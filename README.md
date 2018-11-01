@@ -1,0 +1,2 @@
+# misc
+**some naive experiments**
