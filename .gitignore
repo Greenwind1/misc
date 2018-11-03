@@ -5,3 +5,5 @@
 .RData
 *.xlsx
 *.Rproj
+.gitignore
+*.idea
