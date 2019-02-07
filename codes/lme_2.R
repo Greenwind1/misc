@@ -37,4 +37,21 @@ anova(FE.fit)
 
 anova(Pool.fit, FE.fit)
 anova(FE.fit, Pool.fit)  # Inverted
+resid(Pool.fit)
 
+
+# Compound Symmetry, AR(1), Unstructured
+library(nlme)
+SCex.fit <- gls(model = AC ~ log(PCI) + log(PPSM) + factor(YEAR),
+                data = AutoClaimIn,
+                correlation = corCompSymm(form = ~ 1 | TOWNCODE))
+summary(SCex.fit)
+intervals(SCex.fit)
+getVarCov(SCex.fit)
+
+SCex.fit <- gls(model = AC ~ log(PCI) + log(PPSM) + factor(YEAR) + TOWNCODE,
+                data = AutoClaimIn,
+                correlation = corCompSymm(form = ~ 1 | TOWNCODE))
+summary(SCex.fit)
+intervals(SCex.fit)
+getVarCov(SCex.fit)
