@@ -8,7 +8,7 @@ output:
       toc: true
       theme: cosmo
       highlight: tango
-      code_folding: hide
+      code_folding: show
 ---
 
 ```{r setup, include=FALSE}
@@ -72,5 +72,17 @@ p2 <- train %>%
   xlab('log-PPSM') + ylab('Average Claim')
 grid.arrange(p1, p2, nrow = 1)
 ```
+
+## Linear Mixed-Effects Model ( LMM )
+### Error-components model
+```{r}
+library(nlme)
+EC.fit <-
+  lme(AC ~ lnPCI + lnPPSM + factor(YEAR),
+  data = train,
+  random = ~ 1 | TOWNCODE)
+summary(EC.fit)
+```
+
 
 # EOF
