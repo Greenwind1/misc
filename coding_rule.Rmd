@@ -1,0 +1,608 @@
+---
+title: "Rのコーディングルールについて"
+date: "2015-05-11"
+output: 
+  html_document:
+    theme: readable
+    toc: true
+    toc_depth: 4
+    toc_float: TRUE
+    number_sections: TRUE
+---
+
+
+
+---
+
+---
+
+# 概要
+
+---
+
+前書き  
+- 本ドキュメントでは、Rのコーディング規約について明記しております。  
+- 基本的には、[Hadley WickhamによるStyle guide](http://adv-r.had.co.nz/Style.html)と[google社で提案された規約](https://google-styleguide.googlecode.com/svn/trunk/Rguide.xml)をベースにします。
+
+表記について  
+- パッケージ名は{}で表記  
+- 関数名は''で表記
+
+参照サイト  
+　[Advanced R](http://adv-r.had.co.nz/Style.html), [Google's R Style Guide](https://google-styleguide.googlecode.com/svn/trunk/Rguide.xml), [R packages](http://r-pkgs.had.co.nz)  
+　[Lint_tool_with_R](http://www.slideshare.net/TohruKobayashi/rlint)  
+　[Rでコーディングスタイルを適用させる方法](http://estrellita.hatenablog.com/entry/2015/04/07/095152)  
+　[gepuro流☆変数名の付け方](http://blog.gepuro.net/archives/80 )     
+
+
+ご意見やご指摘など  
+- よりよいものにしてきたいと思います。こうした方がいいのではというご指摘があれば、コメントをよろしくお願いいたします。  
+- 下記のいずれかでご連絡・ご報告いただけますと励みになります。  
+　[Twitter](https://twitter.com/yamano357), [GitHub](https://github.com/yamano357/Think-R-Cording-Style)  
+
+
+```{r read_lib, message = FALSE, echo = FALSE}
+library(knitr)
+knitr::opts_chunk$set(comment = NA)
+```
+
+
+---
+
+---
+
+# 環境
+
+---
+
+- 開発環境としてRStudioを使う  
+
+- 分析ごとにRStudioの「プロジェクト」を分けて使う  
+
+- [Revolution R Open](http://mran.revolutionanalytics.com)をできるだけ使う、もしくは最新バージョンを心がける  
+
+---
+
+---
+
+
+# 命名規則
+
+---
+
+## ファイル名
+
+- Rのスクリプトファイルは、「-」（ハイフン）を区切り文字にした「.R」で終わる  
+
+- 実行順番がある場合は、先頭に付ける  
+ ex) "00-read-date-file.R", "01-date-preprocess.R"  
+
+- Rのオブジェクトファイル（'save'で作成して、'load'で読み込み）は、「.RData」で終わる  
+ ex) "forecast-result-201501.RData"  
+
+---
+
+## オブジェクト名  
+
+- 下記に基づき、語彙を選択（『リーダブルコード』を要参照）  
+　- 機能を推測できる命名  
+　- 知らせなければならない情報を追加  
+　- 曖昧性が少ない  
+　- 汎用的/抽象的な名前を避ける  
+　- [予約語](https://stat.ethz.ch/R-manual/R-devel/library/base/html/Reserved.html)は避ける  
+
+- 変数名：  
+　- 英語名詞  
+　- snake_case（小文字単語を「_」で区切り）  
+　- ハンガリアン記法は不要（命名に拘束力がないので、名前と実体が異なる混乱を招くため）  
+　- （{ff}, {ffbase}によるオブジェクトは「_ff」とすること（知らずに展開するとメモリを使い切る場合があるため））  
+　- 名前属性もsnake_case  
+　　ex) names(input_vec) <- c("var_1", "var_2")  
+　- 定数は「大文字」単語を「_」で区切る（名前属性も「大文字」単語のルール）  
+　　ex) "SET_FEATURE_NUM"  
+　- ひとつの変数はひとつの目的だけで使う（目的が変わった場合は変数を流用しない）  
+
+- 関数名：  
+　- 英語動詞  
+　- lower Camel Case（小文字で書き始め、単語の先頭が大文字）  
+　　ex) selectValueName  
+　- ブール値を返す関数は頭にis, has, can, should があるとわかりやすい  
+　　ex) isConvergence  
+　- 名前から期待される通りの結果を出力、動作や合わせた明確な名前選びを  
+　-- getやsetを安易に使わない（適した語彙を選択すること）  
+　　属性値の取得・設定をイメージするので（属性値の取得・設定する場合はよい）  
+
+- クラス名：  
+　- Camel Case（単語の先頭が大文字）  
+　　ex) SelectValueName  
+
+- パッケージ名：  
+　- 「r」 + Camel Case（単語の先頭が大文字）  
+　　ex) rSelectValueName  
+
+---
+
+---
+
+# 構造  
+
+---
+
+## ディレクトリ構造  
+
+- Rのスクリプトファイルは下記の構造で管理（後述のShinyアプリ化する際、/script/以下の処理を読み込むことで対応できるように）  
+　- 「/script/」以下は各言語による分析用スクリプトを配置  
+　- 「/script/R/class/」以下はRのクラスファイルを置く  
+　- 「/script/R/fun/」以下はRの関数ファイルを置く  
+　- 「/doc/」以下はドキュメント（非自動生成）ファイルを置く  
+　- 「/data/」以下はデータセット（「.RData」など）を配置  
+  （例）「Analytics-Name」が分析名（命名規則は考え中）  
+　/Analytics-Name/script/R/  
+　/Analytics-Name/script/R/class/  
+　/Analytics-Name/script/R/fun/  
+　/Analytics-Name/script/SQL/  
+　/Analytics-Name/doc/  
+　/Analytics-Name/data/  
+
+- Shinyアプリを作る場合  
+  [Shiny](http://shiny.rstudio.com), [The Shiny Cheat sheet](http://www.rstudio.com/wp-content/uploads/2015/02/shiny-cheatsheet.pdf)  
+　- 「app.R」でまとめず「ui.R」と「server.R」に分ける  
+　- 共通処理は「global.R」で定義  
+　- ただし、定数の設定は「global.R」と別ファイル（「def-constant.R」）で記述  
+　- 「ReadMe.Rmd」でReadMeを記述（shinyによるアプリTOPで表示）  
+  （例）「App-Name」がアプリ名（命名規則は考え中）  
+　/App-Name/ui.R  
+　/App-Name/server.R  
+　/App-Name/global.R  
+　/App-Name/def-constant.R  
+　/App-Name/ReadMe.Rmd  
+　/App-Name/script/R/  
+　/App-Name/script/SQL/  
+　/App-Name/data/  
+
+- パッケージ化する場合  
+　規定の構造に準ずる  
+　- （例）  
+　/PACKAGE_NAME/DESCRIPTION  
+　/PACKAGE_NAME/NAMESPACE  
+　/PACKAGE_NAME/NEWS    
+　/PACKAGE_NAME/R/  
+　/PACKAGE_NAME/man/  
+　/PACKAGE_NAME/src/  
+　/PACKAGE_NAME/tests/  
+　/PACKAGE_NAME/data/  
+　/PACKAGE_NAME/inst/  
+
+　- パッケージ作成時に参照しておいた方がいい資料  
+　 [R packages](http://r-pkgs.had.co.nz)  
+　 [東京R非公式おじさんが教える本当に気持ちいいパッケージ作成法](http://www.slideshare.net/teramonagi/r-38511360)
+
+---
+
+
+## ファイル記述順  
+
+1. ファイルコメント（名前、最終更新日、スクリプトの目的や入出力など）  
+-- 可能であれば、「コメント」の項目で触れている{roxygen2}に準じたコメントを書く  
+2. 'source'や'library'による外部スクリプトの読み込み  
+3. 関数定義  
+4. データ処理    
+　(1) 入力  
+　(2) 前処理  
+　(3) 統計処理や集計  
+　(4) 可視化  
+　(5) 出力  
+
+- コピーライトは「[DESCRIPTION](http://www.slideshare.net/kaz_yos/r-devtools-roxygen2/52)」に書き、TODOやBUGFIXなどは「[NEWS](http://www.slideshare.net/kaz_yos/r-devtools-roxygen2/53)」に書く  
+ 
+- 分析スクリプト（関数定義ファイルは除く）は上から順に読み込んで、正しく実行されることが必須  
+　（RStudio上で「Ctrl + Alt + R」のショートカットにて、コード全体を実行）  
+
+---
+
+## ファイルを分ける基準
+
+- 100行から200行に収めること  
+-- 自作関数定義ファイルで、各関数間に依存関係がない場合はひとつのファイルでも可（コメントを残しておくこと）  
+--自作関数定義ファイルにて定義した関数を呼び出す関数は、別ファイルで定義すること  
+
+---
+
+## 関数を分ける基準
+
+- ひとつの関数にひとつの機能  
+
+- ネストが深くなる場合（3を目安）は別の関数に分ける  
+-- ただし、機能的に分けるべきでない場合はひとつのままにする（コメントを残しておくこと）  
+
+---
+
+---
+
+# 構文  
+
+---
+
+## 代入  
+
+- オブジェクトへの割り当ては「<-」を使う  
+- 関数の引数は「=」を使う  
+
+---
+
+## スペース  
+
+- 半角スペースひとつを「スペース」とし、次の条件のときに「スペース」  
+-- 演算子（「=, +, -, <-」など）の「前後」  
+　ex) 1 + 1  
+-- ただし、「:, ::, :::」の後はスペースをあけない  
+　ex) 1:10, dplyr::select()  
+
+-- 「,」の「後」（行列や配列の添字操作時の「,」も）  
+　ex) lm(y ~ x1 + x2, data = data.frame(y = rnorm(100), x1 = rnorm(100), x2 = rnorm(100)))  
+　ex) iris[1:10, ]  
+
+- 'if'と'for', 'function'などのカーリーブラケット（{ }）でスコープを作る関数「(　)」の前後は半角スペースひとつ分をあける
+- 関数呼び出しの前後は半角スペースをあけない
+
+```{r function example, echo = TRUE}
+exampleFunction <- function (
+  iteration_num = 10,
+  ...
+){
+  # 演算子（「=, +, -, <-」など）の「前後」はスペース
+  res_pow <- numeric(iteration_num)
+  
+  # 「for文の繰り返し指定は改行しない」
+  for (iter in seq(from = 1, to = iteration_num)) {
+    if (iter > 10) {
+      return(-1)  
+    } else {
+      res_pow[iter] <- iter * iter
+    }
+  }
+  plot(res_pow) # 「関数呼び出しの前後は半角スペースをあけない」
+  return(1)
+}
+```
+
+---
+
+## インデント  
+
+- 半角スペースふたつ分で字下げして、スコープごとに下げる（Pythonと同じ）  
+　（RStudioの「Tools -> Global Option -> Code -> Display」の「Show indent guides」でインデント表示を設定可能）  
+　（RStudioの「Tools -> Global Option -> Code -> Editing」の「Insert space for tab」で「Tab width」を「2」に設定しておくと、タブで半角スペースふたつ分を設定できる）
+
+---
+
+## 改行  
+
+- 一行を80文字程度を目安に改行（RStudioの「Tools -> Global Option -> Code -> Display」の「Show margin」でライン表示を設定可能）  
+- 関数内に引数は意味合いごとに改行（ただし、関数が引数の値として際には改行しない）  
+- 'dplyr'のパイプ処理ではチェイン演算子(%>%)ごとに改行  
+
+- 'for'文の繰り返し指定は改行しない  
+- 'if'文や'for'文、'apply'ファミリーはたとえ短くても一行でまとめてかかない（ワンライナー禁止）  
+```{r for example, echo = TRUE}
+res_sum <- 0
+for (sum_iter in sample(x = seq(from = 1, to = 10), size = 1000, replace = TRUE)) {
+  res_sum <- res_sum + sum_iter
+}
+```
+- 「;」で複数コードを一行にまとめられるが、使わずに複数行に書く  
+
+
+---
+
+## コメント  
+
+- コメントの内容  
+-- どうしてこうしたか、意図を記述（アルゴリズムの選択理由や、パラメータ設定の根拠など）  
+-- 読めばわかる挙動をひとつひとつ追って書くのは不要  
+-- 定数の意図（理論値、限界値の決め方）は書く  
+
+```{r example_comment, echo = TRUE, message = FALSE}
+library(rugarch)
+# 2週間分のARMAを考慮するため、「armaOrder = c(14, 14)」に設定
+# キャンペーンや広告予算により、日毎に分散が変動すると考えられるため、分散不均一性を説明できるモデルを導入（「variance.model」を定義）
+# 分布は「綺麗な正規分布」にはならないと想定できるため、「distribution.model = "snorm"」に設定
+model_spec <- rugarch::ugarchspec(
+  mean.model = list(
+    armaOrder = c(14, 14), include.mean = TRUE,
+    arfima = TRUE,
+    external.regressors = NULL
+  ),
+  variance.model = list(
+    model = "fGARCH", garchOrder = c(1, 1), submodel = "GARCH",
+    external.regressors = NULL
+  ),
+  distribution.model = "snorm"
+)
+```
+
+
+- コメントの記述  
+-- 「#」の後は半角スペースをひとつ空ける  
+-- コードの後ろには書かない  
+-- 関数内ではなるべく書かない  
+
+- ブロック分け  
+-- 「# Load data process ---------------------------」のように、コードの塊を分ける  
+　(RStudio上で「Ctrl + Shift + R」で挿入可能)
+
+- 関数定義の際は{roxygen2}のフォーマットで必ずコメントを記述  
+-- 「title, description, details」の各フィールドと「@param, @return, @examples」は必須項とする  
+  「@param」は引数の説明（引数毎に記述）  
+  「@return」は戻り値の説明  
+  「@examples」は実行例  
+　http://r-pkgs.had.co.nz/man.html  
+　http://stackoverflow.com/tags/roxygen2/info  
+
+```{r roxygen2_comment, echo = TRUE}
+#' Sum of vector elements. (titleフィールド)
+#'
+#' \code{sum} returns the sum of all the values present in its arguments. （descriptionフィールド）
+#'
+#' This is a generic function: ... （detailsフィールド）
+#'
+#' @param ... Numeric, complex, or logical vectors.
+#' @param na.rm A logical scalar. Should missing values (including NaN) be removed?
+#' @return If all inputs are integer and logical, then the output
+#'   will be an integer. If integer overflow ...
+#' @examples
+#' sum(1:10)
+#' sum(1:5, 6:10)
+sum <- function(..., na.rm = TRUE) {}
+```
+
+上記の記述（一部省略している）によって生成される'sum'のドキュメントが下記のリンク  
+　http://stat.ethz.ch/R-manual/R-devel/library/base/html/sum.html
+
+
+- コメントは日本語でもよいが、パッケージ化する際は英語にすること  
+
+- パッケージ化する場合は{roxygen2}のフォーマットに準じたコメントを適宜行う  
+  [Introduction to roxygen2](http://cran.r-project.org/web/packages/roxygen2/vignettes/roxygen2.html)  
+
+---
+
+## 関数呼び出し  
+
+- 必須項目の引数名は省略可  
+- オプションの引数名を指定する場合は必須  
+　ex) read.table("", header = TRUE)  
+　ex) read.table(file = "", header = TRUE)  
+
+- 関数呼び出し時は「{PACKAGE_NAME}::'FUNCTION_NAME'」で呼び出す関数の名前空間を明示する  
+- ただし、Rの基本パッケージ({stats}, {graphics}, {grDevices}, {utils}, {datasets}, {methods}, {base})内の関数を呼び出す際には、パッケージ名は省略（アドオンパッケージは省略せず）  
+  [【メモ】R のデフォルトパッケージを調べる #rstatsj](http://qiita.com/hoxo_m/items/e5bd3d4ed87e99a9f693)
+
+```{r session_info, echo = TRUE}
+# {devtools}の関数呼び出し
+devtools::session_info()
+# 基本パッケージ
+sessionInfo()
+```
+
+
+- RStudioで「パッケージ名」＋「::」で（＋「キーボードのTabキー」）パッケージリストがサジェスト可  
+
+- 下記リンクにある'lsp'を定義して使うと、一覧リストがRコンソール上で取得できる  
+  [Show names of everything in a package](http://stackoverflow.com/questions/12114355/show-names-of-everything-in-a-package)
+
+```{r lsp, echo = TRUE}
+lsp <- function(package, what = 'all') {
+  ns <- asNamespace(package)
+  # base package does not have NAMESPACE
+  if (isBaseNamespace(ns))
+    return(ls(.BaseNamespaceEnv, all.names = TRUE))
+  else {
+    # for non base packages
+    if (exists('.__NAMESPACE__.', envir = ns, inherits = FALSE)) {
+      wh <- get('.__NAMESPACE__.', envir = asNamespace(package, base.OK = FALSE),
+                inherits = FALSE)
+      if ('?' %in% what) 
+        return(ls(wh))
+      if (!is.null(what) && !any(what %in% c('all', ls(wh))))
+        stop('what is invalid; see ?rawr::lsp \'details\'')
+      tmp <- sapply(ls(wh), function(x) getNamespaceInfo(ns, x))
+      tmp <- rapply(tmp, ls, classes = 'environment', 
+                    how = 'replace', all.names = TRUE)
+      if (is.null(what))
+        return(tmp)
+      if (what %in% 'all')
+        return(ls(getNamespace(package), all.names = TRUE))
+      if (any(what %in% ls(wh)))
+        return(tmp[what])
+    } else 
+      stop(sprintf('no NAMESPACE file found for package %s', package))
+  }
+}
+lsp("devtools", "exports")$exports
+```
+
+---
+
+## 関数定義  
+
+- 用途がない限り、引数に「...」(dotsMethods)を与えない（引数名を間違えた際にも実行できてしまうケースを避ける）  
+
+- パラメータに関しては、用途ごとにlistにまとめた引数を用いる  
+
+- 明示的に'return'を書く  
+
+---
+
+## クラス定義  
+
+- クラスを使用しなくてもよいが、定義する場合は'R6'クラスを用いること  
+
+- 'R6'クラスについて  
+  [wch/R6](https://github.com/wch/R6), [Introduction to R6 classes](http://cran.r-project.org/web/packages/R6/vignettes/Introduction.html), [Understanding R6: new OO system in R](http://rpubs.com/sumprain/R6)  
+  [R6パッケージの紹介―機能と実装](http://www.slideshare.net/__nakamichi__/r6-upload),   [R6 class さっそく調査 #rstatsj](http://qiita.com/hoxo_m/items/23b10243b6ffbea33a80)  
+
+---
+
+## 条件分岐  
+
+- 条件式の引数の並びは文法と同じに  
+ if (age >= 20) 「もし年齢が20才以上ならば」（よい）  
+ if (20 <= age) 「もし20才が年齢以下ならば」（だめ）  
+ 
+- （左辺が「調査対象」（変化する）、右辺が「比較対象」（あまり変化しない））  
+
+- 可読性を考慮して、'ifelse'はネストさせてはいけない    
+
+---
+
+## ループ
+
+- 極力ループは避け、ベクトル・行列演算または'apply'ファミリーで処理する  
+
+- 理由がない限り、'while'は使わない（無限ループを起こしやすい）  
+
+- i, j, k などのfor文の添字は事前に必ず初期化する  
+
+- ループ回数が多くなる場合は{iterators}と{foreach}を利用する  
+
+```{r iterator, message = FALSE}
+library(iterators)
+library(foreach)
+SET_ITER_NUM <- 5000
+i <- res_sum <- 0
+foreach_res <- foreach::foreach (i = iterators::icount(SET_ITER_NUM), .combine = c) %do% {
+  res_sum <- res_sum + i
+  i / res_sum
+}
+```
+
+- 並列処理が考えられる場合の{foreach}は、{pforeach}を利用しておく（並列化・非並列化の切り替えが手軽にできる）  
+  [pforeach](http://d.hatena.ne.jp/hoxo_m/20141222/p1)  
+```{r pforeach, echo = TRUE, cache = TRUE, message = FALSE}
+# library(devtools)
+# devtools::install_github("hoxo-m/pforeach")
+library(pforeach)
+library(randomForest)
+library(kernlab)
+SET_PARALLE <- list(
+  IS_PARALLEL = TRUE,
+  CORE = 3
+)
+data(spam)
+fit_rf <- pforeach::pforeach(
+  ntree = rep(250, SET_PARALLE$CORE), .c = c,
+  .export = "spam", .packages = "randomForest",
+  .parallel = SET_PARALLE$IS_PARALLEL, .cores = SET_PARALLE$CORE
+)({
+  randomForest(type ~ ., data = spam, ntree = ntree)
+})
+```
+
+
+---
+
+
+---
+
+# 分析  
+
+---
+
+## データ処理  
+
+- 添字操作よりも{dplyr}や{tidyr}を積極的に使ってパイプ処理で書く（ただし、{magrittr}と{pipeR}は可読性の観点で、なるべく避ける）  
+  [dplyr](https://github.com/hadley/dplyr), [tidyr](https://github.com/hadley/tidyr), [magrittr](https://github.com/smbache/magrittr),  [pipeR](https://github.com/renkun-ken/pipeR)  
+  [Data Wrangling with dplyr and tidyr Cheat Sheet](http://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf)   
+
+
+- 文字列処理は、基本的には{stringr}で、困ったときは{stringi}を利用する  
+  [hadley/stringr](https://github.com/hadley/stringr/)  
+  [stringr 1.0.0を使ってみる](http://notchained.hatenablog.com/entry/2015/05/01/011703)  
+  [stringiで輝く☆テキストショリスト](http://qiita.com/kohske/items/85d49da04571e9055c44)
+
+
+- データベース接続には{RODBC}や{RJDBC}ではなく、{RMySQL}, {RPostgreSQL}, {ROracle}などを使う（または、{dplyr}の'src_*'を用いる）  
+
+
+- 欠損値について  
+-- 欠損値を含んだレコードを除去する（リストワイズ法）か、「完全情報最尤推定による推定値」または「多重代入法」で補完する  
+　（行った処理と理由をコメントとして残しておく）  
+  [kaggleで予測モデルを構築してみた (5) - Rで行うMultipleImputation](http://smrmkt.hatenablog.jp/entry/2013/01/06/164758)  
+  [kaggleで予測モデルを構築してみた (6) - FIMLの仕組みとRのimputationパッケージ](http://smrmkt.hatenablog.jp/entry/2013/01/14/141158)  
+
+- 外れ値と異常値について（[外れ値検出（知識）](https://sites.google.com/site/scriptofbioinformatics/mian-qiangmemo/waire-zhi-jian-chu-zhi-shi)）  
+-- 外れ値は他の値から大きく外れた値  
+-- 異常値は外れ値のうち、原因（測定ミス、記録ミスなど）がわかっているもの  
+-- 除去する場合は、どういう条件の値を除去するかコメントとして残しておく 
+
+---
+
+## モデリング  
+
+- 統計モデリングには{RStan}を使う（{JAGS}, {OpenBUGS}, {WinBUGS}は使わない）  
+　[RStan](http://mc-stan.org/rstan.html)  
+　[RStanで『予測にいかす統計モデリングの基本』の売上データの分析をトレースしてみた](http://heartruptcy.blog.fc2.com/blog-entry-90.html)  
+　[実践 統計モデリング入門](http://d.hatena.ne.jp/hoxo_m/20150512/p1)  
+
+- {LaplacesDemon}と{Zelig}に関しては検討中  
+　[LaplacesDemon](http://www.bayesian-inference.com/software), [Zelig](http://zeligproject.org)  
+
+- 機械学習アルゴリズムを実装する際は{caret}で実行できないか確認してから行う  
+　[train Model List](http://topepo.github.io/caret/modelList.html)  
+
+---
+
+## パッケージ  
+
+- 下記リンクにあるパッケージは積極的に使う  
+　[Top 10 R Packages to be a Kaggle Champion](http://www.kdnuggets.com/2015/04/top-10-r-packages-kaggle.html)  
+　[Quick list of useful R packages](https://support.rstudio.com/hc/en-us/articles/201057987-Quick-list-of-useful-R-packages)  
+　[Great R packages for data import, wrangling & visualization](http://www.computerworld.com/article/2921176/business-intelligence/great-r-packages-for-data-import-wrangling-visualization.html)  
+　
+
+---
+
+## 可視化  
+
+- グラフのy軸は0から始める（それ以外の場合は凡例で明示する）  
+
+- {ggplot2}を積極的に使う（派生も可）  
+　[ggplot2](http://docs.ggplot2.org/current/), [Getting started with ggplot2](http://rpubs.com/hadley/ggplot-intro)   
+　[ggファミリーを可視化](http://yutannihilation.github.io/allYourFigureAreBelongToUs/)  
+
+- ブラウザ表示やインタラクティブ処理がありえる場合は{ggvis}や{htmlwidgets}を使う  
+　[ggvis](http://ggvis.rstudio.com), [htmlwidgets](http://www.htmlwidgets.org)  
+
+- {rCharts}や{plotly}と{googlevis}はなるべく使わない  
+　[rCharts](http://rcharts.io), [plotly](https://plot.ly/r/getting-started/), [googleVis](https://github.com/mages/googleVis)   
+
+---
+
+---
+
+# その他
+
+- Shinyアプリ化した際とパッケージ化する際は極力Gitでバージョン管理する  
+
+- 複数人が分析結果を使う場合や、前処理やDB接続や定型操作などはパッケージ化する  
+
+- Rによる分析の際はR Markdownで分析結果をドキュメント化する（R以外の部分は今後の課題）   
+[R Markdown](http://rmarkdown.rstudio.com), [R Markdown Cheat Sheet](http://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf)  
+ [R Markdownで楽々レポートづくり](http://gihyo.jp/admin/serial/01/r-markdown/),  [Rとウェブの融合（４）ーrmarkdownー](http://kohske.github.io/ESTRELA/201411/index.html) 
+
+- R Markdownでドキュメント化した際は実行時の環境を結果の後に出力する  
+　（{devtools}の'session_info'か{base}の'sessionInfo'を利用する）  
+
+- Shinyで分析結果の利活用度を上げておく  
+
+- {formatR}と{lintr}の使用は検討  
+  [formatR](http://yihui.name/formatR/), [lintr](https://github.com/jimhester/lintr)
+
+---
+
+---
+
+```{r timelog, echo = FALSE}
+Sys.time()
+```
