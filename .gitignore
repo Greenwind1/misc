@@ -1,9 +1,0 @@
-*.xlsx
-*.Rproj.*
-.Rproj.user
-.Rhistory
-.RData
-*.xlsx
-*.Rproj
-.gitignore
-*.idea
