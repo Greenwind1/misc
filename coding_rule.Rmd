@@ -2,6 +2,9 @@
 title: "Rのコーディングルールについて"
 date: "2015-05-11"
 output: 
+  pdf_document: 
+    toc: yes
+    toc_depth: 4
   html_document:
     theme: readable
     toc: true
