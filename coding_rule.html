@@ -10,7 +10,6 @@
 
 
 
-<meta name="date" content="2015-05-11" />
 
 <title>Rのコーディングルールについて</title>
 
@@ -1482,7 +1481,6 @@ div.tocify {
 
 
 <h1 class="title toc-ignore">Rのコーディングルールについて</h1>
-<h4 class="date"><em>2015-05-11</em></h4>
 
 </div>
 
@@ -1492,22 +1490,24 @@ div.tocify {
 <div id="section" class="section level1">
 <h1><span class="header-section-number">1</span> 概要</h1>
 <hr />
-<p>前書き<br />
-- 本ドキュメントでは、Rのコーディング規約について明記しております。<br />
-- 基本的には、<a href="http://adv-r.had.co.nz/Style.html">Hadley WickhamによるStyle guide</a>と<a href="https://google-styleguide.googlecode.com/svn/trunk/Rguide.xml">google社で提案された規約</a>をベースにします。</p>
-<p>表記について<br />
-- パッケージ名は{}で表記<br />
-- 関数名は’’で表記</p>
-<p>参照サイト<br />
-　<a href="http://adv-r.had.co.nz/Style.html">Advanced R</a>, <a href="https://google-styleguide.googlecode.com/svn/trunk/Rguide.xml">Google’s R Style Guide</a>, <a href="http://r-pkgs.had.co.nz">R packages</a><br />
-　<a href="http://www.slideshare.net/TohruKobayashi/rlint">Lint_tool_with_R</a><br />
-　<a href="http://estrellita.hatenablog.com/entry/2015/04/07/095152">Rでコーディングスタイルを適用させる方法</a><br />
-　<a href="http://blog.gepuro.net/archives/80">gepuro流☆変数名の付け方</a></p>
-<p>ご意見やご指摘など<br />
-- よりよいものにしてきたいと思います。こうした方がいいのではというご指摘があれば、コメントをよろしくお願いいたします。<br />
-- 下記のいずれかでご連絡・ご報告いただけますと励みになります。<br />
-　<a href="https://twitter.com/yamano357">Twitter</a>, <a href="https://github.com/yamano357/Think-R-Cording-Style">GitHub</a></p>
-<pre><code>## Warning: package &#39;knitr&#39; was built under R version 3.4.4</code></pre>
+<ul>
+<li><p>前書き<br />
+本ドキュメントでは、Rのコーディング規約について明記しております。<br />
+基本的には、<br />
+<a href="http://adv-r.had.co.nz/Style.html">Hadley WickhamによるStyleguide</a>と<br />
+<a href="https://google-styleguide.googlecode.com/svn/trunk/Rguide.xml">google社で提案された規約</a><br />
+をベースにします。</p></li>
+<li><p>表記について<br />
+パッケージ名は{}で表記<br />
+関数名は’’で表記</p></li>
+<li><p>参照サイト<br />
+<a href="http://adv-r.had.co.nz/Style.html">Advanced R</a>,<br />
+<a href="https://google-styleguide.googlecode.com/svn/trunk/Rguide.xml">Google’s R Style Guide</a>,<br />
+<a href="http://r-pkgs.had.co.nz">R packages</a><br />
+<a href="http://www.slideshare.net/TohruKobayashi/rlint">Lint_tool_with_R</a><br />
+<a href="http://estrellita.hatenablog.com/entry/2015/04/07/095152">Rでコーディングスタイルを適用させる方法</a><br />
+<a href="http://blog.gepuro.net/archives/80">gepuro流☆変数名の付け方</a></p></li>
+</ul>
 <hr />
 <hr />
 </div>
@@ -1757,23 +1757,7 @@ for (sum_iter in sample(x = seq(from = 1, to = 10), size = 1000, replace = TRUE)
 – 読めばわかる挙動をひとつひとつ追って書くのは不要<br />
 – 定数の意図（理論値、限界値の決め方）は書く</li>
 </ul>
-<pre class="r"><code>library(rugarch)</code></pre>
 <pre><code>Warning: package &#39;rugarch&#39; was built under R version 3.4.4</code></pre>
-<pre class="r"><code># 2週間分のARMAを考慮するため、「armaOrder = c(14, 14)」に設定
-# キャンペーンや広告予算により、日毎に分散が変動すると考えられるため、分散不均一性を説明できるモデルを導入（「variance.model」を定義）
-# 分布は「綺麗な正規分布」にはならないと想定できるため、「distribution.model = &quot;snorm&quot;」に設定
-model_spec &lt;- rugarch::ugarchspec(
-  mean.model = list(
-    armaOrder = c(14, 14), include.mean = TRUE,
-    arfima = TRUE,
-    external.regressors = NULL
-  ),
-  variance.model = list(
-    model = &quot;fGARCH&quot;, garchOrder = c(1, 1), submodel = &quot;GARCH&quot;,
-    external.regressors = NULL
-  ),
-  distribution.model = &quot;snorm&quot;
-)</code></pre>
 <ul>
 <li><p>コメントの記述<br />
 – 「#」の後は半角スペースをひとつ空ける<br />
@@ -1859,7 +1843,7 @@ devtools::session_info()</code></pre>
  glue                    1.3.1    2019-03-12 [1] CRAN (R 3.4.4)
  htmltools               0.3.6    2017-04-28 [1] CRAN (R 3.4.0)
  KernSmooth              2.23-15  2015-06-29 [1] CRAN (R 3.4.0)
- knitr                 * 1.20     2018-02-20 [1] CRAN (R 3.4.4)
+ knitr                   1.20     2018-02-20 [1] CRAN (R 3.4.4)
  ks                      1.11.1   2018-04-22 [1] CRAN (R 3.4.4)
  lattice                 0.20-35  2017-03-25 [1] CRAN (R 3.4.0)
  magrittr                1.5      2014-11-22 [1] CRAN (R 3.4.0)
@@ -1913,7 +1897,7 @@ attached base packages:
 [8] base     
 
 other attached packages:
-[1] rugarch_1.4-0 knitr_1.20   
+[1] rugarch_1.4-0
 
 loaded via a namespace (and not attached):
  [1] Rcpp_1.0.0                  compiler_3.4.0             
@@ -1929,19 +1913,20 @@ loaded via a namespace (and not attached):
 [21] rstudioapi_0.7              yaml_2.1.18                
 [23] mvtnorm_1.0-7               expm_0.999-2               
 [25] withr_2.1.2                 stringr_1.4.0              
-[27] fs_1.2.6                    desc_1.2.0                 
-[29] DistributionUtils_0.5-1     devtools_2.0.1             
-[31] rprojroot_1.3-2             grid_3.4.0                 
-[33] glue_1.3.1                  R6_2.3.0                   
-[35] rmarkdown_1.9               sessioninfo_1.1.1          
-[37] Rsolnp_1.16                 callr_2.0.3                
-[39] magrittr_1.5                usethis_1.4.0              
-[41] backports_1.1.3             htmltools_0.3.6            
-[43] SkewHyperbolic_0.3-2        GeneralizedHyperbolic_0.8-1
-[45] assertthat_0.2.0            spd_2.0-1                  
-[47] numDeriv_2016.8-1           KernSmooth_2.23-15         
-[49] stringi_1.4.3               truncnorm_1.0-8            
-[51] crayon_1.3.4                zoo_1.8-1                  </code></pre>
+[27] knitr_1.20                  fs_1.2.6                   
+[29] desc_1.2.0                  DistributionUtils_0.5-1    
+[31] devtools_2.0.1              rprojroot_1.3-2            
+[33] grid_3.4.0                  glue_1.3.1                 
+[35] R6_2.3.0                    rmarkdown_1.9              
+[37] sessioninfo_1.1.1           Rsolnp_1.16                
+[39] callr_2.0.3                 magrittr_1.5               
+[41] usethis_1.4.0               backports_1.1.3            
+[43] htmltools_0.3.6             SkewHyperbolic_0.3-2       
+[45] GeneralizedHyperbolic_0.8-1 assertthat_0.2.0           
+[47] spd_2.0-1                   numDeriv_2016.8-1          
+[49] KernSmooth_2.23-15          stringi_1.4.3              
+[51] truncnorm_1.0-8             crayon_1.3.4               
+[53] zoo_1.8-1                  </code></pre>
 <ul>
 <li><p>RStudioで「パッケージ名」＋「::」で（＋「キーボードのTabキー」）パッケージリストがサジェスト可</p></li>
 <li><p>下記リンクにある’lsp’を定義して使うと、一覧リストがRコンソール上で取得できる<br />
@@ -2193,7 +2178,7 @@ fit_rf &lt;- pforeach::pforeach(
 </ul>
 <hr />
 <hr />
-<pre><code>[1] &quot;2019-04-21 21:16:05 JST&quot;</code></pre>
+<pre><code>[1] &quot;2019-04-21 21:26:45 JST&quot;</code></pre>
 </div>
 
 

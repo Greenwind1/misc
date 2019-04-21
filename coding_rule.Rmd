@@ -1,16 +1,15 @@
 ---
 title: "Rのコーディングルールについて"
-date: "2015-05-11"
 output: 
+  html_document:
+    number_sections: yes
+    theme: readable
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
   pdf_document: 
     toc: yes
     toc_depth: 4
-  html_document:
-    theme: readable
-    toc: true
-    toc_depth: 4
-    toc_float: TRUE
-    number_sections: TRUE
 ---
 
 
@@ -23,29 +22,27 @@ output:
 
 ---
 
-前書き  
-- 本ドキュメントでは、Rのコーディング規約について明記しております。  
-- 基本的には、[Hadley WickhamによるStyle guide](http://adv-r.had.co.nz/Style.html)と[google社で提案された規約](https://google-styleguide.googlecode.com/svn/trunk/Rguide.xml)をベースにします。
+* 前書き  
+本ドキュメントでは、Rのコーディング規約について明記しております。  
+基本的には、  
+[Hadley WickhamによるStyleguide](http://adv-r.had.co.nz/Style.html)と  
+[google社で提案された規約](https://google-styleguide.googlecode.com/svn/trunk/Rguide.xml)  
+をベースにします。  
 
-表記について  
-- パッケージ名は{}で表記  
-- 関数名は''で表記
+* 表記について  
+パッケージ名は{}で表記  
+関数名は''で表記  
 
-参照サイト  
-　[Advanced R](http://adv-r.had.co.nz/Style.html), [Google's R Style Guide](https://google-styleguide.googlecode.com/svn/trunk/Rguide.xml), [R packages](http://r-pkgs.had.co.nz)  
-　[Lint_tool_with_R](http://www.slideshare.net/TohruKobayashi/rlint)  
-　[Rでコーディングスタイルを適用させる方法](http://estrellita.hatenablog.com/entry/2015/04/07/095152)  
-　[gepuro流☆変数名の付け方](http://blog.gepuro.net/archives/80 )     
-
-
-ご意見やご指摘など  
-- よりよいものにしてきたいと思います。こうした方がいいのではというご指摘があれば、コメントをよろしくお願いいたします。  
-- 下記のいずれかでご連絡・ご報告いただけますと励みになります。  
-　[Twitter](https://twitter.com/yamano357), [GitHub](https://github.com/yamano357/Think-R-Cording-Style)  
+* 参照サイト  
+[Advanced R](http://adv-r.had.co.nz/Style.html),  
+[Google's R Style Guide](https://google-styleguide.googlecode.com/svn/trunk/Rguide.xml),  
+[R packages](http://r-pkgs.had.co.nz)  
+[Lint_tool_with_R](http://www.slideshare.net/TohruKobayashi/rlint)  
+[Rでコーディングスタイルを適用させる方法](http://estrellita.hatenablog.com/entry/2015/04/07/095152)  
+[gepuro流☆変数名の付け方](http://blog.gepuro.net/archives/80 )   
 
 
 ```{r read_lib, message = FALSE, echo = FALSE}
-library(knitr)
 knitr::opts_chunk$set(comment = NA)
 ```
 
@@ -305,7 +302,7 @@ for (sum_iter in sample(x = seq(from = 1, to = 10), size = 1000, replace = TRUE)
 -- 読めばわかる挙動をひとつひとつ追って書くのは不要  
 -- 定数の意図（理論値、限界値の決め方）は書く  
 
-```{r example_comment, echo = TRUE, message = FALSE}
+```{r example_comment, echo = FALSE, message = FALSE}
 library(rugarch)
 # 2週間分のARMAを考慮するため、「armaOrder = c(14, 14)」に設定
 # キャンペーンや広告予算により、日毎に分散が変動すると考えられるため、分散不均一性を説明できるモデルを導入（「variance.model」を定義）
