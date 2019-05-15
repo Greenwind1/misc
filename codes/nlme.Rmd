@@ -6,6 +6,8 @@ output:
    html_document:
       number_sections: true
       toc: true
+      toc_depth: 4
+      toc_float: FALSE
       theme: cosmo
       highlight: tango
       code_folding: show
