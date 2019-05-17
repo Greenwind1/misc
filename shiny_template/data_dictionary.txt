@@ -1,0 +1,150 @@
+# train.csv and test.csv
+
+price_doc: sale price (this is the target variable)
+id: transaction id
+timestamp: date of transaction
+full_sq: total area in square meters, including loggias, balconies and other non-residential areas
+life_sq: living area in square meters, excluding loggias, balconies and other non-residential areas
+floor: for apartments, floor of the building
+max_floor: number of floors in the building
+material: wall material
+build_year: year built
+num_room: number of living rooms
+kitch_sq: kitchen area
+state: apartment condition
+product_type: owner-occupier purchase or investment
+sub_area: name of the district
+
+The dataset also includes a collection of features about each property's surrounding neighbourhood, and some features that are constant across each sub area (known as a Raion). Most of the feature names are self explanatory, with the following notes.
+
+full_all: subarea population
+male_f, female_f: subarea population by gender
+young_*: population younger than working age
+work_*: working-age population
+ekder_*: retirement-age population
+n_m_{all|male|female}: population between n and m years old
+build_count_*: buildings in the subarea by construction type or year
+x_count_500: the number of x within 500m of the property
+x_part_500: the share of x within 500m of the property
+_sqm_: square meters
+cafe_count_d_price_p: number of cafes within d meters of the property that have an average bill under p RUB
+trc_: shopping malls
+prom_: industrial zones
+green_: green zones
+metro_: subway
+_avto_: distances by car
+mkad_: Moscow Circle Auto Road
+ttk_: Third Transport Ring
+sadovoe_: Garden Ring
+bulvar_ring_: Boulevard Ring
+kremlin_: City center
+zd_vokzaly_: Train station
+oil_chemistry_: Dirty industry
+ts_: Power plant
+
+
+# macro.csv
+
+A set of macroeconomic indicators, one for each date.
+
+timestamp: Transaction timestamp
+oil_urals: Crude Oil Urals ($/bbl)
+gdp_quart: GDP
+gdp_quart_growth: Real GDP growth
+cpi: Inflation - Consumer Price Index Growth
+ppi: Inflation - Producer Price index Growth
+gdp_deflator: Inflation - GDP deflator
+balance_trade: Trade surplus
+balance_trade_growth: Trade balance (as a percentage of previous year)
+usdrub: Ruble/USD exchange rate
+eurrub: Ruble/EUR exchange rate
+brent: London Brent ($/bbl)
+net_capital_export: Net import / export of capital
+gdp_annual: GDP at current prices
+gdp_annual_growth: GDP growth (in real terms)
+average_provision_of_build_contract: Provision by orders in Russia (for the developer)
+average_provision_of_build_contract_moscow: Provision by orders in Moscow (for the developer)
+rts: Index RTS / return
+micex: MICEX index / return
+micex_rgbi_tr: MICEX index for government bonds (MICEX RGBI TR) / yield
+micex_cbi_tr: MICEX Index corporate bonds (MICEX CBI TR) / yield
+deposits_value: Volume of household deposits
+deposits_growth: Volume growth of population's deposits
+deposits_rate: Average interest rate on deposits
+mortgage_value: Volume of mortgage loans
+mortgage_growth: Growth of mortgage lending
+mortgage_rate: Weighted average rate of mortgage loans
+grp: GRP of the subject of Russian Federation where Apartment is located
+grp_growth: Growth of gross regional product of the subject of the Russian Federation where Apartment is located
+income_per_cap: Average income per capita 
+real_dispos_income_per_cap_growth: Growth in real disposable income of Population
+salary: Average monthly salary
+salary_growth: Growth of nominal wages
+fixed_basket: Cost of a fixed basket of consumer goods and services for inter-regional comparisons of purchasing power
+retail_trade_turnover: Retail trade turnover
+retail_trade_turnover_per_cap: Retail trade turnover per capita
+retail_trade_turnover_growth: Retail turnover (in comparable prices in% to corresponding period of previous year)
+labor_force: Size of labor force
+unemployment: Unemployment rate
+employment: Employment rate
+invest_fixed_capital_per_cap: Investments in fixed capital per capita
+invest_fixed_assets: Absolute volume of investments in fixed assets
+profitable_enterpr_share: Share of profitable enterprises
+unprofitable_enterpr_share: The share of unprofitable enterprises
+share_own_revenues: The share of own revenues in the total consolidated budget revenues
+overdue_wages_per_cap: Overdue wages per person
+fin_res_per_cap: The financial results of companies per capita
+marriages_per_1000_cap: Number of marriages per 1,000 people
+divorce_rate: The divorce rate / growth rate
+construction_value: Volume of construction work performed (million rubles)
+invest_fixed_assets_phys: The index of physical volume of investment in fixed assets (in comparable prices in% to the corresponding month of Previous year)
+pop_natural_increase: Rate of natural increase / decrease in Population (1,000 persons)
+pop_migration: Migration increase (decrease) of population
+pop_total_inc: Total population growth
+childbirth: Childbirth
+mortality: Mortality
+housing_fund_sqm: Housing Fund (sqm)
+lodging_sqm_per_cap: Lodging (sqm / pax)
+water_pipes_share: Plumbing availability (pax)
+baths_share: Bath availability (pax)
+sewerage_share: Canalization availability
+gas_share: Gas (mains, liquefied) availability
+hot_water_share: Hot water availability
+electric_stove_share: Electric heating for the floor
+heating_share: Heating availability
+old_house_share: Proportion of old and dilapidated housing, percent
+average_life_exp: Average life expectancy
+infant_mortarity_per_1000_cap: Infant mortality rate (per 1,000 children aged up to one year)
+perinatal_mort_per_1000_cap: Perinatal mortality rate (per 1,000 live births)
+incidence_population: Overall incidence of the total population
+rent_price_4+room_bus: rent price for 4-room apartment, business class
+rent_price_3room_bus: rent price for 3-room apartment, business class
+rent_price_2room_bus: rent price for 2-room apartment, business class
+rent_price_1room_bus: rent price for 1-room apartment, business class
+rent_price_3room_eco: rent price for 3-room apartment, econom class
+rent_price_2room_eco: rent price for 2-room apartment, econom class
+rent_price_1room_eco: rent price for 1-room apartment, econom class
+load_of_teachers_preschool_per_teacher: Load of teachers of preschool educational institutions (number of children per 100 teachers);
+child_on_acc_pre_school: Number of children waiting for the determination to pre-school educational institutions, for capacity of 100
+load_of_teachers_school_per_teacher: Load on teachers in high school (number of pupils in hugh school for 100 teachers)
+students_state_oneshift: Proportion of pupils in high schools with one shift, of the total number of pupils in high schools
+modern_education_share: Share of state (municipal) educational organizations, corresponding to modern requirements of education in the total number of high schools;
+old_education_build_share: The share of state (municipal) educational organizations, buildings are in disrepair and in need of major repairs of the total number.
+provision_doctors: Provision (relative number) of medical doctors in area
+provision_nurse: Provision of nursing staff
+load_on_doctors: The load on doctors (number of visits per physician)
+power_clinics: Capacity of outpatient clinics
+hospital_beds_available_per_cap: Availability of hospital beds per 100 000 persons
+hospital_bed_occupancy_per_year: Average occupancy rate of the hospital beds during a year
+provision_retail_space_sqm: Retail space
+provision_retail_space_modern_sqm: Provision of population with retail space of modern formats, square meter
+retail_trade_turnover_per_cap: Retail trade turnover per capita
+turnover_catering_per_cap: Turnover of catering industry per person
+theaters_viewers_per_1000_cap: Number of theaters viewers per 1000 population
+seats_theather_rfmin_per_100000_cap: Total number of seats in Auditorium of the Ministry of Culture Russian theaters per 100,000 population
+museum_visitis_per_100_cap: Number of visits to museums per 1000 of population
+bandwidth_sports: Capacity of sports facilities
+population_reg_sports_share: Proportion of population regularly doing  sports
+students_reg_sports_share: Proportion of pupils and students regularly doing sports in the total number
+apartment_build: City residential apartment construction
+apartment_fund_sqm: City residential apartment fund 
