@@ -17,8 +17,17 @@ output:
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
+# Introduction
+
+In this notebook, we will do some experiments about Time Series Multilevel Models 
+beyond the panel data.  
+Here is a simple figure which shows the difference of the panel data and the 
+multilevel data.  
+  
+![](./fig/fig1.png)
+
 # Libraries
-```{r, echo=TRUE}
+```{r, message=FALSE}
 library(tidyverse)
 library(CASdatasets)
 library(DT)
@@ -26,8 +35,20 @@ library(gridExtra)
 ```
 
 # Load data
+- In this notebook, we will use a dataset of automobile BIL claims 
+(Frees & Wang, 2005)
+
+|  Variable  |  Description  |
+| ---- | ---- |
+|  TOWNCODE  |  The index of Massachusetts towns  |
+|  YEAR  |  The calendar year of the observation  |
+|  AC  |  Average claims per unit of exposure  |
+|  PCI  |  Per-capita income of the town  |
+|  PPSM  |  Population per square mile of the town  |
+
 ```{r}
 data("usmassBI2")
+dim(usmassBI2)
 datatable(
   usmassBI2,
   options = list(pageLength = 10, 
