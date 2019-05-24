@@ -30,13 +30,14 @@ multilevel data.
 ```{r, message=FALSE}
 library(tidyverse)
 library(CASdatasets)
+library(nlme)
 library(DT)
 library(gridExtra)
 ```
 
-# Load data
+# Load Data
 - In this notebook, we will use a dataset of automobile BIL claims 
-(Frees & Wang, 2005)
+(Frees & Wang, 2005) which is a long format data.  
 
 |  Variable  |  Description  |
 | ---- | ---- |
@@ -60,10 +61,16 @@ datatable(
   )
 ```
 
-# Split data into train and validation
+# Split Data into Train and Test
 ```{r}
 train <- usmassBI2 %>% filter(YEAR < 1998)
-valid <- usmassBI2 %>% filter(YEAR == 1998)
+test <- usmassBI2 %>% filter(YEAR == 1998)
+```
+
+# Data Transformation
+```{r}
+train$YEAR <- as.factor(train$YEAR)
+test$YEAR <- as.factor(test$YEAR)
 ```
 
 # EDA
@@ -72,8 +79,10 @@ valid <- usmassBI2 %>% filter(YEAR == 1998)
 ```{r, fig.width=10}
 train %>% select(YEAR, AC, TOWNCODE) %>% 
   ggplot() +
-  geom_line(mapping = aes(x = YEAR, y = AC, color = TOWNCODE)) +
-  geom_point(mapping = aes(x = YEAR, y = AC, color = TOWNCODE)) +
+  geom_line(mapping = aes(
+    x = as.numeric(YEAR), y = AC, color = TOWNCODE)) +
+  geom_point(mapping = aes(
+    x = as.numeric(YEAR), y = AC, color = TOWNCODE)) +
   xlab('YEAR') + ylab('Average Claim')
 ```
 
@@ -96,14 +105,70 @@ p2 <- train %>%
 grid.arrange(p1, p2, nrow = 1)
 ```
 
-## Linear Mixed-Effects Model ( LMM )
-### Error-components model
+# Linear Models
+## Simple LMs
+- In this LM, all observations are considered to be independent.  
+- We can check the importance of each exploratory variable via **summary** and **anova**  
 ```{r}
-library(nlme)
+Pool.fit <- lm(formula = AC ~ lnPCI + lnPPSM + YEAR,
+               data = train)
+summary(Pool.fit)
+anova(Pool.fit)
+```
+
+## Fixed Effects Models
+```{r}
+FE.fit <- lm(formula = AC ~ lnPCI + lnPPSM + YEAR + TOWNCODE - 1,
+               data = train)
+summary(FE.fit)
+anova(FE.fit)
+```
+
+## Model Comparison using anova function (Pool vs FE)
+We will compare 2 models with partial F - test (Chow, 1960).  
+Test statistics are formulated with $\mathrm{F}=\frac{(ErrorSS)_{Pooled} - ErrorSS_{FE}}{(n-1)s^2}$  
+where $s^2 ( = \sqrt{\frac{38638}{110}}=18.74)$ is **the Residual Standard Error**.  
+$(s.e)^2=\frac{\sum{(y_i - \hat{y})^2}}{N-(variable \; DOF)}$  
+And F statistics follows an F-distribution with DOF, $df_1=28$ and $df_2=110$.  
+We can compute statistics as $F=\frac{52694}{28 \times 18.74^2}=5.3577$.
+```{r}
+anova(Pool.fit, FE.fit)
+```
+
+# Models with Serial Correlation
+## Correlation among residuals
+```{r}
+train$rPool <- resid(Pool.fit)
+train %>% 
+  select(YEAR, TOWNCODE, rPool) %>%
+  reshape(., timevar = "YEAR", idvar = "TOWNCODE", direction = "wide") %>% 
+  select(-TOWNCODE) %>% 
+  cor(.)
+```
+
+## GLS with REML
+To relax i.i.d assumption, let's consider a homogeneous model with serial correlation. For subject $i$, the matrix presentation of the model is,  
+$y_i=X_i \beta+\epsilon_i$,  
+where  
+$y_i=(y_{i1}, \; y_{i2}, \; ... , \; y_{iT_i})^T$,  
+$\epsilon_i=(\epsilon_{i1}, \; \epsilon_{i2}, \; ... , \; \epsilon_{iT_i})^T$.  
+Now we assume that $\epsilon_i$ are correlated with 
+$\mathrm{Var}({\epsilon_i})=R_i$.  
+This assumption enables to relax i.i.d condition.  
+  
+Generalized Least Squares (GLS) estimates are obtained by minimizing,  
+$\sum^{n}_{i-1}(y_i-X_i\beta)^T \; R_i^{-1} (y_i-X_i\beta)$.  
+```{r}
+# gls()
+```
+
+# Linear Mixed-Effects Model ( LME )
+## Error-components model
+```{r}
 EC.fit <-
-  lme(AC ~ lnPCI + lnPPSM + factor(YEAR),
-  data = train,
-  random = ~ 1 | TOWNCODE)
+  lme(AC ~ lnPCI + lnPPSM + YEAR,
+      data = train,
+      random = ~ 1 | TOWNCODE)
 summary(EC.fit)
 ```
 
