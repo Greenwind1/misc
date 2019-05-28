@@ -155,14 +155,112 @@ $\epsilon_i=(\epsilon_{i1}, \; \epsilon_{i2}, \; ... , \; \epsilon_{iT_i})^T$.
 Now we assume that $\epsilon_i$ are correlated with 
 $\mathrm{Var}({\epsilon_i})=R_i$.  
 This assumption enables to relax i.i.d condition.  
+Examples of $\mathrm{R}$ are following,  
+  
+\begin{equation}
+\mathrm{Compound \; Symmetry \; R} = \sigma^2
+\begin{bmatrix}
+1 &\rho &\rho \\
+\rho &1 &\rho \\
+\rho &\rho &1
+\end{bmatrix}
+\end{equation}
+  
+\begin{equation}
+\mathrm{AR(1) \; R} = \sigma^2
+\begin{bmatrix}
+1 &\rho &\rho^2 \\
+\rho &1 &\rho \\
+\rho^2 &\rho &1
+\end{bmatrix}
+\end{equation}
+
+\begin{equation}
+\mathrm{Unstructured \; R} = 
+\begin{bmatrix}
+\sigma^2 &\sigma_{12} &\sigma_{13} \\
+\sigma_{12} &\sigma^2 &\sigma_{23} \\
+\sigma_{13} &\sigma_{23} &\simga^2
+\end{bmatrix}
+\end{equation}
   
 Generalized Least Squares (GLS) estimates are obtained by minimizing,  
 $\sum^{n}_{i-1}(y_i-X_i\beta)^T \; R_i^{-1} (y_i-X_i\beta)$.  
+library `nlme` provides 2 types of likelihood-based methods,  
+
+- Maximum Likelihood  
+- REstricted Maximum Likelihood
+
+REML is used to fix downward biased correlation $\mathrm{R}$.  
+We will use here `gls()` function to model above 3 types of $\mathrm{R}$.  
+The gls function estimates the model under the parameterization 
+$\mathrm{R} = \sigma^2 \Sigma$, where $\sigma^2$ is a scale parameter and 
+$\Sigma$ is the correlation matrix.  
+
+### Compound Symmetry
 ```{r}
-# gls()
+# Serial Correlation => SC
+SCex.fit <- gls(AC ~ lnPCI + lnPPSM + YEAR, 
+                data = train,
+                correlation = corCompSymm(form = ~ 1 | TOWNCODE))
+summary(SCex.fit)
+intervals(SCex.fit, which = "var-cov")
+getVarCov(SCex.fit)
 ```
 
+### AR(1)
+```{r}
+SCar.fit <- gls(AC ~ lnPCI + lnPPSM + YEAR, 
+                data = train,
+                correlation = corAR1(form = ~ 1 | TOWNCODE))
+summary(SCar.fit)
+intervals(SCar.fit, which = "var-cov")
+getVarCov(SCar.fit)
+```
+
+### Unstructured
+```{r}
+SCun.fit <- gls(AC ~ lnPCI + lnPPSM + YEAR, 
+                data = train,
+                correlation = corSymm(form = ~ 1 | TOWNCODE))
+summary(SCun.fit)
+intervals(SCun.fit, which = "var-cov")
+getVarCov(SCun.fit)
+```
+
+### t-test and F-test
+Caution is needed for the tests based on the likelihood function.  
+Because the gls default method is `REML`, 
+we must set `ML` method to utilize t or F test.
+```{r}
+SCex.fit.ml <- gls(AC ~ lnPCI + lnPPSM + YEAR,
+                   data = train,
+                   correlation = corCompSymm(form = ~ 1 | TOWNCODE),
+                   method = "ML")
+SCar.fit.ml <- gls(AC ~ lnPCI + lnPPSM + YEAR, 
+                   data = train,
+                   correlation = corAR1(form = ~ 1 | TOWNCODE),
+                   method = "ML")
+SCun.fit.ml <- gls(AC ~ lnPCI + lnPPSM + YEAR, 
+                   data = train,
+                   correlation = corSymm(form = ~ 1 | TOWNCODE),
+                   method = "ML")
+```
+
+The output of `anova` function shows whether more complicated model should be rejected or not.  
+`L.Ratio` can be computed through 
+$2 \cdot \log \frac{\exp{(LogLik_1)}}{\exp{(LogLik_2)}}$ which follows $\chi^2$ distribution.
+```{r}
+anova(SCex.fit.ml, Pool.fit)
+```
+
+
 # Linear Mixed-Effects Model ( LME )
+
+LME can be formulated as,  
+$y_{it} = z_{it}^T \alpha_i + x_{it}^T \beta + \epsilon_{it}$  
+$y_{i} = Z_{i} \alpha_i + X_{i} \beta + \epsilon_{i}$
+
 ## Error-components model
 ```{r}
 EC.fit <-
