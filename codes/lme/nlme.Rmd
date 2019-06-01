@@ -180,7 +180,7 @@ Examples of $\mathrm{R}$ are following,
 \begin{bmatrix}
 \sigma^2 &\sigma_{12} &\sigma_{13} \\
 \sigma_{12} &\sigma^2 &\sigma_{23} \\
-\sigma_{13} &\sigma_{23} &\simga^2
+\sigma_{13} &\sigma_{23} &\sigma^2
 \end{bmatrix}
 \end{equation}
   
