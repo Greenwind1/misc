@@ -259,9 +259,14 @@ anova(SCex.fit.ml, Pool.fit)
 
 LME can be formulated as,  
 $y_{it} = z_{it}^T \alpha_i + x_{it}^T \beta + \epsilon_{it}$  
-$y_{i} = Z_{i} \alpha_i + X_{i} \beta + \epsilon_{i}$
+$y_{i} = Z_{i} \alpha_i + X_{i} \beta + \epsilon_{i}$,  
+where random effects $\alpha_i$, fixed effects $\beta$.  
+In its most general form, we assume that $E(\alpha_i)=0$ and $V(\alpha_i)=D$.  
 
 ## Error-components model
+A special case where $z_{it}=1$  and $V(\epsilon_i)=\sigma^2 I_i$.  
+
+
 ```{r}
 EC.fit <-
   lme(AC ~ lnPCI + lnPPSM + YEAR,
