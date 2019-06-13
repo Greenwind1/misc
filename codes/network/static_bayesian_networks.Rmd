@@ -1,0 +1,44 @@
+---
+title: "Static Bayesian Networks Modeling with R"
+author: "HoxoMaxwell"
+date: '`r Sys.Date()`'
+output: 
+   html_document:
+      number_sections: true
+      toc: true
+      toc_depth: 4
+      toc_float: true
+      theme: cosmo
+      highlight: tango
+      code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Introduction
+
+There are many packages, **bnlearn**, **deal**, **pcalg** and **catnet**.  
+But **bnlearn** will be the 1st choice 
+due to its wide variety of structure learning algorithms,
+parameter learning approaches, and inference techniques.  
+In this notebook, I will do some naive experiments with **bnlearn** package.
+
+# Load Library
+```{r}
+library(bnlearn)
+```
+
+# Load Data
+```{r}
+data(marks)
+str(marks)
+```
+
+```{r}
+ug <- empty.graph(names(marks))
+plot(ug)
+```
+
+# EOF

@@ -1,4 +1,5 @@
 library(igraph)
+library(linkcomm)
 
 test <-
   matrix(c(0, 0, 1, 0, 1, 0, 0, 0, 2, 0, 0, 0, 4, 3, 0, 0), 4, 4)
@@ -30,7 +31,10 @@ page.rank(test.g)
 bonpow(test.g)
 transitivity(test.g)
 transitivity(test.g, type = 'local')
-assortativity.degree(test.g)
+
+g <- graph(c(1, 2, 2, 3, 3, 1, 1, 4), directed = FALSE)
+plot(g)
+assortativity.degree(g)
 
 library(igraphdata)
 library(gridExtra)
@@ -64,4 +68,13 @@ for (i in 1:3) {
 food.df
 par(op)
 
+g21 <- graph.difference(foodwebs[[2]], foodwebs[[1]])
+plot(g21, 
+     vertex.size = 10,
+     edge.arrow.size = 0.5,
+     vertex.label.color = 'deeppink',
+     vertex.label.cex = 0.7)
 
+data(karate)
+data <- get.data.frame(karate)
+glc <- getLinkCommunities(network = data, hcmethod = "ward.D")
