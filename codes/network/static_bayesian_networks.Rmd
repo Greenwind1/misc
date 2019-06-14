@@ -11,6 +11,8 @@ output:
       theme: cosmo
       highlight: tango
       code_folding: show
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -28,17 +30,147 @@ In this notebook, I will do some naive experiments with **bnlearn** package.
 # Load Library
 ```{r}
 library(bnlearn)
+library(DT)
+library(Rgraphviz)
 ```
 
 # Load Data
 ```{r}
 data(marks)
 str(marks)
+datatable(
+  marks,
+  options = list(pageLength = 10, 
+                 autoWidth = TRUE,
+                 scrollX = TRUE,
+                 columnDefs = list(list(width = '90px',
+                                        targets = seq(1, dim(marks)[2])))),
+  class = 'cell-border stripe'
+  )
 ```
 
+# Graph
+
+## UnDirected Graph
 ```{r}
 ug <- empty.graph(names(marks))
 plot(ug)
 ```
+
+Undirected arcs are represented as their two possible orientations.  
+(e.g. "MECH" -> "ALG" and "ALG" -> "MECH")
+```{r}
+arc.ug <- matrix(c("MECH", "VECT", "MECH", "ALG", "VECT", "MECH",
+                     "VECT", "ALG", "ALG", "MECH", "ALG", "VECT",
+                     "ALG", "ANL", "ALG", "STAT", "ANL", "ALG",
+                     "ANL", "STAT", "STAT", "ALG", "STAT", "ANL"),
+                   ncol = 2,
+                   byrow = TRUE,
+                   dimnames = list(c(1:12), c("from", "to")))
+arcs(x = ug) <- arc.ug
+## plot.bn
+graphviz.plot(
+  ug,
+  highlight = list(arcs = arc.ug, 
+                   nodes = names(marks),
+                   col = "gray",
+                   textCol = "white",
+                   fill = "gray",
+                   lwd = 2),
+)
+ug
+```
+
+
+## Directed Acyclic Graph
+### Throughout The Arcs of the Network
+```{r}
+dag <- empty.graph(names(marks))
+arc.dag <- matrix(c("VECT", "MECH",
+                     "ALG", "MECH", 
+                     "ALG", "VECT",
+                     "ANL", "ALG",
+                     "STAT", "ALG", 
+                     "STAT", "ANL"),
+                   ncol = 2,
+                   byrow = TRUE,
+                   dimnames = list(c(), c("from", "to")))
+arcs(dag) <- arc.dag
+graphviz.plot(
+  dag,
+  highlight = list(arcs = arc.dag, 
+                   nodes = names(marks),
+                   col = "gray",
+                   textCol = "white",
+                   fill = "gray",
+                   lwd = 2),
+)
+dag
+```
+
+### Throughout An Adjacency Matrix
+```{r}
+mat.dag <- matrix(
+  c(0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 
+    0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0),
+  nrow = 5, ncol = 5, dimnames = list(nodes(dag), nodes(dag))
+)
+mat.dag
+```
+```{r}
+dag <- empty.graph(names(marks))
+amat(dag) <- mat.dag
+graphviz.plot(
+  dag,
+  highlight = list(arcs = arc.dag, 
+                   nodes = names(marks),
+                   col = "gray",
+                   textCol = "white",
+                   fill = "gray",
+                   lwd = 2),
+)
+```
+
+## Investigation the Propaties of Graphs
+
+### node.ordering
+```{r}
+node.ordering(dag)
+node.ordering(ug)  # return Error
+```
+
+### neighborhood (nbr), Markov blanket (mb)
+```{r}
+nbr(dag, "ALG")
+mb(dag, "MECH")
+```
+
+### childrean, parents (par)
+```{r}
+children(dag, "ALG")
+parents(dag, "ALG")
+```
+
+## Scoring Criteria in Structure Learning
+```{r}
+score(dag, data = marks, type = "loglik-g")
+```
+```{r}
+dag.eq <- reverse.arc(dag, "STAT", "ANL")
+graphviz.plot(
+  dag.eq,
+  highlight = list(arcs = arc.dag, 
+                   nodes = names(marks),
+                   col = "gray",
+                   textCol = "white",
+                   fill = "gray",
+                   lwd = 2),
+)
+all.equal(dag, dag.eq)
+```
+```{r}
+score(dag.eq, data = marks, type = "loglik-g")
+```
+
 
 # EOF
