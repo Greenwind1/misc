@@ -11,6 +11,8 @@ output:
       theme: cosmo
       highlight: tango
       code_folding: show
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -262,10 +264,19 @@ $y_{it} = z_{it}^T \alpha_i + x_{it}^T \beta + \epsilon_{it}$
 $y_{i} = Z_{i} \alpha_i + X_{i} \beta + \epsilon_{i}$,  
 where random effects $\alpha_i$, fixed effects $\beta$.  
 In its most general form, we assume that $E(\alpha_i)=0$ and $V(\alpha_i)=D$.  
+Furthermore, the subject effects and error term are assumed to be uncorrelated,
+$\mathrm{Cov}(\alpha_i, \hat{\epsilon_i})=0$.  
+As in the OLS regression, the MLEs of variance component are biased downward.  
+To mitigate the bias, employing 
+**<font color=deeppink>REstricted Maximum Likelihood</font>** 
+as default.  
 
 ## Error-components model
-A special case where $z_{it}=1$  and $V(\epsilon_i)=\sigma^2 I_i$.  
-
+Another name is **random intercept model**.  
+This model is a special case of LME model 
+where $z_{it}=1$  and $V(\epsilon_i)=\sigma^2 I_i$.  
+The model becomes,  
+$y_it=\alpha_i + x_{it}^T \beta + \epsilon_{it}$  
 
 ```{r}
 EC.fit <-
@@ -273,6 +284,50 @@ EC.fit <-
       data = train,
       random = ~ 1 | TOWNCODE)
 summary(EC.fit)
+intervals(EC.fit, which = "var-cov")
+```
+
+A hypothesis test to check whether the subject-specific effects are significant 
+or not is,  
+  
+$H_0 : \sigma^2_\alpha = 0$ , where $\mathrm{V}(\alpha_i)=\sigma^2_\alpha$.  
+
+Here we consider the following procedure,  
+
+* Run the pooled cross-sectional model $y_{it}=x_{it}^T \beta + \epsilon_{it}$
+and then calculate residuals $\\e_{it}$  
+
+* For each subject, compute an estimator of $\sigma^2_{\alpha}$,  
+$s_i=\frac{1}{T_i (T_i - 1)} \; (T_i^2 \bar{e_i}^2-\sum^{T_i}_{t=1}e_{ti}^2)$  
+
+* Compute test statistic(TS) and compare it with a quantile of an $\chi^2(1)$,  
+$\mathrm{TS}=\frac{1}{2n}(\frac{\sum^{n}_{i=1}s_i\sqrt{T_i(T_i-1)}}{N^-1\sum^{n}_{i=1}\sum^{T_i}_{t=1}e_{it}^2})^2$  
+
+```{r}
+# Pooling test utilizing train$rPool computed in section 8.1
+tcode <- unique(train$TOWNCODE)
+n <- length(tcode)
+N <- nrow(train)
+T <- rep(NA, n)
+s <- rep(NA, n)
+for (i in 1:n) {
+  tmp <- subset(train, TOWNCODE == tcode[i])
+  T[i] <- nrow(tmp)
+  s[i] <- (sum(tmp$rPool) ^ 2 - sum(tmp$rPool ^ 2)) / T[i] / (T[i] - 1)
+}
+(TS <- (sum(s * sqrt(T * (T - 1))) * N / sum(train$rPool ^ 2)) ^ 2 / 2 / n)
+```
+**TS** is enough large to reject the null hypothesis of constant intercept.  
+
+## Error-components model with AR1
+
+```{r}
+RE.fit <-
+  lme(AC ~ lnPCI + lnPPSM + YEAR,
+      data = train,
+      random = ~ 1 | TOWNCODE,
+      correlation = corAR1(form = ~ 1 | TOWNCODE))
+summary(RE.fit)
 ```
 
 
