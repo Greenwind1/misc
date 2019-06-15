@@ -1,0 +1,184 @@
+---
+title: "Bayesian Networks Modeling with R"
+author: "HoxoMaxwell"
+date: '`r Sys.Date()`'
+output: 
+   html_document:
+      number_sections: true
+      toc: true
+      toc_depth: 4
+      toc_float: true
+      theme: cosmo
+      highlight: tango
+      code_folding: show
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Introduction
+
+In this notebook, I will demonstrate how to use **bnlearn**.  
+The process is 2 step, a structure learning and a parameter learning.  
+
+# Load Library
+When you have a trouble installing `Rgraphviz`, see the following link.  
+http://bioconductor.org/packages/release/bioc/html/Rgraphviz.html
+
+```{r}
+library(bnlearn)
+library(DT)
+library(Rgraphviz)
+library(readxl)
+library(psych)
+library(forecast)
+library(ggplot2)
+```
+
+# Load Data
+```{r}
+all <- read_xls("../input/Sachs.SOM.Datasets/Data Files/2. cd3cd28icam2.xls")
+datatable(
+  all,
+  options = list(pageLength = 10, 
+                 autoWidth = TRUE,
+                 scrollX = TRUE,
+                 columnDefs = list(list(width = '90px',
+                                        targets = seq(1, dim(all)[2])))),
+  class = 'cell-border stripe'
+  )
+summary(all)
+```
+```{r}
+pairs.panels(
+  all,
+  breaks = 50,
+  bg = "gray",
+  alpha = 0.5,
+  col = "deeppink",
+  hist.col = "deeppink"
+  )
+```
+
+# Structure Learning
+## Fitting
+```{r}
+set.seed(2019)
+(hc.fit <- bnlearn::hc(all))
+```
+
+## Vizualization
+```{r}
+g <- empty.graph(names(all))
+arcs(g) <- hc.fit$arcs
+graphviz.plot(
+  g,
+  highlight = list(arcs = hc.fit$arcs, 
+                   nodes = names(all),
+                   col = "gray",
+                   textCol = "white",
+                   fill = "gray",
+                   lwd = 2),
+)
+```
+
+# Parameter Learning
+## Train and Test Data
+```{r}
+train <- all[1:round(nrow(all) * 3 / 4), ]
+test <- all[(round(nrow(all) * 3 / 4) + 1):nrow(all),]
+```
+
+## Structure + Parameter Learning
+```{r}
+hc.fit <- hc(train)
+```
+
+### Vizualization on Train Data
+- Structure is changed or not ?
+```{r}
+g <- empty.graph(names(all))
+arcs(g) <- hc.fit$arcs
+graphviz.plot(
+  g,
+  highlight = list(arcs = hc.fit$arcs, 
+                   nodes = names(all),
+                   col = "gray",
+                   textCol = "white",
+                   fill = "gray",
+                   lwd = 2),
+)
+```
+
+### Fitting and Accuracy
+```{r}
+fitted <- bn.fit(hc.fit, data = train, method = "mle")
+pred <- predict(fitted, "PKA", test)
+head(cbind(pred, test$PKA))
+accuracy(f = pred, x = test$PKA)
+test$PKA_PRED <- pred
+```
+
+### Plot of Actual and Predicted
+```{r}
+test %>% ggplot(mapping = aes(x = PKA, y = PKA_PRED)) +
+  geom_point(color = "deeppink", size = 1) +
+  stat_smooth(method = "lm", se = TRUE, color = "dimgray", size = 0.5) +
+  coord_equal() +
+  xlim(0, 6500) + ylim(0, 6500) +
+  xlab("PKA Actual") +
+  ylab("PKA Predicted")
+```
+
+# Parameter Learning on Transformed Data
+## Transformed Train and Test Data
+```{r}
+train.log <- log1p(all[1:round(nrow(all) * 3 / 4), ])
+test.log <- log1p(all[(round(nrow(all) * 3 / 4) + 1):nrow(all),])
+```
+
+## Structure + Parameter Learning
+```{r}
+hc.fit.log <- hc(train.log)
+```
+
+### Vizualization on Train Data
+- Structure is changed or not ?
+```{r}
+g <- empty.graph(names(all))
+arcs(g) <- hc.fit.log$arcs
+graphviz.plot(
+  g,
+  highlight = list(arcs = hc.fit.log$arcs, 
+                   nodes = names(all),
+                   col = "gray",
+                   textCol = "white",
+                   fill = "gray",
+                   lwd = 2),
+)
+```
+
+### Fitting and Accuracy
+```{r}
+fitted.log <- bn.fit(hc.fit.log, data = train.log, method = "mle")
+pred.log <- predict(fitted.log, "PKA", test.log)
+head(cbind(expm1(pred.log), expm1(test.log$PKA)))
+accuracy(f = expm1(pred.log), x = expm1(test.log$PKA))
+test.log$PKA_PRED <- pred.log
+```
+
+### Plot of Actual and Predicted
+```{r}
+test.log %>% ggplot(mapping = aes(x = expm1(PKA), y = expm1(PKA_PRED))) +
+  geom_point(color = "deeppink", size = 1) +
+  stat_smooth(method = "lm", se = TRUE, color = "dimgray", size = 0.5) +
+  coord_equal() +
+  xlim(0, 6500) + ylim(0, 6500) +
+  xlab("PKA Actual") +
+  ylab("PKA Predicted")
+```
+
+# EOF
