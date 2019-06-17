@@ -1,5 +1,6 @@
 ---
 title: "Static Bayesian Networks Modeling with R"
+subtitle: "chapter 2"
 author: "HoxoMaxwell"
 date: '`r Sys.Date()`'
 output: 
@@ -32,6 +33,7 @@ In this notebook, I will do some naive experiments with **bnlearn** package.
 library(bnlearn)
 library(DT)
 library(Rgraphviz)
+library(parallel)
 ```
 
 # Load Data
@@ -54,7 +56,14 @@ datatable(
 ## UnDirected Graph
 ```{r}
 ug <- empty.graph(names(marks))
-plot(ug)
+graphviz.plot(
+  ug,
+  layout = "fdp",
+  highlight = list(nodes = names(marks),
+                   col = "gray",
+                   textCol = "white",
+                   fill = "gray")
+)
 ```
 
 Undirected arcs are represented as their two possible orientations.  
@@ -76,7 +85,7 @@ graphviz.plot(
                    col = "gray",
                    textCol = "white",
                    fill = "gray",
-                   lwd = 2),
+                   lwd = 2)
 )
 ug
 ```
@@ -103,7 +112,7 @@ graphviz.plot(
                    col = "gray",
                    textCol = "white",
                    fill = "gray",
-                   lwd = 2),
+                   lwd = 2)
 )
 dag
 ```
@@ -127,7 +136,7 @@ graphviz.plot(
                    col = "gray",
                    textCol = "white",
                    fill = "gray",
-                   lwd = 2),
+                   lwd = 2)
 )
 ```
 
@@ -136,7 +145,7 @@ graphviz.plot(
 ### node.ordering
 ```{r}
 node.ordering(dag)
-node.ordering(ug)  # return Error
+# node.ordering(ug)  # return Error
 ```
 
 ### neighborhood (nbr), Markov blanket (mb)
@@ -153,7 +162,7 @@ parents(dag, "ALG")
 
 ## Scoring Criteria in Structure Learning
 ```{r}
-score(dag, data = marks, type = "loglik-g")
+bnlearn::score(dag, data = marks, type = "loglik-g")
 ```
 ```{r}
 dag.eq <- reverse.arc(dag, "STAT", "ANL")
@@ -164,13 +173,117 @@ graphviz.plot(
                    col = "gray",
                    textCol = "white",
                    fill = "gray",
-                   lwd = 2),
+                   lwd = 2)
 )
 all.equal(dag, dag.eq)
 ```
 ```{r}
-score(dag.eq, data = marks, type = "loglik-g")
+bnlearn::score(dag.eq, data = marks, type = "loglik-g")
 ```
 
+## V - structure
+```{r}
+vstructs(dag)
+vstructs(dag, moral = TRUE)
+```
+```{r}
+dag2 <- drop.arc(dag, from = "STAT", to = "ANL")
+dag3 <- drop.arc(dag, from = "ALG", to = "VECT")
+graphviz.plot(
+  dag2,
+  highlight = list(arcs = arcs(dag2), 
+                   nodes = nodes(dag2),
+                   col = "gray",
+                   textCol = "white",
+                   fill = "gray",
+                   lwd = 2)
+)
+graphviz.plot(
+  dag3,
+  highlight = list(arcs = arcs(dag3), 
+                   nodes = nodes(dag3),
+                   col = "gray",
+                   textCol = "white",
+                   fill = "gray",
+                   lwd = 2)
+)
+```
+
+### cpdag
+```{r}
+dag2.cpdag <- cpdag(dag2)
+graphviz.plot(
+  dag2.cpdag,
+  highlight = list(arcs = arcs(dag2.cpdag), 
+                   nodes = nodes(dag2.cpdag),
+                   col = "gray",
+                   textCol = "white",
+                   fill = "gray",
+                   lwd = 2)
+)
+```
+
+### moral
+```{r}
+dag2.moral <- moral(dag2)
+graphviz.plot(
+  dag2.moral,
+  highlight = list(arcs = arcs(dag2.moral), 
+                   nodes = nodes(dag2.moral),
+                   col = "gray",
+                   textCol = "white",
+                   fill = "gray",
+                   lwd = 2)
+)
+```
+
+# Structure Learning
+## Grow Shrink Algorithm
+* bnlearn can be implemented with parallel processing.
+```{r}
+cl <- makeCluster(4)
+bn.gs <- gs(x = marks, cluster = cl)
+graphviz.plot(
+  bn.gs,
+  highlight = list(arcs = arcs(bn.gs), 
+                   nodes = nodes(bn.gs),
+                   col = "gray",
+                   textCol = "white",
+                   fill = "gray",
+                   lwd = 2)
+)
+bn.gs
+stopCluster(cl)
+```
+
+## IAMB Algorithm
+```{r}
+bn.iamb <- iamb(marks)
+graphviz.plot(
+  bn.iamb,
+  highlight = list(arcs = arcs(bn.iamb), 
+                   nodes = nodes(bn.iamb),
+                   col = "gray",
+                   textCol = "white",
+                   fill = "gray",
+                   lwd = 2)
+)
+bn.iamb
+```
+
+## hc Algorithm
+```{r}
+bn.hc <- hc(marks)
+graphviz.plot(
+  bn.hc,
+  highlight = list(arcs = arcs(bn.hc), 
+                   nodes = nodes(bn.hc),
+                   col = "gray",
+                   textCol = "white",
+                   fill = "gray",
+                   lwd = 2)
+)
+bn.hc
+```
 
 # EOF
