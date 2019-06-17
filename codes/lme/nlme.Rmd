@@ -329,6 +329,46 @@ RE.fit <-
       correlation = corAR1(form = ~ 1 | TOWNCODE))
 summary(RE.fit)
 ```
+```{r}
+intervals(RE.fit, which = "var-cov")
+```
+* The argument **type = conditional** provides 
+the estimate of $\mathrm{R}_i$  
+* The argument **type = marginal** provides 
+the estimate of $\mathrm{V}_i=Z_iDZ_i^T+R_i$
+```{r}
+getVarCov(RE.fit)
+getVarCov(RE.fit, type = "conditional", individuals = "53")
+getVarCov(RE.fit, type = "marginal", individuals = "53")
+```
+
+## Likelihood Ratio Test
+```{r}
+EC.fit.ml <- lme(
+  AC ~ lnPCI + lnPPSM + YEAR,
+  data = train,
+  random = ~ 1 | TOWNCODE,
+  method = "ML"
+)
+RE.fit.ml <- lme(
+  AC ~ lnPCI + lnPPSM + YEAR,
+  data = train,
+  random = ~ 1 | TOWNCODE,
+  correlation = corAR1(form = ~ 1 | TOWNCODE),
+  method = "ML"
+)
+```
+```{r}
+anova(EC.fit.ml, RE.fit.ml)
+```
+
+## Hausman Test
+```{r}
+Var.FE <- vcov(FE.fit)[-(1:n), -(1:n)]
+Var.EC <- vcov(EC.fit)[-1, -1]  # exclude intercept
+```
+
+
 
 
 # EOF
