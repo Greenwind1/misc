@@ -254,6 +254,7 @@ graphviz.plot(
 )
 bn.gs
 stopCluster(cl)
+# bnlearn::score(bn.gs, data = marks, type = "bic-g")
 ```
 
 ## IAMB Algorithm
@@ -272,8 +273,10 @@ bn.iamb
 ```
 
 ## hc Algorithm
+* Learned structure from `hc` algorithm is the same as 
+the ones present in the original model from Whittaker(1990)  
 ```{r}
-bn.hc <- hc(marks)
+bn.hc <- hc(marks, restart = 10)
 graphviz.plot(
   bn.hc,
   highlight = list(arcs = arcs(bn.hc), 
@@ -284,6 +287,10 @@ graphviz.plot(
                    lwd = 2)
 )
 bn.hc
+bnlearn::score(bn.hc, data = marks, type = "bic-g")
 ```
+
+# Parameter Learning
+
 
 # EOF
