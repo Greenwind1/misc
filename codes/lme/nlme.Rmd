@@ -362,13 +362,18 @@ RE.fit.ml <- lme(
 anova(EC.fit.ml, RE.fit.ml)
 ```
 
-## Hausman Test
+# Prediction
+
+
+## the BLUP of random intercept $\hat{\alpha_i}$
 ```{r}
-Var.FE <- vcov(FE.fit)[-(1:n), -(1:n)]
-Var.EC <- vcov(EC.fit)[-1, -1]  # exclude intercept
+(alpha.BLUP <- ranef(EC.fit))
 ```
 
-
-
+## the BLUP of random intercept $\hat{\alpha_i}$
+```{r}
+(alpha.BLUP <- ranef(EC.fit))
+```
 
 # EOF
+
