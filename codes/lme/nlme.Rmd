@@ -363,16 +363,14 @@ anova(EC.fit.ml, RE.fit.ml)
 ```
 
 # Prediction
-
-
 ## the BLUP of random intercept $\hat{\alpha_i}$
 ```{r}
 (alpha.BLUP <- ranef(EC.fit))
 ```
 
-## the BLUP of random intercept $\hat{\alpha_i}$
+## the GLS of fixed effects $\hat{\beta_{GLS}}$
 ```{r}
-(alpha.BLUP <- ranef(EC.fit))
+(beta.GLS <- fixef(EC.fit))
 ```
 
 # EOF
