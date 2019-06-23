@@ -20,6 +20,8 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
+<img src="../../fig/book.jpg" width=30%>
+
 # Introduction
 
 There are many packages, **bnlearn**, **deal**, **pcalg** and **catnet**.  
@@ -291,6 +293,46 @@ bnlearn::score(bn.hc, data = marks, type = "bic-g")
 ```
 
 # Parameter Learning
+## Continuous Data
+### Fit Model
+* We can specify which estimator will be used via the `method` argument,
+**mle** or **bayes**.  
+* Only **mle** can be applicable for continuous data.  
+```{r}
+fit.hc <- bn.fit(bn.hc, data = marks)
+```
+
+### Check Distribution Parameter
+```{r}
+fit.hc$ALG
+```
+
+## Categorical Data
+### Discretize Data
+```{r}
+dmarks <- discretize(marks, method = "interval", breaks = 2)
+str(dmarks)
+```
+
+### Structure and Parameter Learning
+```{r}
+bn.hc.d <- hc(dmarks)
+graphviz.plot(
+  bn.hc.d,
+  highlight = list(arcs = arcs(bn.hc.d), 
+                   nodes = nodes(bn.hc.d),
+                   col = "gray",
+                   textCol = "white",
+                   fill = "gray",
+                   lwd = 2)
+)
+fit.hc.d <- bn.fit(bn.hc.d, data = dmarks)
+```
+
+### Check Discretized Distribution Parameter
+```{r}
+fit.hc.d$ALG
+```
 
 
 # EOF
