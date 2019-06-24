@@ -362,6 +362,24 @@ RE.fit.ml <- lme(
 anova(EC.fit.ml, RE.fit.ml)
 ```
 
+# Linear Mixed-Effects Model with MIssing Values
+## Random Sampling
+```{r}
+train_m <- train %>% 
+  sample_frac(size = 0.8) %>% 
+  arrange(TOWNCODE)
+```
+
+## Fitting
+```{r}
+EC.fit.m <-
+  lme(AC ~ lnPCI + lnPPSM + YEAR,
+      data = train_m,
+      random = ~ 1 | TOWNCODE)
+summary(EC.fit.m)
+intervals(EC.fit.m, which = "var-cov")
+```
+
 # Prediction
 ## the BLUP of random intercept $\hat{\alpha_i}$
 ```{r}
