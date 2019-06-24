@@ -35,6 +35,7 @@ library(CASdatasets)
 library(nlme)
 library(DT)
 library(gridExtra)
+library(caret)
 ```
 
 # Load Data
@@ -65,18 +66,12 @@ datatable(
 
 # Split Data into Train and Test
 ```{r}
-train <- usmassBI2 %>% filter(YEAR < 1998)
+usmassBI2$YEAR <- as.factor(usmassBI2$YEAR)
+train <- usmassBI2 %>% filter(YEAR != 1998)
 test <- usmassBI2 %>% filter(YEAR == 1998)
 ```
 
-# Data Transformation
-```{r}
-train$YEAR <- as.factor(train$YEAR)
-test$YEAR <- as.factor(test$YEAR)
-```
-
 # EDA
-
 ## YEAR vs Average Claim
 ```{r, fig.width=10}
 train %>% select(YEAR, AC, TOWNCODE) %>% 
@@ -343,6 +338,7 @@ getVarCov(RE.fit, type = "marginal", individuals = "53")
 ```
 
 ## Likelihood Ratio Test
+* anova test shows that Error-componets model without AR1 is better.
 ```{r}
 EC.fit.ml <- lme(
   AC ~ lnPCI + lnPPSM + YEAR,
@@ -362,7 +358,10 @@ RE.fit.ml <- lme(
 anova(EC.fit.ml, RE.fit.ml)
 ```
 
-# Linear Mixed-Effects Model with MIssing Values
+# Linear Mixed-Effects Model with Missing Values
+* LME can consider the case 
+where some temporal parts of the examples in the individuals are missing  
+
 ## Random Sampling
 ```{r}
 train_m <- train %>% 
@@ -380,7 +379,7 @@ summary(EC.fit.m)
 intervals(EC.fit.m, which = "var-cov")
 ```
 
-# Prediction
+# Estimate
 ## the BLUP of random intercept $\hat{\alpha_i}$
 ```{r}
 (alpha.BLUP <- ranef(EC.fit))
@@ -389,6 +388,87 @@ intervals(EC.fit.m, which = "var-cov")
 ## the GLS of fixed effects $\hat{\beta_{GLS}}$
 ```{r}
 (beta.GLS <- fixef(EC.fit))
+```
+
+## Residuals
+```{r}
+data.frame(res = residuals(EC.fit, type = "response")) %>% 
+  ggplot() +
+  geom_histogram(mapping = aes(x = res),
+                 binwidth = 2.5, position = "dodge", 
+                 color="deeppink", fill="deeppink", alpha=0.2)
+```
+
+# Model Evaluation
+```{r}
+test$lnPCI <- log(test$PCI)
+test$lnPPSM <- log(test$PPSM)
+test$YEAR <- as.factor(1997)
+```
+
+## Simple LMs Prediction
+```{r}
+pred.Pool <- predict.lm(Pool.fit, newdata = test)
+data.frame(Actual = test$AC, Pred = pred.Pool) %>% 
+  ggplot() +
+  geom_point(mapping = aes(x = Actual, y = Pred),
+             color = "deeppink", size=2) +
+  xlim(70, 200) + ylim(70, 200)+
+  coord_equal() +
+  ggtitle("Simple LMs Prediction", 
+          paste0("RMSE : ", round(RMSE(pred.Pool, test$AC), 3)))
+```
+
+## GLS AR(1) with REML
+```{r}
+pred.SCar <- predict(SCar.fit, newdata = test)
+data.frame(Actual = test$AC, Pred = pred.SCar) %>% 
+  ggplot() +
+  geom_point(mapping = aes(x = Actual, y = Pred),
+             color = "deeppink", size=2) +
+  xlim(70, 200) + ylim(70, 200)+
+  coord_equal() +
+  ggtitle("GLS AR(1) with REML", 
+          paste0("RMSE : ", round(RMSE(pred.SCar, test$AC), 3)))
+```
+
+## Fixed Effects Models
+```{r}
+pred.FE <- predict(FE.fit, newdata = test)
+data.frame(Actual = test$AC, Pred = pred.FE) %>% 
+  ggplot() +
+  geom_point(mapping = aes(x = Actual, y = Pred),
+             color = "deeppink", size=2) +
+  xlim(50, 200) + ylim(50, 200)+
+  coord_equal() +
+  ggtitle("Fixed Effects Models", 
+          paste0("RMSE : ", round(RMSE(pred.FE, test$AC), 3)))
+```
+
+## Error-components model
+```{r}
+pred.EC <- predict(EC.fit, newdata = test)
+data.frame(Actual = test$AC, Pred = pred.EC) %>% 
+  ggplot() +
+  geom_point(mapping = aes(x = Actual, y = Pred),
+             color = "deeppink", size=2) +
+  xlim(50, 200) + ylim(50, 200)+
+  coord_equal() +
+  ggtitle("Error-components model", 
+          paste0("RMSE : ", round(RMSE(pred.EC, test$AC), 3)))
+```
+
+## Error-components model with AR1
+```{r}
+pred.RE <- predict(RE.fit, newdata = test)
+data.frame(Actual = test$AC, Pred = pred.RE) %>% 
+  ggplot() +
+  geom_point(mapping = aes(x = Actual, y = Pred),
+             color = "deeppink", size=2) +
+  xlim(50, 200) + ylim(50, 200)+
+  coord_equal() +
+  ggtitle("Error-components model with AR1", 
+          paste0("RMSE : ", round(RMSE(pred.RE, test$AC), 3)))
 ```
 
 # EOF
