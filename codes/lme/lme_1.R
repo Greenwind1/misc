@@ -27,6 +27,16 @@ BtheB.long['time'] <-
         MARGIN = 1,
         function(x){as.integer(str_split(x, 'm')[[1]][1])})
 
+# https://hikaru1122.hatenadiary.jp/entry/2015/12/21/203157
+icc <- lmer(
+  formula = bdi ~ 1 +(1 | ID),
+  data = BtheB.long,
+  na.action = na.omit
+  )
+summary(icc)
+# 100.41 / (100.41 + 27.79) = 0.783 > 0.1
+
+
 # random effect on intercept
 lmer1 <- lmer(
   bdi ~ bdi.pre + time + treatment + drug + length + (1 | ID),
@@ -50,16 +60,25 @@ lm1 <- lm(
   data = BtheB.long,
 )
 summary(lm1)
-rmse(
-  as.numeric(lm1$fitted.values),
-  BtheB.long$bdi[!is.na(BtheB.long$bdi)]
-  )
 
-rmse(
-  as.numeric(predict(lmer1)),
-  BtheB.long$bdi[!is.na(BtheB.long$bdi)]
-)
+r2 <- function(pred, actual){
+  return(1 - sum((actual - pred) ^ 2) / sum((actual - mean(actual)) ^ 2))
+  }
 
+rmse(as.numeric(lm1$fitted.values),
+     BtheB.long$bdi[!is.na(BtheB.long$bdi)])
+r2(as.numeric(lm1$fitted.values),
+   BtheB.long$bdi[!is.na(BtheB.long$bdi)])
+
+rmse(as.numeric(predict(lmer1)),
+     BtheB.long$bdi[!is.na(BtheB.long$bdi)])
+r2(as.numeric(predict(lmer1)),
+   BtheB.long$bdi[!is.na(BtheB.long$bdi)])
+
+rmse(as.numeric(predict(lmer2)),
+     BtheB.long$bdi[!is.na(BtheB.long$bdi)])
+r2(as.numeric(predict(lmer2)),
+   BtheB.long$bdi[!is.na(BtheB.long$bdi)])
 
 data.frame(
   actual = BtheB.long$bdi[!is.na(BtheB.long$bdi)],
@@ -68,9 +87,9 @@ data.frame(
   lmer2 = as.numeric(predict(lmer2))
 ) %>% ggplot() +
   geom_point(mapping = aes(x = actual, y = lm1),
-             color = "slategray", size = 2, alpha = 0.5) +
+             color = "slategray", size = 1.5, alpha = 0.5) +
   geom_point(mapping = aes(x = actual, y = lmer1),
-             color = "slateblue", size = 2, alpha = 0.5) +
+             color = "slateblue", size = 2, alpha = 0.7, shape = 17) +
   geom_point(mapping = aes(x = actual, y = lmer2), 
-             color = "darkorange", size = 2, alpha = 0.5) +
+             color = "darkorange", size = 2, alpha = 0.7, shape = 18) +
   labs(x = "actual", y = "predicted", title = "Model Comparison")
