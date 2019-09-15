@@ -1,6 +1,8 @@
 library(HSAUR)
 library(stringr)
 library(lme4)
+library(Metrics)
+library(ggplot2)
 
 # Beating the Blues program...
 # drug : did the patient take anti-depressant drugs (No or Yes).
@@ -42,3 +44,33 @@ lmer2 <- lmer(
 anova(lmer1, lmer2)
 
 summary(lmer1)
+
+lm1 <- lm(
+  bdi ~ bdi.pre + time + treatment + drug + length,
+  data = BtheB.long,
+)
+summary(lm1)
+rmse(
+  as.numeric(lm1$fitted.values),
+  BtheB.long$bdi[!is.na(BtheB.long$bdi)]
+  )
+
+rmse(
+  as.numeric(predict(lmer1)),
+  BtheB.long$bdi[!is.na(BtheB.long$bdi)]
+)
+
+
+data.frame(
+  actual = BtheB.long$bdi[!is.na(BtheB.long$bdi)],
+  lm1 = as.numeric(lm1$fitted.values),
+  lmer1 = as.numeric(predict(lmer1)),
+  lmer2 = as.numeric(predict(lmer2))
+) %>% ggplot() +
+  geom_point(mapping = aes(x = actual, y = lm1),
+             color = "slategray", size = 2, alpha = 0.5) +
+  geom_point(mapping = aes(x = actual, y = lmer1),
+             color = "slateblue", size = 2, alpha = 0.5) +
+  geom_point(mapping = aes(x = actual, y = lmer2), 
+             color = "darkorange", size = 2, alpha = 0.5) +
+  labs(x = "actual", y = "predicted", title = "Model Comparison")
