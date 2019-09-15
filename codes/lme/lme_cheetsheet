@@ -1,0 +1,32 @@
+LME cheet sheet
+
+1. 
+  Compute CII with lmer or ICC::ICCest
+  and Design Effect with DE = 1 + (k - 1) * ICC
+  k: Average number of samples in each group
+
+2. Build naive LME model
+
+3. Try Centerization
+  cf. Shimizu Multi-Level Lecture Notes
+
+4. Consider `Serial Correlation`
+  cf. Computational Actuarial Science with R   chap.15
+
+
+
+*1 
+  ML: variance is not unbiased when sample size is low. 
+  REML: LSM + ML. variance is unbiased. 
+
+*2
+  Refer Shimizu_Multi-level-modeling-Lecture_Theory-Part
+  
+*3
+  When using ANCOVA, the number of explanatory variables become large (m - 1).
+  But in LME, only 1 variable added.
+  
+*4
+  When predicting, LME estimate posterior mean with empirical bayesian method.
+  cf. Doi_2007_Introduction-of-LME-for-Socal-Science
+  

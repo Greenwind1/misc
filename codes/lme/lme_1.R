@@ -1,3 +1,7 @@
+# -------------------------------------------------------------------
+# This Script is based on Mixed_Linear_Effect_Model_Tsuchiya.pdf
+# -------------------------------------------------------------------
+
 library(HSAUR)
 library(stringr)
 library(lme4)
@@ -61,6 +65,8 @@ lm1 <- lm(
 )
 summary(lm1)
 
+
+# Check goodness of fit
 r2 <- function(pred, actual){
   return(1 - sum((actual - pred) ^ 2) / sum((actual - mean(actual)) ^ 2))
   }
