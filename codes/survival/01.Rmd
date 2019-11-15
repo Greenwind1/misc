@@ -1,6 +1,6 @@
 ---
 title: "Survival Analysis"
-subtitle: "gehan data"
+subtitle: "Kaplan-Meier Analysis"
 author: "HoxoMaxwell"
 date: '`r Sys.Date()`'
 output: 
