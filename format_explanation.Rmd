@@ -1,0 +1,49 @@
+---
+title: "タイトル" #ページのタイトルで，h1要素としてbodyに入ります
+subtitle: "サブタイトル" #ページのサブタイトルで，h1.titleのすぐ下にh2として入ります
+title-prefix: "タイトルプリフィックス" #ウィンドウ上部枠に出てくるページ名タイトルの前に入ってきます
+pagetitle: "ページタイトル"  #ウィンドウ上部枠に出てくるページ名タイトルです
+author: "オーサー"  #著者で，複数名の時は'c("kosaki", "chitoge")'とすればOK
+author-meta: "オーサーメタ"  #head要素のmeta情報に書き込まれます
+date: "2017/01/17"  #日付です。決め打ちでもいいですし，rのコードでやる方法も
+abstract: "このドキュメントのアブストラクト。" #本文のすぐ上にアブストラクトとして差し込まれます
+output:
+  html_document:
+    # tocまわり
+    toc: FALSE  #toc(table of contents)を自動生成するかどうか。論理値。
+    toc_depth: 2  #tocで拾う見出しレベルを指定。数値。
+    toc_float: FALSE  #tocをページ冒頭ではなくサイドメニューとして浮かせて表示させるかどうか
+    number_sections: FALSE  #見出しに通し番号をつけるかどうか
+    # figまわり
+    fig_width: 7  #図の大きさ。確かインチ
+    fig_height: 5 #図の高さ。確かインチ
+    fig_retina: 2 #retinaディスプレイに対応させていくかどうか
+    fig_caption: TRUE #図にキャプションを付与していくかどうか
+    dev: "png"  #グラフィックデバイスを指定。この場合png形式。
+    # dfの処理
+    df_print: "default" #data.frameを表示させる際，kableとかtiblleとかpagedを指定。
+    # codeまわり
+    code_folding: "show" #デフォ値はc("none", "show", "hide") #デフォルトでRコード部分を表示させるかどうか。
+    code_download: FALSE  #Rmdソースコードをhtmlに埋め込んでDLできるようにするかどうか。論理値。
+    highlight: "default"  #シンタックスハイライトのテーマを指定。
+    # mathjax
+    mathjax: "default"  #mathjaxをどう含めるか。
+    # テーマ・書式まわり
+    smart: TRUE #出力のタイポグラフィを変換するかどうか。ハイフンをem-dashesにするかなど。論理値。
+    theme: "default"  #htmlのテーマを指定。NULLだとテーマ無し(プレーンなhtml)になる。
+    css: NULL #カスタムなcssを指定。
+    # ドキュメントまわり
+    templete: "default" #(Pandoc用)htmlテンプレートを指定。
+    include:  #ドキュメントにhtmlを差し込むかどうか。
+      - in_header: NULL #<head>内に差し込む内容。htmlファイルを指定。通常はメタデータやjsコードなど
+      - before_body: NULL #<body>の一番最初に差し込む内容。htmlファイルを指定。通常はheader的な要素など
+      - after_body: NULL  #<body>の一番最後に差し込む内容。htmlファイルを指定。通常はfooter的な要素など
+    # 拡張関連
+    extra_dependencies: NULL  #新たに追加したいような要素や，拡張要素を指定。
+    lib_dir: NULL #jqueryとか依存するHTMLライブラリをコピーするディレクトリを指定。デフォは(ファイル名)_filesってディレクトリへ。
+    # 出力制御関連
+    md_extentions: NULL #Pandoc Markdown拡張で追加するand/or削除する要素を指定
+    pandoc_args: NULL #Pandocに送る引数を指定。
+    keep_md: FALSE  #.mdファイルを残すかどうかを指定。論理値
+    self_contained: TRUE  #jsやcss，画像データなどをbase64でhtmlファイルに埋め込み，単一ファイルにするかどうかを指定。論理値
+---
