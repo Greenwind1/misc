@@ -1,0 +1,48 @@
+---
+title: ""
+subtitle: ""
+author: ""
+date: '`r Sys.Date()`'
+output: 
+   html_document:
+      number_sections: true
+      toc: true
+      toc_depth: 5
+      toc_float: true
+      theme: cosmo
+      highlight: tango
+      code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Load Libraries
+```{r, echo=TRUE}
+library(tidyverse)
+library(DT)
+library(stringr)
+library(lubridate)
+library(ggplot2)
+library(gridExtra)
+# source("")
+```
+
+# Load DataSets
+```{r}
+df <- read_csv("")
+```
+
+```{r}
+datatable(
+  data = df[1:50, ],
+  options = list(pageLength = 10, 
+                 autoWidth = TRUE,
+                 scrollX = TRUE,
+                 columnDefs = list(
+                   list(width = '175px',
+                        targets = seq(1, dim(df)[2])))),
+  class = 'cell-border stripe'
+  )
+```
