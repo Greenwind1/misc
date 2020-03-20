@@ -18,19 +18,31 @@ output:
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
-# Load Libraries
+# Preparations {.tabset .tabset-fade .tabset-pills}
+
+## Load libraries
 ```{r, echo=TRUE}
+# Data manipulation
 library(tidyverse)
 library(data.table)
 library(DT)
 library(stringr)
 library(lubridate)
+
+# Visualisation
 library(ggplot2)
-library(ggthemr)
 library(gridExtra)
 library(summarytools)
+
+# Interactivity
+library(crosstalk)
+library(plotly)
+
+# Parallel
+library('foreach')
+library('doParallel')
 ```
 
-# Load DataSets
+## Load DataSets
 ```{r}
 ```
