@@ -6,6 +6,7 @@ date: '`r Sys.Date()`'
 output: 
    html_document:
       number_sections: true
+      fig_caption: true
       toc: true
       toc_depth: 5
       toc_float: true
@@ -21,7 +22,7 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 # Preparations {.tabset .tabset-fade .tabset-pills}
 
 ## Load libraries
-```{r, echo=TRUE}
+```{r, echo=TRUE, message=FALSE}
 # Data manipulation
 library(tidyverse)
 library(data.table)
@@ -39,10 +40,15 @@ library(crosstalk)
 library(plotly)
 
 # Parallel
-library('foreach')
-library('doParallel')
+library(foreach)
+library(doParallel)
 ```
 
-## Load DataSets
+## Load DataSets {.tabset .tabset-fade .tabset-pills}
+### Train
+```{r}
+```
+
+### Test
 ```{r}
 ```
