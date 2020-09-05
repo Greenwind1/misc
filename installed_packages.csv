@@ -785,6 +785,7 @@ colorspace, rasterVis, httr, mapproj, vdiffr, svglite (>=
 "visdat","visdat","C:/Program Files/R/R-3.6.0/library","0.5.3",NA,"R (>= 3.2.2)","ggplot2, tidyr, dplyr, purrr, readr, magrittr, stats, tibble,
 glue",NA,"testthat, plotly (>= 4.5.6), knitr, rmarkdown, vdiffr,
 gdtools, spelling",NA,"MIT + file LICENSE",NA,NA,NA,NA,"no","3.6.2"
+"visreg","visreg","C:/Program Files/R/R-3.6.0/library","2.7.0",NA,NA,"lattice",NA,"rgl, MASS, survival, knitr, ggplot2, Matrix","nlme","GPL-3",NA,NA,NA,NA,"no","3.6.3"
 "vroom","vroom","C:/Program Files/R/R-3.6.0/library","1.2.0",NA,"R (>= 3.1)","bit64, crayon, glue, hms, lifecycle, Rcpp (>= 0.12.18.3),
 rlang (>= 0.4.2), tibble (>= 2.0.0), tidyselect, withr","progress (>= 1.2.1), Rcpp","bench (>= 1.1.0), covr, curl, dplyr, forcats, fs, ggplot2,
 knitr, patchwork, prettyunits, purrr, readr (>= 1.3.1),
