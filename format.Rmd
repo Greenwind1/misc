@@ -13,6 +13,8 @@ output:
       theme: cosmo
       highlight: tango
       code_folding: show
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -34,6 +36,7 @@ library(lubridate)
 library(ggplot2)
 library(gridExtra)
 library(broman)
+library(gtsummary)
 library(summarytools)
 
 # Interactivity
