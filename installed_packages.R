@@ -8,5 +8,5 @@ write.csv(installed, 'installed_packages.csv')
 # install
 installed <- read.csv('installed_packages.csv')
 baseR <- as.data.frame(installed.packages())
-toInstall <- setdiff(installedPreviously, baseR)
-install.packages(toInstall)
+toInstall <- setdiff(installed, baseR)
+install.packages(toInstall$Package)
