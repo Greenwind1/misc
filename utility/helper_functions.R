@@ -22,7 +22,7 @@ ymd.conv <- function(date.code) {
 vect.ymd.conv <- Vectorize(ymd.conv)
 
 
-view.table <- function(df, head.n = 100, pagelen = 10) {
+view.table <- function(df, head.n = 100, pagelen = 10, width = '175px') {
     datatable(
         df[1:head.n, ], 
         options = list(
@@ -30,7 +30,7 @@ view.table <- function(df, head.n = 100, pagelen = 10) {
             autoWidth = TRUE,
             scrollX = TRUE,
             columnDefs = list(list(
-                width = '175px',
+                width = width,
                 targets = seq(1, dim(df)[2]))
                 )
             ), 
