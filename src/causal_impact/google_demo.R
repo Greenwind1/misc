@@ -1,3 +1,6 @@
+# This script based on below document.
+# http://google.github.io/CausalImpact/CausalImpact.html#using-a-custom-model
+
 library(tidyverse)
 library(bsts)
 library(CausalImpact)
