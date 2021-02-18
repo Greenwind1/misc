@@ -2,6 +2,7 @@ library(zoo)
 library(tidyverse)
 library(bsts)
 library(CausalImpact)
+library(patchwork)
 
 
 # Load data: Shinjuku City data: PM 2.5 ----
@@ -63,18 +64,19 @@ dat_pm25_wk_causal <- dat_pm25_wk %>%
 # zoo: ordered observations which includes irregular time series.
 ts_pm25_wk <- zoo(dat_pm25_wk_causal$pm25, dat_pm25_wk_causal$week)
 
-# Model 1 fit ----
+# Model fit ----
 ss <- list()
 
 # Add local trend and weekly-seasonal
-ss <- AddLocalLinearTrend(ss, ts_pm25_wk)
+ss <- AddSemilocalLinearTrend(ss, ts_pm25_wk)
+# ss <- AddLocalLinearTrend(ss, ts_pm25_wk)
 ss <- AddSeasonal(ss, ts_pm25_wk, nseasons = 52)
 
-model1 <- bsts(ts_pm25_wk,
+model <- bsts(ts_pm25_wk,
                state.specification = ss,
                niter = 1500, burn = 500)
-plot(model1, main = "Local trend and seasonal Model")
-plot(model1, "components")
+plot(model, main = "Local trend and seasonal Model")
+plot(model, "components")
 
 # Causal Impact for quarantine ----
 pre.period <- as.Date(c("2016-04-04", "2020-04-07"))
@@ -85,11 +87,70 @@ dat_pm25_wk_causal_post <- dat_pm25_wk %>%
   filter(week >= as.Date("2020-04-07"))
 
 # Do CausalImpact
-impact <- CausalImpact(bsts.model = model1,
+impact <- CausalImpact(bsts.model = model,
                        post.period.response = dat_pm25_wk_causal_post$pm25, 
                        alpha = 0.05)
 plot(impact)
 
-summary(impact)
+impact.res <- as.data.frame(impact$series)
 
+p1 <- impact.res %>% 
+  mutate(Date = as.Date(rownames(impact.res))) %>% 
+  ggplot() +
+  geom_rect(aes(xmin = as.Date("2020-04-07"), xmax = as.Date("2021-02-22"),
+                ymin = 0, ymax = max(response) + 5), 
+            fill = "gray", color = NA, alpha = 0.3) +
+  geom_point(mapping = aes(x = Date, y = response),
+             size = 0.5, color = "darkgoldenrod3", alpha = 0.8) +
+  geom_line(mapping = aes(x = Date, y = response),
+             color = "darkgoldenrod3", alpha = 0.5) + 
+  annotate("text", x = as.Date("2020-04-07"), y = 80, 
+           label = "Start of 1st SoE", color = "tomato", size = 3) +
+  labs(title = "Causal Impact Analysis for Shinjuku PM2.5",
+       subtitle = "pale gray is the period after the 1st SoE.",
+       x = "Date", y = "PM2.5") +
+  theme_minimal()
+
+p2 <- impact.res %>% 
+  mutate(Date = as.Date(rownames(impact.res))) %>% 
+  ggplot() +
+  geom_rect(aes(xmin = as.Date("2020-04-07"), xmax = as.Date("2021-02-22"),
+                ymin = 0, ymax = max(response) + 5), 
+            fill = "gray", color = NA, alpha = 0.3) +
+  geom_point(mapping = aes(x = Date, y = response),
+             size = 0.5, color = "darkgoldenrod3", alpha = 0.8) +
+  geom_line(mapping = aes(x = Date, y = response),
+            color = "darkgoldenrod3", alpha = 0.5) + 
+  geom_point(mapping = aes(x = Date, y = point.pred),
+             size = 1, color = "violetred2", alpha = 0.8) +
+  geom_ribbon(aes(x = Date, ymin = point.pred.lower, ymax = point.pred.upper), 
+              fill = "violetred1", alpha = 0.2) +
+  labs(title = "1 step forward prediction (inc. conterfactual period)",
+       x = "Date", y = "PM2.5") +
+  theme_minimal()
+
+p3 <- impact.res %>% 
+  mutate(Date = as.Date(rownames(impact.res))) %>% 
+  ggplot() +
+  geom_rect(aes(xmin = as.Date("2020-04-07"), xmax = as.Date("2021-02-22"),
+                ymin = min(point.effect.lower), 
+                ymax = max(point.effect.upper)), 
+            fill = "gray", color = NA, alpha = 0.3) +
+  geom_point(mapping = aes(x = Date, y = point.effect),
+             size = 1, color = "darkviolet", alpha = 0.8) +
+  geom_ribbon(aes(x = Date, 
+                  ymin = point.effect.lower, ymax = point.effect.upper), 
+              fill = "darkviolet", alpha = 0.2) +
+  labs(title = "pointwise causal effect",
+       x = "Date", y = "PM2.5") +
+  theme_minimal()
+
+p1 / p2 / p3
+
+ggsave("fig/Sinjuku_pm25_SoE_CausalImpact.png", 
+       width = 10, height = 15, dpi = 300)
+
+summary(impact)
 summary(impact, "report")
+
+
