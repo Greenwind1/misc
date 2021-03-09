@@ -75,6 +75,34 @@ view.table(data)
 
 # Computing Bayes Factor {.tabset .tabset-fade .tabset-pills}
 ```{r}
-
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
+Sys.setenv(LOCAL_CPPFLAGS = '-march=corei7')
+```
+```{r}
+data.list <- list(
+   N = nrow(data),
+   d1 = as.integer(data$Light == "LD"),  # light/dark
+   d2 = as.integer(data$Light == "DM"),  # dim light at night
+   d3 = as.integer(data$Light == "LL"),  # light/light
+   Y = data$BMGain
+)
 ```
 
+```{r}
+ stan.result <- stan(
+     file = ".src/stan/model/BF_model1.stan",
+     data = data.list, 
+     seed = 2020, 
+     chains = 4, 
+     iter = 50000,
+     warmup = 1000,
+     # iter = 10,
+     # warmup = 2,
+     thin = 1
+ )
+```
+
+```{r}
+
+```
