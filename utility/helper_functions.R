@@ -2,7 +2,6 @@ library(stringr)
 library(DT)
 
 
-
 ymd.conv <- function(date.code) {
     if (is.na(date.code)) return(NA)
     if (str_sub(date.code, end = 1) == 3) {
@@ -23,6 +22,7 @@ vect.ymd.conv <- Vectorize(ymd.conv)
 
 
 view.table <- function(df, head.n = 100, pagelen = 10, width = '175px') {
+    head.n <- ifelse(head.n > nrow(df), nrow(df), head.n)
     datatable(
         df[1:head.n, ], 
         options = list(

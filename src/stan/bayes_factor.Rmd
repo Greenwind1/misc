@@ -1,7 +1,7 @@
 ---
-title: ""
-subtitle: ""
-author: ""
+title: "Bayes Factor"
+subtitle: "based on Okada. 2014 (http://team1mile.com/sjpr61-1/okada.pdf)"
+author: "Maxwell"
 date: '`r Sys.Date()`'
 output: 
    html_document:
@@ -21,9 +21,7 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
-# Preparations {.tabset .tabset-fade .tabset-pills}
-
-## Load libraries
+# Load libraries
 ```{r, echo=TRUE, message=FALSE}
 # Data manipulation
 library(tidyverse)
@@ -31,6 +29,7 @@ library(data.table)
 library(DT)
 library(stringr)
 library(lubridate)
+library(Lock5Data)
 
 # Visualisation
 library(ggplot2)
@@ -61,13 +60,21 @@ library(bayesplot)
 
 library(broom)
 library(broom.mixed)
+
+# Custom Functions
+source("./utility/helper_functions.R")
 ```
 
-## Load DataSets {.tabset .tabset-fade .tabset-pills}
-### Train
+# Load DataSets {.tabset .tabset-fade .tabset-pills}
+Lock5Data::LightatNight
 ```{r}
+data <- LightatNight4Weeks
+view.table(data)
 ```
 
-### Test
+
+# Computing Bayes Factor {.tabset .tabset-fade .tabset-pills}
 ```{r}
+
 ```
+
