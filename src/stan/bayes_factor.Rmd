@@ -1,6 +1,6 @@
 ---
 title: "Bayes Factor"
-subtitle: "based on Okada. 2014 (http://team1mile.com/sjpr61-1/okada.pdf)"
+subtitle: "based on Okada. 2014"
 author: "Maxwell"
 date: '`r Sys.Date()`'
 output: 
@@ -20,6 +20,8 @@ editor_options:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
+
+This experimental script is based on http://team1mile.com/sjpr61-1/okada.pdf.
 
 # Load libraries
 ```{r, echo=TRUE, message=FALSE}
@@ -90,16 +92,16 @@ data.list <- list(
 ```
 
 ```{r}
- stan.result <- stan(
-     file = ".src/stan/model/BF_model1.stan",
-     data = data.list, 
-     seed = 2020, 
-     chains = 4, 
-     iter = 50000,
-     warmup = 1000,
-     # iter = 10,
-     # warmup = 2,
-     thin = 1
+stan.result <- stan(
+   file = ".src/stan/model/BF_model1.stan", 
+   data = data.list,
+   seed = 2020,
+   chains = 4,
+   iter = 50000,
+   warmup = 1000,
+   # iter = 10,
+   # warmup = 2,
+   thin = 1
  )
 ```
 
