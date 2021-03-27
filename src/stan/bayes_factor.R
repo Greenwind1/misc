@@ -87,7 +87,7 @@ f1 <- mean(mcmc.sample[["f1"]])
 f2 <- mean(mcmc.sample[["f2"]])
 
 BF1u <- f1 / (1 / 6)
-BF2u <- f1 / (1 / 3)
+BF2u <- f2 / (1 / 3)
 
 cat("BF1u:", BF1u, "\n")  # 5.601
-cat("BF2u:", BF2u)  # 2.8005
+cat("BF2u:", BF2u)  # 2.823
