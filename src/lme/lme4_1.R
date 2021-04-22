@@ -8,6 +8,7 @@ library(lme4)
 library(Metrics)
 library(ggplot2)
 
+# Dataset ----
 # Beating the Blues program...
 # drug : did the patient take anti-depressant drugs (No or Yes).
 # length : the length of the current episode of depression.
@@ -31,6 +32,8 @@ BtheB.long['time'] <-
         MARGIN = 1,
         function(x){as.integer(str_split(x, 'm')[[1]][1])})
 
+
+# ICC(1, 1) ----
 # https://hikaru1122.hatenadiary.jp/entry/2015/12/21/203157
 icc <- lmer(
   formula = bdi ~ 1 +(1 | ID),
@@ -41,6 +44,7 @@ summary(icc)
 # 100.41 / (100.41 + 27.79) = 0.783 > 0.1
 
 
+# LME ----
 # random effect on intercept
 lmer1 <- lmer(
   bdi ~ bdi.pre + time + treatment + drug + length + (1 | ID),
@@ -66,7 +70,7 @@ lm1 <- lm(
 summary(lm1)
 
 
-# Check goodness of fit
+# Check goodness of fit ----
 r2 <- function(pred, actual){
   return(1 - sum((actual - pred) ^ 2) / sum((actual - mean(actual)) ^ 2))
   }
