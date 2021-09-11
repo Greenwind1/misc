@@ -52,6 +52,8 @@ datsel <- filter(doge1, between(date, start_analysis, end_analysis))
 fit1 <- fit_model(datsel, tweets[1])
 fit2 <- fit_model(datsel, tweets[1], use_cov = FALSE)
 
+summary(fit1$model$bsts.model)
+
 plot(fit1) +
     xlab('Time') +
     ylab('Price') +
