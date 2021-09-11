@@ -5,7 +5,6 @@
 # Covariates are input by adding them next to the target column.
 
 library('dplyr')
-library('riingo')
 library('ggplot2')
 library('CausalImpact')
 
