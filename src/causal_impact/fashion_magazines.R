@@ -5,12 +5,11 @@ library(CausalImpact)
 library(patchwork)
 
 
-# Load data: Shinjuku City data: PM 2.5 ----
+# Load data ----
 dat <- read_csv("input/fashion_magazines.csv")
 dat <- dat %>% mutate(PERIOD = as.Date(PERIOD))
 
-# EDA and Preprocessing ----
-# Visual plot to see data trend
+# Visual plot to see data trend ----
 ggplot(dat, aes(x = PERIOD, y = VOGUE_JAPAN))+
   geom_point(color = "black", alpha = 0.7) +
   geom_line(color = "black", alpha = 0.7) +
@@ -18,13 +17,13 @@ ggplot(dat, aes(x = PERIOD, y = VOGUE_JAPAN))+
   theme_minimal()
 ggsave("fig/fashion_magazines_01.png", dpi = 150)
 
-# Post Intervention Period is filled with NA
+# Create ts zoo data ----
+# Post Intervention Period is filled with NA for bsts
 zoo_causal <- dat %>% 
   mutate(
     VOGUE_JAPAN = replace(VOGUE_JAPAN, PERIOD >= as.Date("2020-01-01"), NA)
     )
 
-# Create ts zoo data
 # zoo: ordered observations which includes irregular time series.
 zoo_causal <- zoo(zoo_causal$VOGUE_JAPAN, zoo_causal$PERIOD)
 
@@ -33,8 +32,7 @@ ss <- list()
 
 # Add local trend and weekly-seasonal
 ss <- AddSemilocalLinearTrend(ss, zoo_causal)
-# ss <- AddLocalLinearTrend(ss, ts_pm25_wk)
-ss <- AddSeasonal(ss, zoo_causal, nseasons = 4)
+ss <- AddSeasonal(ss, zoo_causal, nseasons = 4)  # quarterly
 
 model <- bsts(zoo_causal,
               state.specification = ss, 
@@ -42,7 +40,7 @@ model <- bsts(zoo_causal,
 plot(model, main = "Local trend and seasonal Model")
 plot(model, "components")
 
-# Causal Impact for SoE ----
+# Causal Impact of SoE ----
 pre.period <- as.Date(c("2015-01-01", "2020-01-01"))
 post.period <- as.Date(c("2020-01-01", "2021-04-30"))
 
@@ -55,6 +53,7 @@ impact <- CausalImpact(bsts.model = model,
                        alpha = 0.05)
 plot(impact)
 
+# Summarize via visualization ----
 impact.res <- as.data.frame(impact$series)
 
 p1 <- impact.res %>% 
@@ -109,5 +108,3 @@ ggsave("fig/fashion_magazines_02.png", width = 8, height = 8, dpi = 150)
 
 summary(impact)
 summary(impact, "report")
-
-
