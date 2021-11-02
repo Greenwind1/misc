@@ -29,6 +29,7 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 library(tidyverse)
 library(data.table)
 library(DT)
+library(gt)
 library(stringr)
 library(lubridate)
 
