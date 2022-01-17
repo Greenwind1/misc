@@ -30,6 +30,7 @@ knitr::opts_knit$set(root.dir = "./")
 library(tidyverse)
 library(data.table)
 library(DT)
+library(gt)
 library(stringr)
 library(lubridate)
 

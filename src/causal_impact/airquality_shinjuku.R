@@ -73,8 +73,8 @@ ss <- AddSemilocalLinearTrend(ss, ts_pm25_wk)
 ss <- AddSeasonal(ss, ts_pm25_wk, nseasons = 52)
 
 model <- bsts(ts_pm25_wk,
-               state.specification = ss,
-               niter = 1500, burn = 500)
+              state.specification = ss, 
+              niter = 1500, burn = 500)
 plot(model, main = "Local trend and seasonal Model")
 plot(model, "components")
 

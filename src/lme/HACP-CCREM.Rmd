@@ -1,0 +1,231 @@
+---
+title: "Hierarchical Age-Period-Cohort model"
+author: "HoxoMaxwell"
+date: '`r Sys.Date()`'
+output: 
+   html_document:
+      number_sections: true
+      toc: true
+      toc_depth: 5
+      toc_float: true
+      theme: cosmo
+      highlight: tango
+      code_folding: show
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Introduction
+https://statsnotebook.io/blog/analysis/age_period_cohort_analysis/
+
+Epidemiologists and social scientists often apply Age-Period-Cohort (APC) analysis to disentangle trends of social/health behvaiors into three components.
+
+- Age effect - This represents the effect associated with chronological age. For example, young people are more likely to use cannabis for recreational purpose than older people.  
+
+- Period effect - This represents the effect associated with time period that affects all age groups at the same time. For example, changes in legislation with regards to recreational cannabis use is like to influence behaviors across all age group.  
+
+- Cohort effect - Epidemiologists and social scientists are often interested in birth cohort, who experienced the same historical and social events at the same age. Cohort effect thus is often used to refered to the variation due to these unique experiences. For example, the baby boomer generation has a higher rate of cannabis use compared to subsequent cohort at the same age.  
+
+In this tutorial, we will use a simulalated data based on a nationally representative dataset in Australia and disentangle changes in cannabis use trends into age, period and cohort effect. The challenge of age-period-cohort analysis (APC analysis) has long been identified because the cohort variabls is often directly calcuated from age and period such that
+
+Cohort = Period - Age
+
+In this tutorial, we will use the `Hierarchical APC-Cross-Classified Random Effect Model` (`HAPC-CCREM`; Yang et al, 2008) to test the age, period and cohort effect on weekly cannabis use. This model is a type of mixed effect model in which the Age effect is entered as a fixed effect and both Cohort and Period are entered as random effects. In this setup, the HAPC-CCREM is not different from the typical application of mixed model in which the random effects often represent the contextual effects that influence the outcome. In this case, cohort represents the contextual effect of experiencing the same social and historical context at the same age within the same birth cohort and period effect represents the contextual effect of experiencing the same social and historical context at a certain time period that affects all age group.
+
+
+# Library
+```{r}
+library(tidyverse)
+library(patchwork)
+library(lme4)
+library(lmerTest)
+library(emmeans)
+# library(equatiomatic)
+```
+
+
+# Dataset
+![](https://statsnotebook.io/blog/analysis/img/apc_data.png)
+
+1. `Sex` - 1: Male; 2: Female  
+2. `HighSchool` - 0: Not completed high school; 1: completed high school  
+3. `remoteness` - 1: Major cities; 2: Inner regional area; 3: Remote area  
+4. `Year (Period)` - Year the data was collected: 2001/2004/2007/2010/2013/2016/2019  
+5. `cohort_cat (Cohort)` - Birth cohort: 1: 1941/50; 2: 1951/60; 3: 1961/70; 4: 1971/80; 5: 1981/90; 6: 1991/2000  
+6. `weekly_cannabis` - Weekly cannabis use: 0: No; 1: Yes  
+7. `AgeR (Age)` - Recoded age. The value is calculated by dividing the actual age by 10. This is to facilitate model converence when we add the quadratic term of age into the model.  
+
+```{r}
+currentDataset <-read_csv(
+  "https://statsnotebook.io/blog/data_management/example_data/APC_cannabis.csv"
+  )
+```
+
+
+# Explanatory Variables
+```{r}
+# Sex, HighSchool, Year, cohort_cat and remoteness as factor variable
+currentDataset$Sex <- factor(currentDataset$Sex, exclude = c("", NA))
+currentDataset$HighSchool <- factor(currentDataset$HighSchool, 
+                                    exclude = c("", NA))
+currentDataset$Year <- factor(currentDataset$Year, exclude = c("", NA))
+currentDataset$cohort_cat <- factor(currentDataset$cohort_cat, 
+                                    exclude = c("", NA))
+currentDataset$remoteness <- factor(currentDataset$remoteness, 
+                                    exclude = c("", NA))
+
+# Center age at 20 years old and create the quadratic term
+currentDataset$AgeR <- currentDataset$AgeR - 2
+currentDataset$AgeR2 <- currentDataset$AgeR ^ 2
+```
+
+
+# APC model
+
+At level 1, we have  
+  
+$logit P({cannabis}_{ijk}) = b_{0jk} + b_{1} {\cdot} Age_{ijk} + b_{2} {\cdot} Age^{2}_{ijk} + b_{3} {\cdot} Female_{ijk} + b_{4} {\cdot} Inner regional_{ijk} + b_{5} {\cdot} Remote area_{ijk} + b_{6} {\cdot} High School_{ijk}$
+  
+  
+At level 2, we have  
+  
+$b_{0jk} = \gamma_0+ u_{0j} + v_{0k}$
+  
+  
+where, the index $ijk$ is for individual $i$ in period $j$ and cohort $k$.  
+
+## APC LME (HAPC-CCREM)
+```{r}
+formula.lme1 <- 
+    weekly_cannabis ~ 
+    AgeR + AgeR2 + Sex + remoteness + HighSchool + 
+    (1 | cohort_cat) + (1 | Year)
+
+lme1 <- glmer(formula = formula.lme1,
+              family = binomial, 
+              data = currentDataset)
+summary(lme1)
+# confint(lme1, level = 0.95, method = "Wald")
+
+# Compute odds ratio
+se <- sqrt(diag(vcov(lme1)))
+z <- -qnorm((1 - 0.95) / 2)
+exp(cbind(Est = fixef(lme1), 
+          "2.5%"  = fixef(lme1) - z * se, 
+          "97.5%" = fixef(lme1) + z * se))  # odds
+```
+
+Age is strongly associated with reduced odds of using cannabis weekly. The quadratic term of age is not statistically significant and is very close to zero.
+
+## Visualize the effect of age on cannabis use
+```{r}
+Age_eff <- data.frame()
+
+# Age is centred at 20 years old, and is divided by 10.
+# (i.e. 0 means the participant is 20 years old, 1 means 30 years old, etc)
+# We use a for loop to calculate the probability of weekly cannabis use 
+# when the age "score" is between 0 and 5, with 0.5 increment.
+# The calculated probability is stored in a new data frame Age_eff
+
+for (i in 0:10) {
+  emm <- emmeans(lme1,  ~ AgeR + AgeR2,
+                 at = list(AgeR = i / 2, AgeR2 = (i / 2) ^ 2), 
+                 type = "response", 
+                 level = 0.95)
+  Age_eff = rbind(data.frame(summary(emm)), Age_eff)
+}
+Age_eff
+```
+```{r, fig.width=8, fig.height=5}
+p1 <- ggplot(Age_eff, aes(x = ((AgeR + 2) * 10), y = prob)) +
+    geom_point(color = "deeppink", size = 2) + 
+    geom_errorbar(aes(ymin = asymp.LCL, ymax = asymp.UCL), 
+                  width = 1, color = "slategray", alpha = 0.7) +
+    theme_minimal() +
+    theme(axis.title = element_text(size = 12, color = "slategray"), 
+          axis.text = element_text(size = 10, color = "slategray")) +
+    labs(x = "Age", y = "Probability of weeky cannabis use")
+p1
+```
+
+
+# LME w/o Period and Cohort
+```{r}
+formula.glm1 <- 
+    weekly_cannabis ~ AgeR + AgeR2 + Sex + remoteness + HighSchool
+
+glm1 <- glm(formula = formula.glm1,
+            family = binomial, 
+            data = currentDataset)
+
+summary(glm1)
+confint(glm1, level = .95, method = "Wald")
+```
+
+## Visualize the effect of period and cohort on cannabis use
+```{r}
+# Extract the random effect
+u0 <- ranef(lme1, condVar = TRUE)
+attributes(u0$Year)
+names(u0$Year) <- "est"
+names(u0$cohort_cat) <- "est"
+
+# Extract the standard error
+period_eff <- data.frame(
+    est = u0$Year, 
+    se = sqrt(attr(u0[[1]], "postVar")[1, , ]), 
+    period = c(2001, 2004, 2007, 2010, 2013, 2016, 2019)
+    )
+
+cohort_eff <- data.frame(
+    est = u0$cohort_cat, 
+    se = sqrt(attr(u0[[2]], "postVar")[1, , ]), 
+    cohort = c("1941/50",
+               "1951/60",
+               "1961/70",
+               "1971/80",
+               "1981/90",
+               "1991/2000")
+  )
+
+period_eff$upper <- period_eff$est + 1.96 * period_eff$se
+period_eff$lower <- period_eff$est - 1.96 * period_eff$se
+cohort_eff$upper <- cohort_eff$est + 1.96 * cohort_eff$se
+cohort_eff$lower <- cohort_eff$est - 1.96 * cohort_eff$se
+```
+
+```{r, fig.width=8, fig.height=10}
+p2 <- ggplot(period_eff, aes(x = period, y = est)) +
+    geom_point(color = "deeppink") + 
+    geom_errorbar(aes(ymin = lower, ymax = upper), 
+                  width = .2, color = "slategray", alpha = 0.7) +
+    theme_minimal() + 
+    theme(axis.title = element_text(size = 10, color = "slategray"), 
+          axis.text = element_text(size = 8, color = "gray")) +
+    labs(x = "Year (Period)", y = "Conditional log odds \nof the period effect")
+
+p3 <- ggplot(cohort_eff, aes(x = cohort, y = est)) +
+    geom_point(color = "deeppink") + 
+    geom_errorbar(aes(ymin = lower, ymax = upper), 
+                  width = .2, color = "slategray", alpha = 0.7) +
+    theme_minimal() + 
+    theme(axis.title = element_text(size = 10, color = "slategray"), 
+          axis.text = element_text(size = 8, color = "gray")) +
+    labs(x = "Cohort", y = "Conditional log odds \nof the cohort effect")
+
+p2 / p3
+```
+
+
+# Model Comparison
+```{r}
+anova(lme1, glm1)
+```
+
+
+# EOF
+
