@@ -19,6 +19,7 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+knitr::opts_knit$set(root.dir = "./")
 ```
 
 # Preparations {.tabset .tabset-fade .tabset-pills}
@@ -36,9 +37,9 @@ library(lubridate)
 library(ggplot2)
 library(patchwork)
 library(broman)
-library(gtsummary)
-library(summarytools)
+library(sf)  # map
 library(leaflet)  # map
+library(mapview)  # map
 
 # Interactivity
 library(plotly)
@@ -49,25 +50,35 @@ library(purrr)
 library(foreach)
 library(doParallel)
 
-# Statiscis Analysis
+# Statistics Analysis
+# Descriptive Statistics
+library(gtsummary)
+library(summarytools)
 library(psych)
 library(naniar)
+# Multi Level Model
 library(lme4)
 library(lmerTest)
 library(coefplot)
-
+# stan
 library(rstan)
 library(bayesplot)
-
 library(broom)
 library(broom.mixed)
 ```
 
-## Load DataSets {.tabset .tabset-fade .tabset-pills}
-### Train
-```{r}
+## Environment
+```{r Environment}
+# rgb(73, 81, 112, maxColorValue = 255): "#495170"
+# rgb(102, 103, 103, maxColorValue = 255): "#666767"
+col1 <- "#495170"
+col2 <- "#f7be16"
+col3 <- "#fa8072"
+scale.col1 <- c(col1, "deeppink")
+scale.col2 <- c(col1, "#9845B8", "#20314E", "deeppink")
 ```
 
-### Test
-```{r}
+# Load DataSets {.tabset .tabset-fade .tabset-pills}
+```{r Load DataSets}
+
 ```
