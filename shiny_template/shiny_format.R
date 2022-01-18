@@ -8,7 +8,7 @@ library(shiny)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #   ui: how your app should look
 #   https://mastering-shiny.org/basic-ui.html#inputs
-#   - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #   titlePanel; mainPanel; tabsetPanel; tabPanel; 
 #   sidebarLayout; sidebarPanel; 
 #   selectInput; radioButtons; checkboxGroupInput;
@@ -33,7 +33,8 @@ ui <- fluidPage(
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #   server: how it should behave
-#   - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#   https://mastering-shiny.org/basic-reactivity.html#the-server-function
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #   renderText; renderPrint; 
 #   renderTable; renderDataTable;
 #   renderPlot; renderPlotly;
