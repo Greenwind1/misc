@@ -57,8 +57,8 @@ ui <- fluidPage(
             selectInput(inputId = "nut.col", 
                         label = "Type of Nutrition",
                         choices = colnames(data.df)[8:ncol(data.df)]),
+            br(), br(), br(), br(), br(),
             textOutput("summary"),
-            br(),
             leafletOutput("map", width = 800, height = 600),
         ),
     )
@@ -81,7 +81,7 @@ server <- function(input, output) {
         pal <- colorNumeric(
             palette = c(journal.col1, "#FFFFFF", journal.col3),
             domain = plot.df[, input$nut.col],
-            reverse = T
+            reverse = F
         )
         
         leaflet(data = plot.sf) %>%
@@ -93,6 +93,8 @@ server <- function(input, output) {
                 fillOpacity = 0.7,
                 stroke = TRUE, color = "dimgray",
                 weight = 1, dashArray = 4, opacity = 0.2,
+                popup = paste(plot.df[, "city"], ": ", 
+                              plot.df[, input$nut.col])
             ) %>% 
             addLegend(
                 position = "topleft",
@@ -100,7 +102,7 @@ server <- function(input, output) {
                 # bins = 20, 
                 opacity = 0.8,
                 labFormat = labelFormat(
-                    transform = function(x) sort(x, decreasing = TRUE),
+                    transform = function(x) sort(x, decreasing = F),
                     digits = 1
                 ),
                 title = ""
@@ -111,3 +113,7 @@ server <- function(input, output) {
 
 # shinyApp ----
 shinyApp(ui = ui, server = server)
+
+
+# library(rsconnect)
+# rsconnect::deployApp("../Nutrition_map")

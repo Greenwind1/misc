@@ -5,7 +5,7 @@ account: greenwind1
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 5467112
-bundleId: 5484271
+bundleId: 5484459
 url: https://greenwind1.shinyapps.io/Nutrition_map/
-when: 1642584994.43503
-lastSyncTime: 1642584994.43503
+when: 1642588130.5338
+lastSyncTime: 1642588130.5338
