@@ -63,3 +63,10 @@ server <- function(input, output, session) {
 #   ui + server
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 shinyApp(ui, server)
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#   deploy to shinyapp.io
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# library(rsconnect)
+# rsconnect::deployApp("../app_name")
