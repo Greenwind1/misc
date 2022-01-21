@@ -19,7 +19,7 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
-knitr::opts_knit$set(root.dir = "./")
+knitr::opts_knit$set(root.dir = ".")
 ```
 
 # Preparations {.tabset .tabset-fade .tabset-pills}
@@ -37,7 +37,7 @@ library(lubridate)
 # Visualisation
 library(ggplot2)
 library(patchwork)
-library(broman)
+library(broman)  # plot_crayons()
 library(sf)  # map
 library(leaflet)  # map
 library(mapview)  # map
