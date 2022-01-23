@@ -8,7 +8,8 @@ library(lubridate)
 # Visualisation
 library(ggplot2)
 library(patchwork)
-library(broman)
+library(broman)  # plot_crayons()
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(gtsummary)
 library(summarytools)
 library(leaflet)  # map

@@ -38,6 +38,7 @@ library(lubridate)
 library(ggplot2)
 library(patchwork)
 library(broman)  # plot_crayons()
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(sf)  # map
 library(leaflet)  # map
 library(mapview)  # map
