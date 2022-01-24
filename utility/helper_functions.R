@@ -22,19 +22,18 @@ vect.ymd.conv <- Vectorize(ymd.conv)
 
 
 # Reference: https://rstudio.github.io/DT/
-view.table <- function(df, head.n = 100, pagelen = 10, width = '175px',
+view.table <- function(df, rownames = TRUE,
+                       head.n = 100, pagelen = 10, width = '175px',
                        caption = NULL, is.filter = TRUE) {
   head.n <- ifelse(nrow(df) <= head.n, nrow(df), head.n)
   pagelen <- ifelse(nrow(df) <= pagelen, nrow(df), pagelen)
   filter <- ifelse(is.filter, "top", "none")
-  is.rownames <- ifelse(length(rownames(df)) == nrow(df), TRUE, FALSE)
   
   datatable(
     df[1:head.n, ], 
-    rownames = is.rownames,
+    rownames = rownames,
     options = list(
-      # pageLength = pagelen,
-      pageLength = 5,
+      pageLength = pagelen,
       autoWidth = TRUE,
       scrollX = TRUE,
       columnDefs = list(list(
