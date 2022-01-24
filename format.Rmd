@@ -5,14 +5,15 @@ author: ""
 date: '`r Sys.Date()`'
 output: 
    html_document:
-      number_sections: true
-      fig_caption: true
-      toc: true
+      number_sections: TRUE
+      fig_caption: TRUE
+      toc: TRUE
       toc_depth: 5
-      toc_float: true
+      toc_float: TRUE
       theme: cosmo
       highlight: tango
       code_folding: show
+      # code_download: TRUE
 editor_options: 
   chunk_output_type: console
 ---
