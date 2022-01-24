@@ -21,19 +21,34 @@ ymd.conv <- function(date.code) {
 vect.ymd.conv <- Vectorize(ymd.conv)
 
 
-view.table <- function(df, head.n = 100, pagelen = 10, width = '175px') {
-    head.n <- ifelse(head.n > nrow(df), nrow(df), head.n)
-    datatable(
-        df[1:head.n, ], 
-        options = list(
-            pageLength = pagelen,
-            autoWidth = TRUE,
-            scrollX = TRUE,
-            columnDefs = list(list(
-                width = width,
-                targets = seq(1, dim(df)[2]))
-                )
-            ), 
-        class = 'cell-border stripe'
-    )
+# Reference: https://rstudio.github.io/DT/
+view.table <- function(df, head.n = 100, pagelen = 10, width = '175px',
+                       caption = NULL, is.filter = TRUE) {
+  if (nrow(df) < head.n) {
+    head.n <- nrow(df)
+  } 
+  if (is.filter) {
+    filter = "top"
+  }
+  else{
+    filter = "none"
+  }
+  datatable(
+    df[1:head.n, ], 
+    options = list(
+      pageLength = pagelen,
+      autoWidth = TRUE,
+      scrollX = TRUE,
+      columnDefs = list(list(
+        width = width,
+        targets = seq(1, dim(df)[2]))
+      ),
+      dom = 'C<"clear">lfrtip', 
+      colReorder = list(realtime = TRUE)
+    ), 
+    class = 'cell-border stripe',
+    caption = caption,
+    filter = filter,
+    extensions = c("KeyTable", "ColReorder")
+  )
 }
