@@ -28,7 +28,6 @@ library(psych)
 library(naniar)
 library(lme4)
 library(lmerTest)
-library(ICC)  # CI.type = "Smith" ("THD" is heavy memory-comsuming)
 library(coefplot)
 
 library(rstan)

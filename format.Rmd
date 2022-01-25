@@ -62,7 +62,6 @@ library(naniar)
 # Multi Level Model
 library(lme4)
 library(lmerTest)
-library(ICC)  # CI.type = "Smith" ("THD" is heavy memory-comsuming)
 library(coefplot)
 # stan
 library(rstan)
