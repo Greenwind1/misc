@@ -26,7 +26,7 @@ knitr::opts_knit$set(root.dir = ".")
 # Preparations {.tabset .tabset-fade .tabset-pills}
 
 ## Load libraries
-```{r, echo=TRUE, message=FALSE}
+```{r, echo=FALSE, message=FALSE}
 # Data manipulation
 library(tidyverse)
 library(data.table)
@@ -62,6 +62,7 @@ library(naniar)
 # Multi Level Model
 library(lme4)
 library(lmerTest)
+library(ICC)
 library(coefplot)
 # stan
 library(rstan)
