@@ -15,8 +15,9 @@ reg.codes.df <- read_csv("input/35region-codes.csv",
     rename(REGION_CLASS = CLASS) %>%
     mutate(REGION_CLASS = as.factor(REGION_CLASS))
 
-nutrition.df.h25 <- read_csv("input/H25_Nutrition Data of Shizuoka_v1.csv")
+nutrition.df.h25 <- read_csv("input/H25_Nutrition Data of Shizuoka_v2.csv")
 nutrition.df.h28 <- read_csv("input/Nutrition Data of Shizuoka_v2.csv")
+nutrition.df.h28 <- nutrition.df.h28 %>% select(colnames(nutrition.df.h25))
 
 data.df.h25 <- reg.codes.df %>% 
     left_join(nutrition.df.h25, by = "NUTRITION_REGION_CODE")
