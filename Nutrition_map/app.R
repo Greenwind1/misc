@@ -57,6 +57,8 @@ plot.sf.h28 <- plot.sf.h28 %>% slice(1:n())
 plot.sf.h28 <- plot.sf.h28[!duplicated(plot.sf.h28$CODE), ]
 plot.df.h28 <- plot.sf.h28 %>% as.data.frame
 
+plot.df.all <- rbind(plot.df.h25, plot.df.h28)
+
 nut.cols <- colnames(data.df.h28)[8:ncol(data.df.h28)]
 
 rm(data.df.h25, data.df.h28)
@@ -91,7 +93,7 @@ server <- function(input, output) {
         journal.col3 <- "#fa8072"
         pal <- colorNumeric(
             palette = c(journal.col1, "#FFFFFF", journal.col3),
-            domain = plot.df.h28[, input$nut.col],
+            domain = plot.df.all[, input$nut.col],
             reverse = F
         )
         
@@ -127,7 +129,7 @@ server <- function(input, output) {
         journal.col3 <- "#fa8072"
         pal <- colorNumeric(
             palette = c(journal.col1, "#FFFFFF", journal.col3),
-            domain = plot.df.h25[, input$nut.col],
+            domain = plot.df.all[, input$nut.col],
             reverse = F
         )
         
