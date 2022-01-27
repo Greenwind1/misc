@@ -57,7 +57,7 @@ ui <- fluidPage(
             selectInput(inputId = "nut.col", 
                         label = "Type of Nutrition",
                         choices = colnames(data.df)[8:ncol(data.df)]),
-            br(), br(), br(), br(), br(),
+            br(), br(), br(), br(), br(), br(), br(), br(), br(), br(),
             textOutput("summary"),
             leafletOutput("map", width = 800, height = 600),
         ),
