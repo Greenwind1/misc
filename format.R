@@ -13,6 +13,7 @@ library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(gtsummary)
 library(summarytools)
 library(leaflet)  # map
+library(extrafont)  # "Candara"
 
 # Interactivity
 library(plotly)
