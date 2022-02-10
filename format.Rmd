@@ -74,12 +74,11 @@ library(broom.mixed)
 ## Environment
 ```{r Environment}
 # rgb(73, 81, 112, maxColorValue = 255): "#495170"
-# rgb(102, 103, 103, maxColorValue = 255): "#666767"
-col1 <- "#495170"
-col2 <- "#f7be16"
-col3 <- "#fa8072"
-scale.col1 <- c(col1, "deeppink")
-scale.col2 <- c(col1, "#9845B8", "#20314E", "deeppink")
+col.1 <- "#495170"
+col.2 <- "#f7be16"
+col.3 <- "#fa8072"
+scale.col.1 <- c(col.1, "deeppink")
+scale.col.2 <- c(col.1, "#9845B8", "#20314E", "deeppink")
 ```
 
 # Load DataSets {.tabset .tabset-fade .tabset-pills}
