@@ -3,6 +3,8 @@ title: ""
 subtitle: ""
 author: ""
 date: '`r Sys.Date()`'
+bibliography: references.bib
+link-citations: true
 output: 
    html_document:
       number_sections: TRUE
