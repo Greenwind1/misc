@@ -29,6 +29,7 @@ knitr::opts_knit$set(root.dir = ".")
 
 ## Load libraries
 ```{r, echo=FALSE, message=FALSE}
+# Remove library loading if necessary...
 # Data manipulation
 library(tidyverse)
 library(data.table)
@@ -79,8 +80,9 @@ library(broom.mixed)
 col.1 <- "#495170"
 col.2 <- "#f7be16"
 col.3 <- "#fa8072"
-scale.col.1 <- c(col.1, "deeppink")
-scale.col.2 <- c(col.1, "#9845B8", "#20314E", "deeppink")
+scale.col.1 <- c(col.1, col.3)
+
+options(dplyr.summarise.inform = TRUE)
 ```
 
 # Load DataSets {.tabset .tabset-fade .tabset-pills}

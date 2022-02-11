@@ -1,3 +1,4 @@
+# Remove library loading if necessary...
 # Data manipulation
 library(tidyverse)
 library(data.table)
@@ -36,3 +37,16 @@ library(bayesplot)
 
 library(broom)
 library(broom.mixed)
+
+
+# Environment ----
+# rgb(73, 81, 112, maxColorValue = 255): "#495170"
+col.1 <- "#495170"
+col.2 <- "#f7be16"
+col.3 <- "#fa8072"
+scale.col.1 <- c(col.1, col.3)
+
+options(dplyr.summarise.inform = TRUE)
+
+
+# Load DataSets ----
