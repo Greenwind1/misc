@@ -5,6 +5,7 @@ library(jpndistrict)
 library(leaflet)
 library(shiny)
 library(shinydashboard)
+library(bslib)
 
 
 # global ----
@@ -68,6 +69,7 @@ gc()
 
 # ui ----
 ui <- fluidPage(
+    theme = bs_theme(bootswatch = "minty"),
     dashboardPage(
         header = dashboardHeader(title = 'Nutrition Map'),
         sidebar = dashboardSidebar(disable = TRUE),
