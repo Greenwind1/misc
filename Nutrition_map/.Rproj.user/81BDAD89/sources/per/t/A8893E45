@@ -1,0 +1,28 @@
+{
+    "id": "A8893E45",
+    "path": "C:/Users/owner/Rcwd/misc_R/Nutrition_map/app.R",
+    "project_path": "app.R",
+    "type": "r_source",
+    "hash": "3846506447",
+    "contents": "",
+    "dirty": false,
+    "created": 1642581831690.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "27,0",
+        "scrollLine": "8",
+        "docOutlineVisible": "1",
+        "ignored_words": "shinyApp\n"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1643275946,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1643275946171,
+    "read_only": false,
+    "read_only_alternatives": []
+}

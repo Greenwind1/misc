@@ -1,0 +1,88 @@
+---
+title: ""
+subtitle: ""
+author: ""
+date: '`r Sys.Date()`'
+output: 
+   html_document:
+      number_sections: TRUE
+      fig_caption: TRUE
+      toc: TRUE
+      toc_depth: 5
+      toc_float: TRUE
+      theme: cosmo
+      highlight: tango
+      code_folding: show
+      # code_download: TRUE
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+knitr::opts_knit$set(root.dir = ".")
+```
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+
+## Load libraries
+```{r, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(DT)
+library(gt)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(patchwork)
+library(broman)  # plot_crayons()
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(sf)  # map
+library(leaflet)  # map
+library(mapview)  # map
+library(extrafont)  # "Candara"
+
+# Interactivity
+library(plotly)
+library(crosstalk)
+
+# Parallel
+library(purrr)
+library(foreach)
+library(doParallel)
+
+# Statistics Analysis
+# Descriptive Statistics
+library(gtsummary)
+library(summarytools)
+library(psych)
+library(naniar)
+# Multi Level Model
+library(lme4)
+library(lmerTest)
+library(coefplot)
+# stan
+library(rstan)
+library(bayesplot)
+library(broom)
+library(broom.mixed)
+```
+
+## Environment
+```{r Environment}
+# rgb(73, 81, 112, maxColorValue = 255): "#495170"
+# rgb(102, 103, 103, maxColorValue = 255): "#666767"
+col1 <- "#495170"
+col2 <- "#f7be16"
+col3 <- "#fa8072"
+scale.col1 <- c(col1, "deeppink")
+scale.col2 <- c(col1, "#9845B8", "#20314E", "deeppink")
+```
+
+# Load DataSets {.tabset .tabset-fade .tabset-pills}
+```{r Load DataSets}
+
+```
