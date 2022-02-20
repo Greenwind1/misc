@@ -1,6 +1,14 @@
 library(stringr)
 library(DT)
 
+create.empty.df <- function(nrow, ncol, colnames = c()) {
+    if(missing(ncol) && length(colnames) > 0) {
+        ncol <- length(colnames)
+    }
+    data.frame(
+        matrix(vector(), nrow, ncol, dimnames = list(c(), colnames))
+    )
+}
 
 ymd.conv <- function(date.code) {
     if (is.na(date.code)) return(NA)
