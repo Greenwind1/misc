@@ -1,22 +1,28 @@
 ---
 title: "CAS_nlme"
-author: "HoxoMaxwell"
-date: '`r Sys.Date()`'
+subtitle: ""
+author: "Maxwell"
+date: ''
 output: 
    html_document:
-      number_sections: true
-      toc: true
-      toc_depth: 4
-      toc_float: true
-      theme: cosmo
+      number_sections: TRUE
+      fig_caption: TRUE
+      toc: TRUE
+      toc_depth: 5
+      toc_float: TRUE
+      theme:
+         bootswatch: minty
+         # bootswatch: cosmo
       highlight: tango
       code_folding: show
+      # code_download: TRUE
 editor_options: 
   chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+knitr::opts_knit$set(root.dir = ".")
 ```
 
 # Introduction
@@ -470,6 +476,3 @@ data.frame(Actual = test$AC, Pred = pred.RE) %>%
   ggtitle("Error-components model with AR1", 
           paste0("RMSE : ", round(RMSE(pred.RE, test$AC), 3)))
 ```
-
-# EOF
-

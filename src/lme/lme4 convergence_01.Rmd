@@ -1,7 +1,7 @@
 ---
-title: ""
+title: "lme4 convergence problem"
 subtitle: ""
-author: ""
+author: "Maxwell"
 date: '`r Sys.Date()`'
 # bibliography: references.bib
 link-citations: true
@@ -24,66 +24,40 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
-knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+knitr::opts_knit$set(root.dir = "../..")
 ```
+
+I sometimes encountered a convergence problem with mle4 package.
+Here I will examine the experiment by following guidance:  
+https://m-clark.github.io/posts/2020-03-16-convergence/#remove-zero-random-effects
 
 # Preparations {.tabset .tabset-fade .tabset-pills}
 
 ## Load libraries
-`Remove library if necessary...`
 ```{r, echo=FALSE, message=FALSE}
-# Data manipulation
 library(tidyverse)
-library(data.table)
-library(DT)
-library(gt)
-library(stringr)
-library(lubridate)
-
-# Visualisation
 library(ggplot2)
 library(patchwork)
 library(broman)  # plot_crayons()
 library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(extrafont)  # "Candara"
-library(sf)  # map
-library(leaflet)  # map
-library(mapview)  # map
-
-# Interactivity
-library(plotly)
-library(crosstalk)
-
-# Parallel
-library(purrr)
-library(foreach)
-library(doParallel)
-
-# Descriptive Statistics
 library(naniar)
-library(psych)
 library(gtsummary)
-
-# Multi Level Model
 library(lme4)
 library(lmerTest)
 library(coefplot)
+library(mixedup)
 
-# Stan
-library(rstan)
-library(bayesplot)
-library(broom)
-library(broom.mixed)
+source("utility/helper_functions.R")
 ```
 
 ## Environment
 ```{r Environment}
 # rgb(73, 81, 112, maxColorValue = 255): "#495170"
 col.1 <- "#495170"  # blue
-col.2 <- "#72faa4"  # green
-col.3 <- "#f7be16"  # yellow
-col.4 <- "#fa8072"  # red
-scale.col.1 <- c(col.1, col.4)
+col.2 <- "#f7be16"  # yellow
+col.3 <- "#fa8072"  # red
+scale.col.1 <- c(col.1, col.3)
 font.1 <- "Candara"
 theme_set(theme_bw(base_family = font.1))
 options(dplyr.summarise.inform = TRUE)
@@ -91,5 +65,11 @@ options(dplyr.summarise.inform = TRUE)
 
 # Load DataSets {.tabset .tabset-fade .tabset-pills}
 ```{r Load DataSets}
-
+df <- readRDS("input/convergence.RDS")
+df = df %>% 
+   mutate(
+      SUR.ID = factor(SUR.ID), 
+      replicate = factor(replicate),
+      Unit = factor(1:n())
+   )
 ```
