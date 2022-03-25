@@ -27,8 +27,8 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 knitr::opts_knit$set(root.dir = "../..")
 ```
 
-I sometimes encountered a convergence problem with mle4 package.
-Here I will examine the experiment by following guidance:  
+I sometimes encountered a convergence problem with `lme4` package.
+Here I will examine the convergence problem by the following guidance:  
 https://m-clark.github.io/posts/2020-03-16-convergence/#remove-zero-random-effects
 
 # Preparations {.tabset .tabset-fade .tabset-pills}
@@ -37,6 +37,7 @@ https://m-clark.github.io/posts/2020-03-16-convergence/#remove-zero-random-effec
 ```{r, echo=FALSE, message=FALSE}
 library(tidyverse)
 library(ggplot2)
+library(ggthemes)
 library(patchwork)
 library(broman)  # plot_crayons()
 library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
@@ -45,6 +46,7 @@ library(naniar)
 library(gtsummary)
 library(lme4)
 library(lmerTest)
+library(broom.mixed)
 library(coefplot)
 library(mixedup)
 
@@ -54,9 +56,9 @@ source("utility/helper_functions.R")
 ## Environment
 ```{r Environment}
 # rgb(73, 81, 112, maxColorValue = 255): "#495170"
-col.1 <- "#495170"  # blue
-col.2 <- "#f7be16"  # yellow
-col.3 <- "#fa8072"  # red
+col.1 <- crayons()["Blue Gray"]  # blue
+col.2 <- crayons()["Caribbean Green"]  # green
+col.3 <- crayons()["Razzmatazz"]  # red
 scale.col.1 <- c(col.1, col.3)
 font.1 <- "Candara"
 theme_set(theme_bw(base_family = font.1))
@@ -65,11 +67,267 @@ options(dplyr.summarise.inform = TRUE)
 
 # Load DataSets {.tabset .tabset-fade .tabset-pills}
 ```{r Load DataSets}
-df <- readRDS("input/convergence.RDS")
-df = df %>% 
+df <- readRDS("input/convergence.RDS") %>% 
    mutate(
       SUR.ID = factor(SUR.ID), 
       replicate = factor(replicate),
       Unit = factor(1:n())
    )
 ```
+```{r}
+glimpse(df)
+view.table(df)
+```
+
+# VIF
+`GVIF of c.tm.depth is very high.`
+```{r}
+car::vif(lm(CountDetections ~ . -Unit -Day -FalseDetections, dat = df))
+```
+
+# Start from naive GLM
+```{r}
+glm.1 <- glm(
+   cbind(ValidDetections, FalseDetections) ~
+      tm:Area + tm:c.distance + c.distance:Area + c.tm.depth:Area +
+      c.receiver.depth:Area + c.temp:Area + c.wind:Area + c.tm.depth +
+      c.receiver.depth + c.temp + c.wind + tm + c.distance + Area + replicate +
+      SUR.ID + Day, 
+  data = df, 
+  family = binomial(link = "logit")
+)
+
+summary(glm.1)
+```
+
+- Due to multicollinearity, some coefficients resulted in NA.
+```{r}
+# glm.2 <- update(glm.1, . ~ . - Day)
+glm.2 <- glm(
+   cbind(ValidDetections, FalseDetections) ~
+      # tm:Area + tm:c.distance + c.distance:Area + #c.tm.depth:Area +
+      # c.receiver.depth:Area + c.temp:Area + c.wind:Area + #c.tm.depth +
+      c.receiver.depth + c.temp + c.wind + tm + c.distance + Area + replicate + 
+      SUR.ID, 
+   data = df, 
+   family = binomial(link = "logit")
+)
+summary(glm.2)
+```
+Now it worked.
+
+# Inital GLME
+```{r}
+glme.1 <- glmer(
+   cbind(ValidDetections, FalseDetections) ~ 
+      tm:Area + tm:c.distance + c.distance:Area + c.tm.depth:Area + 
+      c.receiver.depth:Area + c.temp:Area + c.wind:Area + c.tm.depth + 
+      c.receiver.depth + c.temp + c.wind + tm + c.distance + Area + replicate + 
+      (1 | SUR.ID) + (1|Day) + (1|Unit), 
+   data = df, 
+   family = binomial(link = "logit")
+)
+```
+```{r}
+summary(glme.1)
+glme.1@optinfo$conv$lme4$messages[[1]]
+```
+Seems to fail in convergence...
+
+# GLME w/o cross terms
+```{r}
+glme.2 <- glmer(
+   cbind(ValidDetections, FalseDetections) ~
+      # tm:Area + tm:c.distance + c.distance:Area + #c.tm.depth:Area +
+      # c.receiver.depth:Area + c.temp:Area + c.wind:Area + #c.tm.depth +
+      c.receiver.depth + c.temp + c.wind + tm + c.distance + Area + replicate + 
+      SUR.ID + 
+      (1 | Unit),
+   data = df, 
+   family = binomial(link = "logit")
+)
+```
+```{r}
+summary(glme.2)
+glme.2@optinfo$conv$lme4$messages[[1]]
+```
+Seems to fail to converge without change...
+
+# Check Items
+## Singularity
+This is a mixed model-specific check, and in general, 
+checking singularity goes along with removing zero random effects.  
+These days, you will usually get a singularity warning 
+when it is likely the case. 
+In the past, Bolker suggested checking this problem as follows, 
+but for this example concluded the result was not close enough to zero 
+to be a real concern. 
+The theta below are just our `random effect standard deviations`, 
+and I would say that the ones besides Unit probably were not 
+meaningfully different from zero.
+```{r}
+pars <- unlist(getME(glme.1, name = c("theta", "beta")))
+print(pars)
+```
+
+Nowadays lme4 provides the function `isSingular` which uses the steps above to check the minimum value against some specified tolerance.
+```{r}
+isSingular(glme.1, tol = 1e-5)
+```
+
+## Compare Absolute and Scaled Gradient
+For the mixed model setting, Bolker notes the following:
+
+> One general problem is that large scaled gradients are often associated with small absolute gradients: 
+we might decide that we are more interested in testing the (parallel) minimum of these two quantities.
+
+We can do this as follows for the initial mixed model.
+```{r}
+derivs_init <- glme.1@optinfo$derivs
+sc_grad_init <- with(derivs_init, solve(Hessian, gradient))
+
+max(abs(sc_grad_init))
+max(pmin(abs(sc_grad_init), abs(derivs_init$gradient)))
+```
+
+## GLME w/o cross terms and c.distance
+```{r}
+glme.3 <- glmer(
+   cbind(ValidDetections, FalseDetections) ~
+      # tm:Area + tm:c.distance + c.distance:Area + #c.tm.depth:Area +
+      # c.receiver.depth:Area + c.temp:Area + c.wind:Area + #c.tm.depth +
+      c.receiver.depth + c.temp + c.wind + tm + 
+      # c.distance + 
+      Area + replicate + SUR.ID + (1 | Unit),
+   data = df, 
+   family = binomial(link = "logit")
+)
+```
+```{r}
+summary(glme.3)
+glme.3@optinfo$conv$lme4$messages[[1]]
+```
+
+# Restart GLME
+```{r}
+pars2 <- getME(glme.2, name = c("theta", "fixef"))
+glme.2.update <- update(object = glme.2, 
+                        start = pars2, 
+                        control = glmerControl(optCtrl = list(maxfun = 2e4)))
+```
+```{r}
+summary(glme.2.update)
+glme.2.update@optinfo$conv$lme4$messages[[1]]
+```
+
+# GLME with BOBYQA through all iterations
+```{r}
+glme.2.update.opt <- update(
+   object = glme.2, 
+   # start = pars2, 
+   control = glmerControl(
+      optimizer = "bobyqa", 
+      optCtrl = list(maxfun = 2e4)
+   ) 
+)
+```
+```{r}
+summary(glme.2.update.opt)
+glme.2.update.opt@optinfo$conv$lme4$messages[[1]]
+```
+
+# Visualization
+```{r}
+glme.2.df <- glme.2 %>% 
+    broom.mixed::tidy(conf.int = T) %>%
+    as.data.frame() %>% 
+    mutate_if(is.numeric, round, 5) %>% 
+    filter(!str_detect(term, "Intercept|sd__"))
+glme.2.update.opt.df <- glme.2.update.opt %>% 
+    broom.mixed::tidy(conf.int = T) %>%
+    as.data.frame() %>% 
+    mutate_if(is.numeric, round, 5) %>% 
+    filter(!str_detect(term, "Intercept|sd__"))
+glm.2.df <- glm.2 %>% 
+   broom::tidy() %>% 
+   mutate(
+      conf.low = estimate - std.error, 
+      conf.high = estimate + std.error, 
+   ) %>% 
+   filter(!str_detect(term, "Intercept|sd__"))
+```
+```{r, fig.width=12, fig.height=10}
+glm.2.p <- glm.2.df %>% 
+   ggplot(mapping = aes(x = fct_rev(term), y = estimate, 
+                         ymin = conf.low, ymax = conf.high)) + 
+   geom_pointrange(color = col.1, size = 0.4) + 
+   geom_text(mapping = aes(x = fct_rev(term), 
+                           y = estimate,
+                           label = round(estimate, 3)), 
+             check_overlap = TRUE, size = 3,
+             family = "Candara", color = col.1,
+             hjust = -0.1, nudge_x = 0.25) + 
+   geom_hline(yintercept = 0, color = "slategray", 
+              linetype = 2, alpha = 0.5) + 
+   lims(y = c(NA, max(glm.2.df$conf.high, na.rm = T) + 0.4)) + 
+   labs(x = NULL, y = NULL, title = "GLM w/o level 2") + 
+   coord_flip() + 
+   theme_minimal() +
+   # theme_wsj() + 
+   theme(
+      title = element_text(family = "Candara", color = col.1, size = 10), 
+      axis.text = element_text(family = "Candara", color = col.1, size = 8.5)
+   )
+
+glme.2.p <- glme.2.df %>% 
+   ggplot(mapping = aes(x = fct_rev(term), y = estimate, 
+                         ymin = conf.low, ymax = conf.high)) + 
+   geom_pointrange(color = col.2, size = 0.4) + 
+   geom_text(mapping = aes(x = fct_rev(term), 
+                           y = estimate,
+                           label = round(estimate, 3)), 
+             check_overlap = TRUE, size = 3,
+             family = "Candara", color = col.2,
+             hjust = -0.1, nudge_x = 0.25) + 
+   geom_hline(yintercept = 0, color = "slategray", 
+              linetype = 2, alpha = 0.5) + 
+   lims(y = c(NA, max(glme.2.df$conf.high, na.rm = T) + 0.4)) + 
+   labs(x = NULL, y = NULL, 
+        title = "GLME w/ default opt schedule", 
+        subtitle = "BOBYQA => Nelder Mead") + 
+   coord_flip() + 
+   theme_minimal() +
+   theme(
+      title = element_text(family = "Candara", color = col.2, size = 10), 
+      axis.text = element_text(family = "Candara", color = col.2, size = 8.5)
+   )
+
+glme.2.update.opt.p <- glme.2.update.opt.df %>% 
+   ggplot(mapping = aes(x = fct_rev(term), y = estimate, 
+                         ymin = conf.low, ymax = conf.high)) + 
+   geom_pointrange(color = col.3, size = 0.4) + 
+   geom_text(mapping = aes(x = fct_rev(term), 
+                           y = estimate,
+                           label = round(estimate, 3)), 
+             check_overlap = TRUE, size = 3,
+             family = "Candara", color = col.3,
+             hjust = -0.1, nudge_x = 0.25) + 
+   geom_hline(yintercept = 0, color = "slategray", 
+              linetype = 2, alpha = 0.5) + 
+   lims(y = c(NA, max(glme.2.update.opt.df$conf.high, na.rm = T) + 0.4)) + 
+   labs(x = NULL, y = NULL, title = "GLME w/ only BOBYQA") + 
+   coord_flip() + 
+   theme_minimal() +
+   theme(
+      title = element_text(family = "Candara", color = col.3, size = 10), 
+      axis.text = element_text(family = "Candara", color = col.3, size = 8.5)
+   )
+
+pw <- glm.2.p + glme.2.p + glme.2.update.opt.p
+pw + patchwork::plot_annotation(
+   caption = "@Maxwell_110"
+)
+
+ggsave("fig/lme4-convergence_01.png", dpi = 300, width = 12, height = 10)
+```
+
