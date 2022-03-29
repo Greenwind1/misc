@@ -1,0 +1,167 @@
+---
+title: "GeoStan Vignette"
+subtitle: "01:"
+author: ""
+date: '`r Sys.Date()`'
+# bibliography: references.bib
+link-citations: true
+output: 
+   html_document:
+      number_sections: TRUE
+      fig_caption: TRUE
+      toc: TRUE
+      toc_depth: 5
+      toc_float: TRUE
+      theme:
+         bootswatch: minty
+         # bootswatch: cosmo
+      highlight: tango
+      code_folding: show
+      # code_download: TRUE
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+knitr::opts_knit$set(root.dir = "../..")  # modify with the location of code
+```
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+
+## Load libraries
+`Remove library if necessary...`
+```{r, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(DT)
+library(gt)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(patchwork)
+library(broman)  # plot_crayons()
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(extrafont)  # "Candara"
+library(sf)  # map
+library(leaflet)  # map
+library(mapview)  # map
+
+# Interactivity
+library(plotly)
+library(crosstalk)
+
+# Parallel
+library(purrr)
+library(foreach)
+library(doParallel)
+
+# Descriptive Statistics
+library(naniar)
+library(psych)
+library(gtsummary)
+
+# Stan
+library(geostan)
+library(rstan)
+library(bayesplot)
+library(broom)
+library(broom.mixed)
+
+source("utility/helper_functions.R")
+```
+
+## Environment
+```{r Environment}
+# rgb(73, 81, 112, maxColorValue = 255): "#495170"
+col.1 <- "#495170"  # blue
+col.2 <- "#72faa4"  # green
+col.3 <- "#f7be16"  # yellow
+col.4 <- "#fa8072"  # red
+scale.col.1 <- c(col.1, col.4)
+font.1 <- "Candara"
+theme_set(theme_bw(base_family = font.1))
+options(dplyr.summarise.inform = TRUE)
+```
+
+# Load DataSets {.tabset .tabset-fade .tabset-pills}
+
+|  Variable  |  Description  |
+| ---- | ---- |
+|  GEOID  |  Six digit combined state and county FIPS code  |
+|  rate.male  |  Raw (crude) age-specific male mortality rate, 2014-2018  |
+|  geometry  |  simple features geometry for county boundaries  |
+
+```{r Load DataSets}
+data("georgia")
+view.table(georgia)
+```
+
+# Spatial EDA
+```{r}
+sp.diag.eda <- sp_diag(
+   y = georgia$rate.male, 
+   shape = georgia, 
+   name = "mortality rate", 
+   plot = FALSE,
+   mc_style = c("scatter", "hist"), 
+)
+
+p1 <- sp.diag.eda$residual_histogram + 
+   theme_minimal(base_size = 7, base_family = font.1)
+p2 <- sp.diag.eda$mc_plot + 
+   theme_minimal(base_size = 7, base_family = font.1)
+p3 <- sp.diag.eda$residual_map + 
+   theme_minimal(base_size = 7, base_family = font.1)
+
+p1 + p2 + p3
+ggsave("fig/geo_stan_vignette_01-fig1.png", 
+       width = 7, height = 2.5, dpi = 200)
+```
+
+# CAR model
+## Fitting
+```{r}
+A <- shape2mat(georgia, style = "B")
+cars <- prep_car_data(A)
+fit <- stan_car(
+   deaths.male ~ offset(log(pop.at.risk.male)),
+   censor_point = 9,
+   data = georgia,
+   car_parts = cars,
+   family = poisson(),
+   cores = 4, # for multi-core processing
+   refresh = 0 # to silence some printing
+) 
+```
+
+## Result visualization
+```{r}
+sp.diag.car <- sp_diag(
+   y = fit, 
+   shape = georgia, 
+   name = "Residual of deaths", 
+   plot = FALSE, 
+   w = A
+)
+
+p1 <- sp.diag.car$fitted_plot + 
+   theme_minimal(base_size = 7, base_family = font.1)
+p2 <- sp.diag.car$mc_plot + 
+   theme_minimal(base_size = 7, base_family = font.1)
+p3 <- sp.diag.car$residual_map + 
+   theme_minimal(base_size = 7, base_family = font.1)
+
+p1 + p2 + p3
+ggsave("fig/geo_stan_vignette_01-fig2.png", 
+       width = 7, height = 2.5, dpi = 200)
+```
+
+## Fit summary
+```{r}
+print(fit)
+```
+

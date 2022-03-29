@@ -85,7 +85,7 @@ col.3 <- "#f7be16"  # yellow
 col.4 <- "#fa8072"  # red
 scale.col.1 <- c(col.1, col.4)
 font.1 <- "Candara"
-theme_set(theme_bw(base_family = font.1))
+theme_set(theme_minimal(base_family = font.1))
 options(dplyr.summarise.inform = TRUE)
 ```
 
