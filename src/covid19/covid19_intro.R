@@ -82,12 +82,13 @@ x %>% filter(administrative_area_level_1 %in% country.sel) %>%
         ),
         # pattern = "image", 
         # pattern_type = "tile", 
-        pattern = "stripe", 
+        pattern = "circle", 
         # pattern_type = "tile", 
         pattern_fill = "#0296CC", 
         pattern_colour = crayons()["Cadet Blue"],
-        # pattern_scale = 2, 
-        pattern_spacing = 0.025, 
+        pattern_density = 0.5, 
+        pattern_scale = 20,
+        # pattern_spacing = 0.025, 
         fill = crayons()["Cadet Blue"], 
         color = "white"
     ) + 
