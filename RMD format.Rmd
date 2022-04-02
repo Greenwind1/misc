@@ -18,6 +18,7 @@ output:
       highlight: tango
       code_folding: show
       # code_download: TRUE
+      fig_width: 8
 editor_options: 
   chunk_output_type: console
 ---
