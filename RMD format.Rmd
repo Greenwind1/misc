@@ -15,7 +15,8 @@ output:
       theme:
          bootswatch: minty
          # bootswatch: cosmo
-      highlight: tango
+      highlight: espresso
+      # espresso, tango, zenburn
       code_folding: show
       # code_download: TRUE
       fig_width: 8
