@@ -112,5 +112,4 @@ x %>% filter(administrative_area_level_1 %in% country.sel) %>%
          # caption = "@Maxwell_110", 
          subtitle = "https://covid19datahub.io/")
 
-ggsave("fig/covid19_confirmed.png", width = 7.5, height = 5, dpi = 200, 
-       bg = "transparent")
+ggsave("fig/covid19_confirmed.jpg", width = 7.5, height = 5, dpi = 200)
