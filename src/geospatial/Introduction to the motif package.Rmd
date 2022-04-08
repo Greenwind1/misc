@@ -1,0 +1,149 @@
+---
+title: "Introduction to the motif package"
+subtitle: "https://jakubnowosad.com/motif/articles/v1_intro.html"
+author: "Maxwell as a substitute for Nowosad, Jakub"
+date: ''
+# bibliography: references.bib
+link-citations: true
+output: 
+   html_document:
+      number_sections: TRUE
+      fig_caption: TRUE
+      toc: TRUE
+      toc_depth: 5
+      toc_float: TRUE
+      theme:
+         bootswatch: minty
+         # bootswatch: cosmo
+      highlight: espresso
+      # espresso, tango, zenburn
+      code_folding: hide
+      # code_download: TRUE
+      fig_width: 10
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+<img src=../../fig/motif_logo.png width=150>
+
+The **`motif`** package implements ideas of the pattern-based spatial analysis in R. Its role is to describe spatial patterns of **`categorical raster data`** for any defined regular and irregular areas. Patterns are represented quantitatively using **built-in signatures based on co-occurrence matrices** but also allows for any user-defined functions. It also enables spatial analysis such as search, change detection, and clustering to be performed on spatial patterns.
+
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Load libraries
+```{r, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(DT)
+library(gt)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(patchwork)
+library(broman)  # plot_crayons()
+library(extrafont)  # "Candara"
+library(sf)  # map
+library(motif)
+library(stars)
+```
+
+## Environment
+```{r Environment}
+# rgb(73, 81, 112, maxColorValue = 255): "#495170"
+col.1 <- "#495170"  # blue
+col.2 <- "#72faa4"  # green
+col.3 <- "#f7be16"  # yellow
+col.4 <- "#fa8072"  # red
+scale.col.1 <- c(col.1, col.4)
+font.1 <- "Candara"
+theme_set(theme_minimal(base_family = font.1))
+options(dplyr.summarise.inform = TRUE)
+```
+
+# Load DataSets {.tabset .tabset-fade .tabset-pills}
+The motif package works on raster data represented by **stars objects**. It has several example datasets. This file contains a land cover data for New Guinea, with seven possible categories:  
+  
+(1) agriculture  
+(2) forest  
+(3) grassland  
+(5) settlement  
+(6) shrubland  
+(7) sparse vegetation  
+(9) water
+
+```{r Load DataSets}
+landcover <- read_stars(
+    system.file("raster/landcover2015.tif", package = "motif")
+)
+plot(landcover, downsample = 12)  # ?plot.stars
+```
+
+# Signatures
+## Whole area
+We can see that most of the island is covered by forest, with some agriculture and smaller areas of the other classes. It is also reasonably easy to describe these proportions (so-called composition) numerically - we just need to count cells of each category for the whole data.  
+
+We can use the **lsp_signature()** function for this. It requires a stars object as the first input and the type of a signature to calculate - "composition" in this case. There are also several additional arguments, including threshold - a share (between 0 and 1) of NA cells to allow signature calculation and normalization - decision if the output vector should be normalized.  
+
+| type:  
+|   Type of the calculated signature. It can be `"coma"` (co-occurrence matrix), `"cove"` (co-occurrence vector), `"cocoma"` (co-located co-occurrence matrix), `"cocove"` (co-located co-occurrence vector), `"wecoma"` (weighted co-occurrence matrix), `"wecove"` (weighted co-occurrence vector), `"incoma"` (integrated co-occurrence matrix), `"incove"` (integrated co-occurrence vector), `"composition"` or any function that can summarize stars objects.  
+```{r}
+landcover_comp <- lsp_signature(x = landcover, 
+                                type = "composition", 
+                                threshold = 1, 
+                                normalization = "none")
+landcover_comp
+```
+
+The output of lsp_signature(), landcover_comp, has a new class **lsp**.  
+It is a tibble with three columns:
+
+id - an id of each window (area)
+na_prop - share (0-1) of NA cells for each window
+signature - a list-column containing with calculated signatures  
+
+We can take a look at the last column:
+```{r}
+cat(class(landcover_comp))
+landcover_comp$signature
+```
+
+## Regular local landscapes
+Another approach would be to divide this large area into many regular rectangles (we refer to them as **local landscapes**) and to calculate a signature in each of them. The previously used signature, "composition" has one important flaw though. It only describes how many cells of each category we have. However, it does not distinguish an area with the left half of forest and right half of agriculture from an area with forest mixed with agriculture (think of a green-yellow checkerboard). Gladly, several more types of signatures do exist. It includes **a co-occurrence matrix (type = "coma")**.  
+
+"coma" goes to each cell, looks at its value, looks at the values of its neighbors and **counts how many neighbors of each class our central cell has**.
+```{r}
+landcover_coma <- lsp_signature(landcover, type = "coma", window = 200)
+landcover_coma
+```
+
+```{r}
+landcover_coma$signature[[1]]
+```
+
+## Irregular local landscapes
+```{r}
+ecoregions <- read_sf(
+    system.file("vector/ecoregions.gpkg", package = "motif")
+)
+plot(ecoregions)
+```
+
+```{r}
+landcover_coma_e <- lsp_signature(
+    landcover, type = "coma", window = ecoregions["id"]
+)
+landcover_coma_e
+```
+
+```{r}
+landcover_coma_e$signature[[1]]
+```
+
