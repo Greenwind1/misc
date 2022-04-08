@@ -1,0 +1,10 @@
+alpha,color,label,value
+255,#FFFF64,agriculture,1
+255,#006400,forest,2
+255,#BE9600,grassland,3
+255,#00DC82,wetland,4
+255,#C31400,settlement,5
+255,#966400,shrubland,6
+255,#FFDCD2,sparse vegetation,7
+255,#FFF5D7,bare area,8
+255,#0046C8,water,9
