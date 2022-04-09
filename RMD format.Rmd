@@ -49,6 +49,8 @@ library(broman)  # plot_crayons()
 library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(extrafont)  # "Candara"
 library(sf)  # map
+library(spdep)  # helpful functions for mapping
+library(rmapshaper)  # helpful functions for mapping
 library(leaflet)  # map
 library(mapview)  # map
 
@@ -86,8 +88,7 @@ col.2 <- "#72faa4"  # green
 col.3 <- "#f7be16"  # yellow
 col.4 <- "#fa8072"  # red
 scale.col.1 <- c(col.1, col.4)
-font.1 <- "Candara"
-theme_set(theme_minimal(base_family = font.1))
+theme_set(theme_minimal(base_family = "Candara"))
 options(dplyr.summarise.inform = TRUE)
 ```
 
