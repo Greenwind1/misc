@@ -48,11 +48,12 @@ library(patchwork)
 library(broman)  # plot_crayons()
 library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(extrafont)  # "Candara"
-library(sf)  # map
+library(sf)  # simple feature
 library(spdep)  # helpful functions for mapping
 library(rmapshaper)  # helpful functions for mapping
-library(leaflet)  # map
-library(mapview)  # map
+library(tmap)  # map viewer
+library(leaflet)  # map viewer
+library(mapview)  # map viewer
 
 # Interactivity
 library(plotly)

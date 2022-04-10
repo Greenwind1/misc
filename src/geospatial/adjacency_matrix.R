@@ -4,7 +4,6 @@
 
 library(sf)
 library(spdep)
-library(maptools)
 library(rmapshaper)
 library(tidyverse)
 library(stringr)
@@ -17,9 +16,6 @@ map.sf <- sf::read_sf(
     "input/Administrative_district_Tokyo_2021/N03-21_13_210101.shp"
     # "input/Administrative_district_Shizuoka_2021/N03-21_22_210101.shp"
 )
-map.sp <- maptools::readShapeSpatial(
-    "input/Administrative_district_Tokyo_2021/N03-21_13_210101.shp"
-)
 
 map.sf %>% 
     filter(str_detect(N03_004, "区")) %>% 
@@ -29,10 +25,7 @@ map.sf %>%
 
 # A neighbours list with class nb. See card for details of “nb” objects.
 map.sf.nb <- spdep::poly2nb(map.sf)
-map.sp.nb <- spdep::poly2nb(map.sp)
-
 summary(map.sf.nb)
-summary(map.sp.nb)
 
 num <- rep(NA, length(map.sp))
 
