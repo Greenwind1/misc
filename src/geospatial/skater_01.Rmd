@@ -1,0 +1,266 @@
+---
+title: "Spatial `K`luster Analysis by Tree Edge Removal"
+subtitle: ""
+author: "Maxwell"
+date: '`r Sys.Date()`'
+# bibliography: references.bib
+link-citations: true
+output: 
+   html_document:
+      number_sections: TRUE
+      fig_caption: TRUE
+      toc: TRUE
+      toc_depth: 5
+      toc_float: TRUE
+      theme:
+         bootswatch: minty
+         # bootswatch: cosmo
+      highlight: espresso
+      # espresso, tango, zenburn
+      code_folding: show
+      # code_download: TRUE
+      fig_width: 10
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+Tutorial for regionalization function `skater`.
+
+References:  
+
+1. AssunÇão RM, Neves MC, Câmara G, Da Costa Freitas C. Efficient regionalization techniques for socio‐economic geographical units using minimum spanning trees. International Journal of Geographical Information Science. 2006;20: 797–811. doi:10.1080/13658810600665111
+
+2. https://r-spatial.github.io/spdep/reference/skater.html
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+
+## Load libraries
+```{r, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(DT)
+library(gt)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(patchwork)
+library(broman)  # plot_crayons()
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(RColorBrewer)  # display.brewer.all()
+library(extrafont)  # "Candara"
+library(sf)  # simple feature
+library(spdep)  # helpful functions for mapping: skater
+library(rmapshaper)  # helpful functions for mapping
+library(tmap)  # map viewer
+library(leaflet)  # map viewer
+library(mapview)  # map viewer
+
+# Descriptive Statistics
+library(naniar)
+library(psych)
+library(gtsummary)
+```
+
+## Environment
+```{r Environment}
+# rgb(73, 81, 112, maxColorValue = 255): "#495170"
+col.os <- "#414a4c"
+col.cb <- "#b0b7c6"
+col.rm <- "#e3256b"
+theme_set(theme_minimal(base_family = "Candara"))
+options(dplyr.summarise.inform = TRUE)
+```
+
+# Load DataSets {.tabset .tabset-fade .tabset-pills}
+
+**> ?spdep::bhicv**  
+**Data set with 4 life condition indices of Belo Horizonte region**  
+
+The data are collected inthe Atlas of condition indices published by the Joao Pinheiro Foundation and UNDP.
+
+**Format**: A shape polygon object with seven variables  
+**id**: The identificator  
+**Name**: Name of city  
+**Population**: The population of city  
+**HLCI**: Health Life Condition Index  
+**ELCI**: Education Life Condition Index  
+**CLCI**: Children Life Condition Index  
+**ELCI_1**: Economic Life Condition Index  
+
+```{r Load DataSets}
+bh <- sf::read_sf(
+    system.file("etc/shapes/bhicv.shp", package = "spdep"), 
+    quiet = TRUE
+)
+print(st_crs(bh))
+st_crs(bh) <- "+proj=longlat +ellps=WGS84"  # set CRS
+```
+```{r}
+ggplot() + 
+    geom_sf(mapping = aes(), data = bh,
+            color = col.os, fill = col.cb, size = 0.2, alpha = 0.5)
+```
+
+
+# Preprocessing for skater algorithm {.tabset .tabset-fade .tabset-pills}
+## Standardize Node 4 Features
+```{r}
+bh.index.scale <- scale(
+    x = bh %>% as.data.frame() %>% select(HLCI, ELCI, CLCI, ELCI_1)
+)
+bh.index.scale.df <- bh.index.scale %>% as.data.frame()
+```
+
+## Compute Neighboorhod list with `spdep::poly2nb`
+```{r}
+bh.nb <- spdep::poly2nb(bh)
+spdep::card(bh.nb)
+```
+
+## Computing costs with `spdep::nbcosts`
+**method**:  
+
+| "mahalanobis" 
+|       or 
+| "euclidean", "maximum", "manhattan", "canberra", "binary" or "minkowisk"
+
+```{r}
+bh.costs <- spdep::nbcosts(
+    nb = bh.nb, 
+    data = bh.index.scale,
+    method = c("euclidean", "maximum", "manhattan", "canberra", 
+               "binary", "minkowski", "mahalanobis")
+)
+cat(class(bh.costs))
+```
+
+## Making listw with `spdep::nb2listw`
+```{r}
+unlist(bh.costs)
+bh.listw <- spdep::nb2listw(neighbours = bh.nb, bh.costs, style = "B")
+bh.listw
+```
+
+## Find a Minimum Spanning Tree with `spdep::mstree` and Plot
+
+**nbw**: An object of listw class returned by nb2listw function. See this help for details.
+
+**ini**: The initial node in the minimal spanning tree. Heuristic
+
+```{r}
+bh.mst <- spdep::mstree(nbw = bh.listw, ini = 5)
+cat(class(bh.mst))
+cat(dim(bh.mst))
+bh.mst[1:3, ]
+```
+```{r, fig.width=10, fig.height=10}
+plot(sf::st_geometry(bh), border = col.os)
+# ?plot.mst
+plot(bh.mst, coordinates(as(bh, "Spatial")), 
+     cex.circles = 0., cex.labels = 0.5, fg = col.os, add = TRUE, 
+     col = col.rm)
+```
+
+
+# Regionalization with `spdep::skater` {.tabset .tabset-fade .tabset-pills}
+
+**Arguments**  
+**edges**: A matrix with 2 colums with each row is an edge  
+**data**: A data.frame with data observed over nodes.  
+**ncuts**: The number of cuts. `This value specifiedis not the number of clusters, but the number of cuts in the graph, one less than the number of clusters`.  
+**crit**: A scalar or two dimensional vector with criteria for groups. Examples: limits of group size or limits of population size. If scalar, is the minimum criteria for groups.  
+**vec.crit**: A vector for evaluating criteria.  
+**method**: "mahalanobis" or "euclidean", "maximum", "manhattan", "canberra", "binary" or "minkowisk"  
+**p**: The power of the Minkowski distance.  
+**cov**: The covariance matrix used to compute the mahalanobis distance.  
+**inverted**: logical. If 'TRUE', 'cov' is supposed to contain the inverse of the covariance matrix.  
+  
+  
+**Value**  
+**groups**: A vector with length equal the number of nodes. Each position identifies the group of node.  
+**edges.groups**: A list of length equal the number of groups with each element is a set of edges.  
+**not.prune**: A vector identifying the groups with are not candidates to partition.  
+**candidates**: A vector identifying the groups with are candidates to partition.  
+**ssto**: The total dissimilarity in each step of edge removal.
+
+## ncuts = 2 (ncluster = 3)
+```{r}
+bh.reg.1 <- spdep::skater(
+    edges = bh.mst[, 1:2], 
+    data = bh.index.scale.df,
+    ncuts = 2
+)
+summary(bh.reg.1)
+```
+
+```{r}
+cat(names(bh.reg.1), sep = "\n")
+table(bh.reg.1$groups)
+```
+
+```{r, fig.height=10}
+bh %>% bind_cols(
+    tibble(GROUP = factor(bh.reg.1$groups, levels = c(1, 2, 3)))
+) %>% ggplot() + 
+    geom_sf(mapping = aes(fill = GROUP), 
+            size = 0.2, alpha = 0.5) + 
+    scale_fill_carto_d(name = "Region: ", palette = "Vivid") + 
+    theme(legend.position = "none")
+```
+
+
+## ncuts = 3 (ncluster = 4)
+```{r}
+bh.reg.1 <- spdep::skater(
+    edges = bh.mst[, 1:2], 
+    data = bh.index.scale.df,
+    ncuts = 3
+)
+summary(bh.reg.1)
+```
+
+```{r}
+table(bh.reg.1$groups)
+```
+
+```{r, fig.height=10}
+bh %>% bind_cols(
+    tibble(GROUP = factor(bh.reg.1$groups, levels = c(1, 2, 3)))
+) %>% ggplot() + 
+    geom_sf(mapping = aes(fill = GROUP), 
+            size = 0.2, alpha = 0.5) + 
+    scale_fill_carto_d(name = "Region: ", palette = "Vivid") + 
+    theme(legend.position = "none")
+```
+
+## ncuts = 4 (ncluster = 5)
+```{r}
+bh.reg.1 <- spdep::skater(
+    edges = bh.mst[, 1:2], 
+    data = bh.index.scale.df,
+    ncuts = 4
+)
+summary(bh.reg.1)
+```
+
+```{r}
+table(bh.reg.1$groups)
+```
+
+```{r, fig.height=10}
+bh %>% bind_cols(
+    tibble(GROUP = factor(bh.reg.1$groups, levels = c(1, 2, 3)))
+) %>% ggplot() + 
+    geom_sf(mapping = aes(fill = GROUP), 
+            size = 0.2, alpha = 0.5) + 
+    scale_fill_carto_d(name = "Region: ", palette = "Vivid") + 
+    theme(legend.position = "none")
+```

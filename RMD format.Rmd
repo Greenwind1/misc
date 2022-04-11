@@ -19,7 +19,7 @@ output:
       # espresso, tango, zenburn
       code_folding: show
       # code_download: TRUE
-      fig_width: 8
+      fig_width: 10
 editor_options: 
   chunk_output_type: console
 ---
@@ -32,8 +32,9 @@ knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
 # Preparations {.tabset .tabset-fade .tabset-pills}
 
 ## Load libraries
-`Remove library if necessary...`
 ```{r, echo=FALSE, message=FALSE}
+# Remove library if necessary...
+
 # Data manipulation
 library(tidyverse)
 library(data.table)
@@ -84,11 +85,10 @@ library(broom.mixed)
 ## Environment
 ```{r Environment}
 # rgb(73, 81, 112, maxColorValue = 255): "#495170"
-col.1 <- "#495170"  # blue
-col.2 <- "#72faa4"  # green
-col.3 <- "#f7be16"  # yellow
-col.4 <- "#fa8072"  # red
-scale.col.1 <- c(col.1, col.4)
+col.os <- "#414a4c"
+col.cb <- "#b0b7c6"
+col.rm <- "#e3256b"
+scale.col.1 <- c()
 theme_set(theme_minimal(base_family = "Candara"))
 options(dplyr.summarise.inform = TRUE)
 ```

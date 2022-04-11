@@ -12,9 +12,9 @@ library(extrafont)  # "Candara"
 theme_set(theme_minimal(base_family = "Candara"))
 options(dplyr.summarise.inform = TRUE)
 
-col.os <- "#414a4c"
-col.tb <- "#77dde7"
-col.pb <- "#1ca9c9"
+col.os <- "#414a4c"  # Outer Space
+col.tb <- "#77dde7"  # Turquoise Blue
+col.pb <- "#1ca9c9"  # Pasicif Blue
 
 map.sf <- sf::read_sf(
     "input/Administrative_district_Tokyo_2021/N03-21_13_210101.shp"
