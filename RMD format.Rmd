@@ -36,8 +36,8 @@ knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
 # Data manipulation
 library(tidyverse)
 library(data.table)
+library(janitor)  # janitor::row_to_names()
 library(DT)
-library(gt)
 library(stringr)
 library(lubridate)
 
