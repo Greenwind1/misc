@@ -97,7 +97,7 @@ bh.nb <- spdep::poly2nb(bh)
 spdep::card(bh.nb)
 ```
 
-## Computing costs with `spdep::nbcosts`
+## Compute costs with `spdep::nbcosts`
 ```{r}
 bh.costs <- spdep::nbcosts(
     nb = bh.nb, 
