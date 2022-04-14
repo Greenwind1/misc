@@ -188,7 +188,7 @@ p1 / p2
 
 
 ## Choropleth Map: Tokyo
-```{r, fig.height=10}
+```{r, fig.height=15}
 p1 <- lp.sf.stat %>% 
     ggplot() + 
     geom_sf(mapping = aes(), data = admin.sf, 
@@ -200,7 +200,7 @@ p1 <- lp.sf.stat %>%
     labs(x = NULL, y = NULL, title = "Mean Price (1e6 JPY)") + 
     theme(title = element_text(size = 15), 
           legend.position = c(0.05, 0.35), 
-          plot.margin = unit(c(0, 0, 20, 0), units = "pt")) + 
+          plot.margin = unit(c(0, 0, 30, 0), units = "pt")) + 
     guides(fill = guide_colourbar(
         barwidth = 0.5, barheight = 10, label.position = "right", 
         ticks.linewidth = 3
@@ -217,23 +217,18 @@ p2 <- lp.sf.stat %>%
     labs(x = NULL, y = NULL, title = "Median Price (1e6 JPY)") + 
     theme(title = element_text(size = 15), 
           legend.position = c(0.05, 0.35), 
-          plot.margin = unit(c(0, 0, 0, 0), units = "pt")) + 
+          plot.margin = unit(c(0, 0, 30, 0), units = "pt")) + 
     guides(fill = guide_colourbar(
         barwidth = 0.5, barheight = 10, label.position = "right", 
         ticks.linewidth = 3
     ))
 
-p1 / p2
-ggsave("fig/Land-price_Tokyo.jpg", dpi = 300, width = 10, height = 10)
-```
-
-```{r, fig.height=5}
-p1 <- lp.sf.stat %>% 
+p3 <- lp.sf.stat %>% 
     ggplot() + 
     geom_sf(mapping = aes(), data = admin.sf, 
             fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) + 
     geom_sf(mapping = aes(fill = Price_Change.Mean)) + 
-    rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
+    rcartocolor::scale_fill_carto_c(name = "", palette = "ArmyRose") + 
     geom_sf_text(aes(label = Price_Change.Mean), color = "white", 
                  cex = 2.5, family = "Candara") + 
     labs(x = NULL, y = NULL, title = "Mean Price Change (%)") + 
@@ -244,20 +239,22 @@ p1 <- lp.sf.stat %>%
         barwidth = 0.5, barheight = 10, label.position = "right", 
         ticks.linewidth = 3
     ))
-p1
-ggsave("fig/Land-price-change_Tokyo.jpg", dpi = 300, width = 10, height = 5)
+
+p1 / p2 / p3
+ggsave("fig/Land-price_Tokyo.jpg", dpi = 300, width = 10, height = 15)
 ```
 
 ## Choropleth Map: Central Tokyo
-```{r, fig.height=16, fig.width=8}
+```{r, fig.height=24, fig.width=8}
 p1 <- lp.sf.stat %>% filter(District <= 13123) %>% 
     ggplot() + 
   geom_sf(mapping = aes(), data = admin.sf %>% filter(District <= 13123), 
           fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) + 
   geom_sf_text(aes(label = City), color = col.os, 
                cex = 4, family = "Candara") + 
-  labs(x = NULL, y = NULL) + 
-  theme(plot.margin = unit(c(0, 0, 20, 0), units = "pt"))
+  labs(x = NULL, y = NULL, title = "Central Tokyo Districts") + 
+  theme(title = element_text(size = 15), 
+        plot.margin = unit(c(0, 0, 40, 0), units = "pt"))
 
 p2 <- lp.sf.stat %>% filter(District <= 13123) %>% 
   ggplot() + 
@@ -267,33 +264,24 @@ p2 <- lp.sf.stat %>% filter(District <= 13123) %>%
   geom_sf_text(aes(label = Price.Median), color = col.os, 
                cex = 4, family = "Candara") + 
   rcartocolor::scale_fill_carto_c(name = "", palette = "Tropic") + 
-  labs(x = NULL, y = NULL) + 
+  labs(x = NULL, y = NULL, title = "Median Land Price (1e6 JPY)") + 
   theme(title = element_text(size = 15), 
         legend.position = c(0.05, 0.3), 
-        plot.margin = unit(c(0, 0, 0, 0), units = "pt")) + 
+        plot.margin = unit(c(0, 0, 40, 0), units = "pt")) + 
   guides(fill = guide_colourbar(
     barwidth = 0.5, barheight = 15, label.position = "right", 
     ticks.linewidth = 3
   ))
 
-p1 / p2 + plot_annotation(
-  title = "Median Land Price", 
-  subtitle = "(1e6 JPY)", 
-  theme = theme(title = element_text(size = 15))
-)
-
-ggsave("fig/Land-price_Central-Tokyo.jpg", dpi = 300, width = 10, height = 20)
-```
-
-```{r, fig.height=16, fig.width=8}
-p1 <- lp.sf.stat %>% filter(District <= 13123) %>% 
+p3 <- lp.sf.stat %>% filter(District <= 13123) %>% 
   ggplot() + 
   geom_sf(mapping = aes(), data = admin.sf %>% filter(District <= 13123), 
           fill = NA, color = col.cb, alpha = 0.1, size = 0.1) + 
   geom_sf(mapping = aes(fill = Price_Change.Mean), color = "white") + 
-  geom_sf_text(aes(label = Price_Change.Mean), color = col.os, cex = 3) + 
-  rcartocolor::scale_fill_carto_c(name = "", palette = "Tropic") + 
-  labs(x = NULL, y = NULL) + 
+  geom_sf_text(aes(label = Price_Change.Mean), color = col.os, 
+               cex = 4, family = "Candara") + 
+  rcartocolor::scale_fill_carto_c(name = "", palette = "ArmyRose") + 
+  labs(x = NULL, y = NULL, title = "Mean Land Price Change (%)") + 
   theme(title = element_text(size = 15), 
         legend.position = c(0.05, 0.3), 
         plot.margin = unit(c(0, 0, 0, 0), units = "pt")) + 
@@ -302,19 +290,13 @@ p1 <- lp.sf.stat %>% filter(District <= 13123) %>%
     ticks.linewidth = 3
   ))
 
-p1 + plot_annotation(
-  title = "Mean Land Price Change (%)", 
-  subtitle = "", 
-  theme = theme(title = element_text(size = 15))
-)
-
-ggsave("fig/Land-price-change_Central-Tokyo.jpg", 
-       dpi = 300, width = 10, height = 10)
+p1 / p2 / p3
+ggsave("fig/Land-price_Central-Tokyo.jpg", dpi = 300, width = 10, height = 30)
 ```
 
 
 # Spatial Clustering with SKATER
-## Standardize Node 4 Features
+## Standardize Node Features
 ```{r}
 lp.stat.scale <- lp.sf.stat %>% 
     as.data.frame() %>% 
@@ -355,7 +337,7 @@ lp.stat.mst <- spdep::mstree(nbw = lp.stat.listw, ini = 5)
 cat(dim(lp.stat.mst))
 lp.stat.mst[1:3, ]
 ```
-```{r, fig.width=10, fig.height=10}
+```{r, fig.width=10, fig.height=6.5}
 plot(sf::st_geometry(lp.sf.stat), border = col.os)
 # ?plot.mst
 plot(lp.stat.mst, coordinates(as(lp.sf.stat, "Spatial")), 
@@ -387,13 +369,12 @@ p1 <- lp.sf.stat %>%
     rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
     geom_sf_text(aes(label = Price.Median), color = "white",
                  cex = 3, family = "Candara") +
-    labs(x = NULL, y = NULL, title = NULL, 
-         caption = "Median Price (1e6 JPY)", size = 1) + 
+    labs(x = NULL, y = NULL, title = "Median Price (1e6 JPY)") + 
     theme(title = element_text(size = 15),
           legend.position = c(0.05, 0.35), 
           plot.margin = unit(c(0, 0, 20, 0), units = "pt")) + 
     guides(fill = guide_colourbar(
-        barwidth = 0.5, barheight = 15, label.position = "right", 
+        barwidth = 0.5, barheight = 12, label.position = "right", 
         ticks.linewidth = 3
     ))
 
@@ -407,13 +388,12 @@ p2 <- lp.sf.stat %>%
     rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
     geom_sf_text(aes(label = Price_Change.Mean), color = "white",
                  cex = 3, family = "Candara") +
-    labs(x = NULL, y = NULL, title = NULL, 
-         caption = "Mean Price Change (%)") + 
+    labs(x = NULL, y = NULL, title = "Mean Price Change (%)") + 
     theme(title = element_text(size = 15), 
           legend.position = c(0.05, 0.35), 
           plot.margin = unit(c(0, 0, 20, 0), units = "pt")) + 
     guides(fill = guide_colourbar(
-        barwidth = 0.5, barheight = 15, label.position = "right", 
+        barwidth = 0.5, barheight = 12, label.position = "right", 
         ticks.linewidth = 3
     ))
 
@@ -425,8 +405,9 @@ p3 <- lp.sf.stat %>% bind_cols(
     scale_fill_carto_d(name = "", palette = "Vivid") + 
     geom_sf_text(aes(label = City), color = col.os, 
                  cex = 3, family = "Candara") + 
-    labs(x = NULL, y = NULL, title = NULL) + 
-    theme(legend.position = "none", 
+    labs(x = NULL, y = NULL, title = "ncluster = 3") + 
+    theme(title = element_text(size = 15), 
+          legend.position = "none", 
           plot.margin = unit(c(0, 0, 0, 0), units = "pt"))
 
 p1 / p2 / p3 + 
@@ -462,13 +443,12 @@ p1 <- lp.sf.stat %>%
     rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
     geom_sf_text(aes(label = Price.Median), color = "white",
                  cex = 3, family = "Candara") +
-    labs(x = NULL, y = NULL, title = NULL, 
-         caption = "Median Price (1e6 JPY)", size = 1) + 
+    labs(x = NULL, y = NULL, title = "Median Price (1e6 JPY)") + 
     theme(title = element_text(size = 15),
           legend.position = c(0.05, 0.35), 
           plot.margin = unit(c(0, 0, 20, 0), units = "pt")) + 
     guides(fill = guide_colourbar(
-        barwidth = 0.5, barheight = 15, label.position = "right", 
+        barwidth = 0.5, barheight = 12, label.position = "right", 
         ticks.linewidth = 3
     ))
 
@@ -482,13 +462,12 @@ p2 <- lp.sf.stat %>%
     rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
     geom_sf_text(aes(label = Price_Change.Mean), color = "white",
                  cex = 3, family = "Candara") +
-    labs(x = NULL, y = NULL, title = NULL, 
-         caption = "Mean Price Change (%)") + 
+    labs(x = NULL, y = NULL, title = "Mean Price Change (%)") + 
     theme(title = element_text(size = 15), 
           legend.position = c(0.05, 0.35), 
           plot.margin = unit(c(0, 0, 20, 0), units = "pt")) + 
     guides(fill = guide_colourbar(
-        barwidth = 0.5, barheight = 15, label.position = "right", 
+        barwidth = 0.5, barheight = 12, label.position = "right", 
         ticks.linewidth = 3
     ))
 
@@ -500,8 +479,9 @@ p3 <- lp.sf.stat %>% bind_cols(
     scale_fill_carto_d(name = "", palette = "Vivid") + 
     geom_sf_text(aes(label = City), color = col.os, 
                  cex = 3, family = "Candara") + 
-    labs(x = NULL, y = NULL, title = NULL) + 
-    theme(legend.position = "none", 
+    labs(x = NULL, y = NULL, title = "ncluster = 4") + 
+    theme(title = element_text(size = 15), 
+          legend.position = "none", 
           plot.margin = unit(c(0, 0, 0, 0), units = "pt"))
 
 p1 / p2 / p3 + 
@@ -537,13 +517,12 @@ p1 <- lp.sf.stat %>%
     rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
     geom_sf_text(aes(label = Price.Median), color = "white",
                  cex = 3, family = "Candara") +
-    labs(x = NULL, y = NULL, title = NULL, 
-         caption = "Median Price (1e6 JPY)", size = 1) + 
+    labs(x = NULL, y = NULL, title = "Median Price (1e6 JPY)") + 
     theme(title = element_text(size = 15),
           legend.position = c(0.05, 0.35), 
           plot.margin = unit(c(0, 0, 20, 0), units = "pt")) + 
     guides(fill = guide_colourbar(
-        barwidth = 0.5, barheight = 15, label.position = "right", 
+        barwidth = 0.5, barheight = 12, label.position = "right", 
         ticks.linewidth = 3
     ))
 
@@ -557,13 +536,12 @@ p2 <- lp.sf.stat %>%
     rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
     geom_sf_text(aes(label = Price_Change.Mean), color = "white",
                  cex = 3, family = "Candara") +
-    labs(x = NULL, y = NULL, title = NULL, 
-         caption = "Mean Price Change (%)") + 
+    labs(x = NULL, y = NULL, title = "Mean Price Change (%)") + 
     theme(title = element_text(size = 15), 
           legend.position = c(0.05, 0.35), 
           plot.margin = unit(c(0, 0, 20, 0), units = "pt")) + 
     guides(fill = guide_colourbar(
-        barwidth = 0.5, barheight = 15, label.position = "right", 
+        barwidth = 0.5, barheight = 12, label.position = "right", 
         ticks.linewidth = 3
     ))
 
@@ -575,8 +553,9 @@ p3 <- lp.sf.stat %>% bind_cols(
     scale_fill_carto_d(name = "", palette = "Vivid") + 
     geom_sf_text(aes(label = City), color = col.os, 
                  cex = 3, family = "Candara") + 
-    labs(x = NULL, y = NULL, title = NULL) + 
-    theme(legend.position = "none", 
+    labs(x = NULL, y = NULL, title = "ncluster = 5") + 
+    theme(title = element_text(size = 15), 
+          legend.position = "none", 
           plot.margin = unit(c(0, 0, 0, 0), units = "pt"))
 
 p1 / p2 / p3 + 
@@ -610,9 +589,10 @@ p1 <- lp.sf.stat %>% bind_cols(
     scale_fill_carto_d(name = "", palette = "Vivid") + 
     geom_sf_text(aes(label = City), color = col.os, 
                  cex = 3, family = "Candara") + 
-    labs(x = NULL, y = NULL, title = NULL) + 
-    theme(legend.position = "none", 
-          plot.margin = unit(c(0, 0, 0, 0), units = "pt"))
+    labs(x = NULL, y = NULL, title = "ncluster = 3") + 
+    theme(title = element_text(size = 15), 
+          legend.position = "none", 
+          plot.margin = unit(c(0, 0, 30, 0), units = "pt"))
 
 p2 <- lp.sf.stat %>% bind_cols(
     tibble(GROUP = factor(lp.stat.reg.4$groups, levels = 1:5))
@@ -622,9 +602,10 @@ p2 <- lp.sf.stat %>% bind_cols(
     scale_fill_carto_d(name = "", palette = "Vivid") + 
     geom_sf_text(aes(label = City), color = col.os, 
                  cex = 3, family = "Candara") + 
-    labs(x = NULL, y = NULL, title = NULL) + 
-    theme(legend.position = "none", 
-          plot.margin = unit(c(0, 0, 0, 0), units = "pt"))
+    labs(x = NULL, y = NULL, title = "ncluster = 5") + 
+    theme(title = element_text(size = 15), 
+          legend.position = "none", 
+          plot.margin = unit(c(0, 0, 30, 0), units = "pt"))
 
 p3 <- lp.sf.stat %>% bind_cols(
     tibble(GROUP = factor(lp.stat.reg.9$groups, levels = 1:10))
@@ -634,8 +615,9 @@ p3 <- lp.sf.stat %>% bind_cols(
     scale_fill_carto_d(name = "", palette = "Vivid") + 
     geom_sf_text(aes(label = City), color = col.os, 
                  cex = 3, family = "Candara") + 
-    labs(x = NULL, y = NULL, title = NULL) + 
-    theme(legend.position = "none", 
+    labs(x = NULL, y = NULL, title = "ncluster = 10") + 
+    theme(title = element_text(size = 15), 
+          legend.position = "none", 
           plot.margin = unit(c(0, 0, 0, 0), units = "pt"))
 
 p1 / p2 / p3 + 
