@@ -56,6 +56,8 @@ library(broman)  # plot_crayons()
 library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(RColorBrewer)  # display.brewer.all()
 library(extrafont)  # "Candara"
+
+# Geospatial Analysis
 library(sf)  # simple feature
 library(spdep)  # helpful functions for mapping: skater
 library(rmapshaper)  # helpful functions for mapping
@@ -263,4 +265,5 @@ bh %>% bind_cols(
             size = 0.2, alpha = 0.5) + 
     scale_fill_carto_d(name = "Region: ", palette = "Vivid") + 
     theme(legend.position = "none")
+ggsave("fig/skater_01.jpg", dpi = 300, width = 8, height = 10)
 ```
