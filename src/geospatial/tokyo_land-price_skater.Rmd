@@ -71,8 +71,15 @@ col.cb <- "#b0b7c6"  # Cadet Blue
 col.el <- "#ceff1d"  # Electric Lime
 col.rm <- "#e3256b"  # Razzmatazz
 scale.col.1 <- c()
-theme_set(theme_minimal(base_family = "Candara"))
+font.1 <- "Candara"
+theme_set(theme_minimal(base_family = font.1))
 options(dplyr.summarise.inform = TRUE)
+
+t.img <- png::readPNG("fig/twitter.png")
+t.grob <- grid::rasterGrob(t.img, 
+                           width = unit(0.4, "cm"), 
+                           height = unit(0.4, "cm"),
+                           interpolate = FALSE)
 ```
 
 # Load DataSets {.tabset .tabset-fade .tabset-pills}
@@ -524,7 +531,12 @@ p1 <- lp.sf.stat %>%
     guides(fill = guide_colourbar(
         barwidth = 0.5, barheight = 12, label.position = "right", 
         ticks.linewidth = 3
-    ))
+    )) + 
+  annotation_custom(grob = t.grob, 
+                    xmin = 139.8, xmax = 139.8, 
+                    ymin = 35.83, ymax = 35.83) + 
+  annotate(geom = "text", x = 139.83, y = 35.83, 
+           label = "@Maxwell_110", size = 3, family = "Candara", color = "gray")
 
 p2 <- lp.sf.stat %>% 
     filter(!City %in% c("Oku-Tama", "Hinohara")) %>% 
@@ -592,7 +604,12 @@ p1 <- lp.sf.stat %>% bind_cols(
     labs(x = NULL, y = NULL, title = "ncluster = 3") + 
     theme(title = element_text(size = 15), 
           legend.position = "none", 
-          plot.margin = unit(c(0, 0, 30, 0), units = "pt"))
+          plot.margin = unit(c(0, 0, 30, 0), units = "pt")) + 
+  annotation_custom(grob = t.grob, 
+                    xmin = 139.8, xmax = 139.8, 
+                    ymin = 35.83, ymax = 35.83) + 
+  annotate(geom = "text", x = 139.83, y = 35.83, 
+           label = "@Maxwell_110", size = 3, family = "Candara", color = "gray")
 
 p2 <- lp.sf.stat %>% bind_cols(
     tibble(GROUP = factor(lp.stat.reg.4$groups, levels = 1:5))

@@ -48,8 +48,11 @@ library(broman)  # plot_crayons()
 library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(RColorBrewer)  # display.brewer.all()
 library(extrafont)  # "Candara"
+
+# GeoSpatial Analysis
 library(sf)  # simple feature
 library(spdep)  # helpful functions for mapping: skater
+library(ClustGeo)
 library(rmapshaper)  # helpful functions for mapping
 library(tmap)  # map viewer
 library(leaflet)  # map viewer
@@ -73,6 +76,19 @@ col.rm <- "#e3256b"  # Razzmatazz
 scale.col.1 <- c()
 theme_set(theme_minimal(base_family = "Candara"))
 options(dplyr.summarise.inform = TRUE)
+
+col.plos.yellow <- "#D6E13D"  # PLOS ONE
+col.plos.pink <- "#CF00A3"  # PLOS ONE
+scale.col.1 <- c()
+font.1 <- "Candara"
+theme_set(theme_minimal(base_family = font.1))
+options(dplyr.summarise.inform = TRUE)
+
+t.img <- png::readPNG("fig/twitter.png")
+t.grob <- grid::rasterGrob(t.img, 
+                           width = unit(0.4, "cm"), 
+                           height = unit(0.4, "cm"),
+                           interpolate = FALSE)
 ```
 
 # Load DataSets {.tabset .tabset-fade .tabset-pills}
@@ -505,7 +521,12 @@ p1 <- lp.sf.stat %>% ggplot() +
     labs(x = NULL, y = NULL, title = "ncluster = 3") + 
     theme(title = element_text(size = 15), 
           legend.position = "none", 
-          plot.margin = unit(c(0, 0, 30, 0), units = "pt"))
+          plot.margin = unit(c(0, 0, 30, 0), units = "pt")) + 
+  annotation_custom(grob = t.grob, 
+                    xmin = 139.8, xmax = 139.8, 
+                    ymin = 35.83, ymax = 35.83) + 
+  annotate(geom = "text", x = 139.83, y = 35.83, 
+           label = "@Maxwell_110", size = 3, family = "Candara", color = "gray")
 
 p2 <- lp.sf.stat %>% ggplot() + 
     geom_sf(mapping = aes(fill = partition.5), size = 0.2, alpha = 0.5) + 
