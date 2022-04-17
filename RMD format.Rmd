@@ -91,6 +91,7 @@ col.cb <- "#b0b7c6"  # Cadet Blue
 col.el <- "#ceff1d"  # Electric Lime
 col.rm <- "#e3256b"  # Razzmatazz
 col.plos.ye <- "#D6E13D"  # PLOS ONE
+col.plos.pink <- "#CF00A3"  # PLOS ONE
 scale.col.1 <- c()
 theme_set(theme_minimal(base_family = "Candara"))
 options(dplyr.summarise.inform = TRUE)

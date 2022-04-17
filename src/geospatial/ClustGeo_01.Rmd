@@ -76,6 +76,7 @@ col.cb <- "#b0b7c6"  # Cadet Blue
 col.el <- "#ceff1d"  # Electric Lime
 col.rm <- "#e3256b"  # Razzmatazz
 col.plos.yellow <- "#D6E13D"  # PLOS ONE
+col.plos.pink <- "#CF00A3"  # PLOS ONE
 scale.col.1 <- c()
 font.1 <- "Candara"
 theme_set(theme_minimal(base_family = font.1))
@@ -122,9 +123,11 @@ cat("dim(map@data):", dim(map@data), "\n")
 cat("map@plotOrder[1:10]:", map@plotOrder[1:10], "\n")
 cat("map@bbox:")
 print(map@bbox)
+
+map.sf <- map %>% st_as_sf()
 ```
 ```{r, fig.width=5, fig.height=10}
-ggplot(data = map %>% st_as_sf()) + 
+ggplot(data = map.sf) + 
   geom_sf(fill = col.plos.yellow, color = col.os, alpha = 1) + 
   labs(x = NULL, y = NULL, 
        title = "303 French municipalities of Gironde estuary") + 
@@ -156,6 +159,7 @@ identical(as.vector(map$INSEE_COM), rownames(dat))
 
 **wt**: vector with the weights of the observations. By default, wt=NULL corresponds to the case where all observations are weighted by 1/n.
 
+## w/ D0 only
 ```{r}
 D0 <- dist(dat)
 tree.1 <- 
@@ -163,12 +167,178 @@ tree.1 <-
 ```
 
 ```{r}
+# ?plot.hclust
 plot(tree.1, hang = -1, label = FALSE, 
-     xlab = "", sub = "", 
-     main = "Ward dendrogram with D0 only")
+     xlab = "", sub = "", main = "Ward dendrogram: D0 only")
 
 rect.hclust(tree.1 , k = 5, border = c(4, 5, 3, 2, 1))
 legend("topright", legend = paste("cluster", 1:5), 
        fill = 1:5, bty = "n", border = "white")
+
+map.sf <- map.sf %>% 
+  mutate(partition.1 = factor(cutree(tree = tree.1, k = 5), 
+                              levels = 1:5, labels = 1:5))
 ```
 
+```{r, fig.width=5, fig.height=10}
+ggplot(data = map.sf) + 
+  geom_sf(mapping = aes(fill = partition.1), 
+          color = col.os, alpha = 1, size = 0.25) + 
+  scale_fill_carto_d(
+    palette = "Pastel", 
+    guide = guide_legend(title = expression("GlustGeo::\n hclustgeo"))
+  ) + 
+  labs(x = NULL, y = NULL, 
+       title = "303 French municipalities of Gironde estuary:", 
+       subtitle = "alpha = 0") + 
+  theme(legend.position = c(0.85, 0.88)) + 
+  annotation_custom(grob = t.grob, 
+                    xmin = 420000, xmax = 420000, 
+                    ymin = 6310000, ymax = 6310000) + 
+  annotate(geom = "text", x = 434000, y = 6310000, 
+           label = "@Maxwell_110", size = 3, family = "Candara")
+
+ggsave("fig/ClustGeo_01_Partition-1.jpg", width = 5, height = 10)
+```
+
+## D0 and D1
+
+alpha = 0: only D0 is considered.
+alpha = 1: only D1 is considered.
+
+Calculate separately the socio-economic homogeneity (denoted Q0) and the geographic homogneity (denoted Q1) of the partitions obtained for a range of alpha and clusters K.  
+The homogeneity Q0 (resp. Q1) is the proportion of explained inertia calculated with D0 (resp. D1).
+
+```{r}
+D0 <- dist(dat)
+D1 <- dist(x = D.geo)
+alpha.seq <- seq(0, 1, 0.1)
+K <- 5
+cr <- choicealpha(D0, D1, alpha.seq, K, 
+                  wt = NULL, scale = TRUE, graph = FALSE)
+cr$Q # proportion of explained inertia
+crQ.df <- data.frame(cr$Q) %>% mutate(alpha = alpha.seq)
+rownames(crQ.df) <- NULL
+```
+
+```{r}
+crQ.df %>% ggplot() + 
+  geom_point(mapping = aes(x = alpha, y = Q0), 
+             color = col.plos.yellow, size = 2) + 
+  geom_line(mapping = aes(x = alpha, y = Q0), 
+            color = col.plos.yellow, size = 1) + 
+  geom_point(mapping = aes(x = alpha, y = Q1), 
+             color = col.plos.pink, size = 2) + 
+  geom_line(mapping = aes(x = alpha, y = Q1), 
+            color = col.plos.pink, size = 1) + 
+  lims(y = c(0, 1.)) + 
+  labs(y = "Q: proportion of explained inertia", 
+       title = "ClustGeo::choicealpha") + 
+  theme(plot.title = element_text(
+    size = 15, 
+    margin = margin(t = 50, r = 0, b = -50, l = 0, unit = "pt")
+  ))
+```
+
+```{r}
+tree.2 <- 
+  ClustGeo::hclustgeo(D0 = D0, D1 = D1, alpha = 0.2, scale = TRUE, wt = NULL)
+
+map.sf <- map.sf %>% 
+  mutate(partition.2 = factor(cutree(tree = tree.2, k = 5), 
+                              levels = 1:5, labels = 1:5))
+```
+
+```{r, fig.width=5, fig.height=10}
+ggplot(data = map.sf) + 
+  geom_sf(mapping = aes(fill = partition.2), 
+          color = col.os, alpha = 1, size = 0.25) + 
+  scale_fill_carto_d(
+    palette = "Pastel", 
+    guide = guide_legend(title = expression("GlustGeo::\n hclustgeo"))
+  ) + 
+  labs(x = NULL, y = NULL, 
+       title = "303 French municipalities of Gironde estuary:", 
+       subtitle = "alpha = 0.2") + 
+  theme(legend.position = c(0.85, 0.88)) + 
+  annotation_custom(grob = t.grob, 
+                    xmin = 420000, xmax = 420000, 
+                    ymin = 6310000, ymax = 6310000) + 
+  annotate(geom = "text", x = 434000, y = 6310000, 
+           label = "@Maxwell_110", size = 3, family = "Candara")
+
+ggsave("fig/ClustGeo_01_Partition-2.jpg", width = 5, height = 10)
+```
+
+## Another D1
+Take the neighborhood between the municipalities into account rather than the geographical distance
+
+```{r}
+list.nb <- poly2nb(map, row.names = rownames(dat))  # also used in `SKATER`
+A <- spdep::nb2mat(list.nb, style = "B")
+diag(A) <- 1
+colnames(A) <- rownames(A) <- as.vector(map$NOM_COMM)
+A[1:5, 1:5]
+```
+
+**Note: The dissimilarity matrix D1 is then 1 minus A.**
+```{r}
+D0 <- dist(dat)
+D1 <- as.dist(1 - A)
+alpha.seq <- seq(0, 1, 0.1)
+K <- 5
+cr <- choicealpha(D0, D1, alpha.seq, K, 
+                  wt = NULL, scale = TRUE, graph = FALSE)
+cr$Q  # proportion of explained inertia
+crQ.df <- data.frame(cr$Qnorm) %>% mutate(alpha = alpha.seq)
+rownames(crQ.df) <- NULL
+```
+
+```{r}
+crQ.df %>% ggplot() + 
+  geom_point(mapping = aes(x = alpha, y = Q0norm), 
+             color = col.plos.yellow, size = 2) + 
+  geom_line(mapping = aes(x = alpha, y = Q0norm), 
+            color = col.plos.yellow, size = 1) + 
+  geom_point(mapping = aes(x = alpha, y = Q1norm), 
+             color = col.plos.pink, size = 2) + 
+  geom_line(mapping = aes(x = alpha, y = Q1norm), 
+            color = col.plos.pink, size = 1) + 
+  lims(y = c(0, NA)) + 
+  labs(y = "Q: proportion of explained inertia", 
+       title = "ClustGeo::choicealpha") + 
+  theme(plot.title = element_text(
+    size = 15, 
+    margin = margin(t = 50, r = 0, b = -50, l = 0, unit = "pt")
+  ))
+```
+
+```{r}
+tree.3 <- 
+  ClustGeo::hclustgeo(D0 = D0, D1 = D1, alpha = 0.2, scale = TRUE, wt = NULL)
+
+map.sf <- map.sf %>% 
+  mutate(partition.3 = factor(cutree(tree = tree.3, k = 5), 
+                              levels = 1:5, labels = 1:5))
+```
+
+```{r, fig.width=5, fig.height=10}
+ggplot(data = map.sf) + 
+  geom_sf(mapping = aes(fill = partition.3), 
+          color = col.os, alpha = 1, size = 0.25) + 
+  scale_fill_carto_d(
+    palette = "Pastel", 
+    guide = guide_legend(title = expression("GlustGeo::\n hclustgeo"))
+  ) + 
+  labs(x = NULL, y = NULL, 
+       title = "303 French municipalities of Gironde estuary:", 
+       subtitle = "alpha = 0.2; Neighborhood Dissimilarity") + 
+  theme(legend.position = c(0.85, 0.88)) + 
+  annotation_custom(grob = t.grob, 
+                    xmin = 420000, xmax = 420000, 
+                    ymin = 6310000, ymax = 6310000) + 
+  annotate(geom = "text", x = 434000, y = 6310000, 
+           label = "@Maxwell_110", size = 3, family = "Candara")
+
+ggsave("fig/ClustGeo_01_Partition-3.jpg", width = 5, height = 10)
+```
