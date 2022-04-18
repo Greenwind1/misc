@@ -93,7 +93,8 @@ col.rm <- "#e3256b"  # Razzmatazz
 col.plos.ye <- "#D6E13D"  # PLOS ONE
 col.plos.pink <- "#CF00A3"  # PLOS ONE
 scale.col.1 <- c()
-theme_set(theme_minimal(base_family = "Candara"))
+font.base <- "Candara"
+theme_set(theme_minimal(base_family = font.base))
 options(dplyr.summarise.inform = TRUE)
 # Twitter Logo and Acc
 t.img <- png::readPNG("fig/twitter.png")
