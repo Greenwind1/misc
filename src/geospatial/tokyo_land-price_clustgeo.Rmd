@@ -531,8 +531,6 @@ p1 <- lp.sf.stat %>% ggplot() +
 p2 <- lp.sf.stat %>% ggplot() + 
     geom_sf(mapping = aes(fill = partition.5), size = 0.2, alpha = 0.5) + 
     scale_fill_carto_d(name = "", palette = "Vivid") + 
-    geom_sf_text(aes(label = City), color = col.os, 
-                 cex = 3, family = "Candara") + 
     labs(x = NULL, y = NULL, title = "ncluster = 5") + 
     theme(title = element_text(size = 15), 
           legend.position = "none", 
@@ -541,8 +539,6 @@ p2 <- lp.sf.stat %>% ggplot() +
 p3 <- lp.sf.stat %>% ggplot() + 
     geom_sf(mapping = aes(fill = partition.10), size = 0.2, alpha = 0.5) + 
     scale_fill_carto_d(name = "", palette = "Vivid") + 
-    geom_sf_text(aes(label = City), color = col.os, 
-                 cex = 3, family = "Candara") + 
     labs(x = NULL, y = NULL, title = "ncluster = 10") + 
     theme(title = element_text(size = 15), 
           legend.position = "none", 
@@ -551,10 +547,12 @@ p3 <- lp.sf.stat %>% ggplot() +
 p1 / p2 / p3 + 
     plot_annotation(
     title = "Spatial Clustering on Price Stats", 
-    subtitle = "", 
+    subtitle = "(ClustGeo)", 
     theme = theme(title = element_text(size = 20, family = "Candara"))
     )
 
 ggsave("fig/Spatial-Clustering-Tokyo_ClustGeo_n3-10.jpg", 
        dpi = 300, width = 15, height = 10 * 3)
+ggsave("fig/Spatial-Clustering-Tokyo_ClustGeo_n3-10_dpi150.jpg", 
+       dpi = 150, width = 15, height = 10 * 3)
 ```
