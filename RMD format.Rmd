@@ -87,6 +87,7 @@ library(broom.mixed)
 ## Environment
 ```{r Environment}
 # rgb(73, 81, 112, maxColorValue = 255): "#495170"
+col.tw <- "#dbd7d2"  # Timberwolf
 col.os <- "#414a4c"  # Outer Space
 col.rp <- "#7851a9"  # Royal Purple
 col.cb <- "#b0b7c6"  # Cadet Blue

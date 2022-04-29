@@ -54,6 +54,7 @@ library(sf)  # simple feature
 library(spdep)  # helpful functions for mapping: skater
 library(ClustGeo)
 library(rmapshaper)  # helpful functions for mapping
+library(ggsn)
 library(tmap)  # map viewer
 library(leaflet)  # map viewer
 library(mapview)  # map viewer
@@ -68,13 +69,15 @@ source("utility/helper_functions.R")
 
 ## Environment
 ```{r Environment}
+col.tw <- "#dbd7d2"  # Timberwolf
 col.os <- "#414a4c"  # Outer Space
 col.rp <- "#7851a9"  # Royal Purple
 col.cb <- "#b0b7c6"  # Cadet Blue
 col.el <- "#ceff1d"  # Electric Lime
 col.rm <- "#e3256b"  # Razzmatazz
 scale.col.1 <- c()
-theme_set(theme_minimal(base_family = "Candara"))
+font.base <- "Candara"
+theme_set(theme_minimal(base_family = font.base))
 options(dplyr.summarise.inform = TRUE)
 
 col.plos.yellow <- "#D6E13D"  # PLOS ONE
@@ -158,6 +161,7 @@ lp.sf <- lp.sf %>% mutate(
     left_join(admin.code %>% select(District, City), by = "District") %>% 
     filter(!City %in% city.rm)
 ```
+
 
 # Exploratory Data Analysis {.tabset .tabset-fade .tabset-pills}
 ## Descriptive Statistics
@@ -385,11 +389,24 @@ p1 <- lp.sf.stat %>%
             fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) + 
     geom_sf(mapping = aes(fill = Price.Median)) + 
     rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
+    scalebar(
+        data = admin.sf %>% filter(!City %in% c("Oku-Tama", "Hinohara")), 
+        location = "bottomright",  # waved if anchor set.
+        anchor = setNames(c(139.3, 35.52), c("x", "y")), 
+        dist = 10, dist_unit = "km",
+        # Esri Japan: https://bit.ly/3LtcBaE
+        transform = TRUE, model = "WGS84",
+        height = 0.01, st.dist = 0.03, st.size = 4, st.color = col.os, 
+        box.fill = c(col.tw, col.plos.pink), 
+        box.color = "white", border.size = 0.05, 
+        family = font.base
+    ) + 
     geom_sf_text(aes(label = Price.Median), color = "white",
-                 cex = 3, family = "Candara") +
+                 cex = 5, family = font.base) + 
     labs(x = NULL, y = NULL, title = "Median Price (1e6 JPY)") + 
-    theme(title = element_text(size = 15),
-          legend.position = c(0.05, 0.35), 
+    theme(title = element_text(size = 15), 
+          # legend.position = c(0.05, 0.35), 
+          legend.position = "none", 
           plot.margin = unit(c(0, 0, 20, 0), units = "pt")) + 
     guides(fill = guide_colourbar(
         barwidth = 0.5, barheight = 12, label.position = "right", 
@@ -405,10 +422,11 @@ p2 <- lp.sf.stat %>%
     geom_sf(mapping = aes(fill = Price_Change.Mean)) + 
     rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
     geom_sf_text(aes(label = Price_Change.Mean), color = "white",
-                 cex = 3, family = "Candara") +
+                 cex = 5, family = "Candara") + 
     labs(x = NULL, y = NULL, title = "Mean Price Change (%)") + 
     theme(title = element_text(size = 15), 
-          legend.position = c(0.05, 0.35), 
+          # legend.position = c(0.05, 0.35), 
+          legend.position = "none", 
           plot.margin = unit(c(0, 0, 20, 0), units = "pt")) + 
     guides(fill = guide_colourbar(
         barwidth = 0.5, barheight = 12, label.position = "right", 
@@ -419,7 +437,7 @@ p3 <- lp.sf.stat %>% ggplot() +
     geom_sf(mapping = aes(fill = partition.3), size = 0.2, alpha = 0.5) + 
     scale_fill_carto_d(name = "", palette = "Vivid") + 
     geom_sf_text(aes(label = City), color = col.os, 
-                 cex = 3, family = "Candara") + 
+                 cex = 4, family = font.base) + 
     labs(x = NULL, y = NULL, title = "ncluster = 3") + 
     theme(title = element_text(size = 15), 
           legend.position = "none", 
@@ -453,11 +471,24 @@ p1 <- lp.sf.stat %>%
             fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) + 
     geom_sf(mapping = aes(fill = Price.Median)) + 
     rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
+    scalebar(
+        data = admin.sf %>% filter(!City %in% c("Oku-Tama", "Hinohara")), 
+        location = "bottomright",  # waved if anchor set.
+        anchor = setNames(c(139.3, 35.52), c("x", "y")), 
+        dist = 10, dist_unit = "km",
+        # Esri Japan https://bit.ly/3LtcBaE
+        transform = TRUE, model = "WGS84",
+        height = 0.01, st.dist = 0.03, st.size = 4, st.color = col.os, 
+        box.fill = c(col.tw, col.plos.pink), 
+        box.color = "white", border.size = 0.05, 
+        family = font.base
+    ) +   
     geom_sf_text(aes(label = Price.Median), color = "white",
-                 cex = 3, family = "Candara") +
+                 cex = 5, family = "Candara") +
     labs(x = NULL, y = NULL, title = "Median Price (1e6 JPY)") + 
     theme(title = element_text(size = 15),
-          legend.position = c(0.05, 0.35), 
+          # legend.position = c(0.05, 0.35), 
+          legend.position = "none", 
           plot.margin = unit(c(0, 0, 20, 0), units = "pt")) + 
     guides(fill = guide_colourbar(
         barwidth = 0.5, barheight = 12, label.position = "right", 
@@ -473,7 +504,7 @@ p2 <- lp.sf.stat %>%
     geom_sf(mapping = aes(fill = Price_Change.Mean)) + 
     rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
     geom_sf_text(aes(label = Price_Change.Mean), color = "white",
-                 cex = 3, family = "Candara") +
+                 cex = 5, family = "Candara") +
     labs(x = NULL, y = NULL, title = "Mean Price Change (%)") + 
     theme(title = element_text(size = 15), 
           legend.position = c(0.05, 0.35), 
@@ -487,7 +518,7 @@ p3 <- lp.sf.stat %>% ggplot() +
     geom_sf(mapping = aes(fill = partition.5), size = 0.2, alpha = 0.5) + 
     scale_fill_carto_d(name = "", palette = "Vivid") + 
     geom_sf_text(aes(label = City), color = col.os, 
-                 cex = 3, family = "Candara") + 
+                 cex = 4, family = "Candara") + 
     labs(x = NULL, y = NULL, title = "ncluster = 5") + 
     theme(title = element_text(size = 15), 
           legend.position = "none", 
@@ -517,7 +548,7 @@ p1 <- lp.sf.stat %>% ggplot() +
     geom_sf(mapping = aes(fill = partition.3), size = 0.2, alpha = 0.5) + 
     scale_fill_carto_d(name = "", palette = "Vivid") + 
     geom_sf_text(aes(label = City), color = col.os, 
-                 cex = 3, family = "Candara") + 
+                 cex = 4, family = "Candara") + 
     labs(x = NULL, y = NULL, title = "ncluster = 3") + 
     theme(title = element_text(size = 15), 
           legend.position = "none", 
