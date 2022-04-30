@@ -9,12 +9,25 @@ library(tidyverse)
 library(stringr)
 library(extrafont)  # "Candara"
 
-theme_set(theme_minimal(base_family = "Candara"))
+
+col.tw <- "#dbd7d2"  # Timberwolf
+col.os <- "#414a4c"  # Outer Space
+col.rp <- "#7851a9"  # Royal Purple
+col.cb <- "#b0b7c6"  # Cadet Blue
+col.el <- "#ceff1d"  # Electric Lime
+col.rm <- "#e3256b"  # Razzmatazz
+col.plos.yellow <- "#D6E13D"  # PLOS ONE
+col.plos.pink <- "#CF00A3"  # PLOS ONE
+scale.col.1 <- c()
+font.base <- "Candara"
+theme_set(theme_minimal(base_family = font.base))
 options(dplyr.summarise.inform = TRUE)
 
-col.os <- "#414a4c"  # Outer Space
-col.tb <- "#77dde7"  # Turquoise Blue
-col.pb <- "#1ca9c9"  # Pasicif Blue
+t.img <- png::readPNG("fig/twitter.png")
+t.grob <- grid::rasterGrob(t.img, 
+                           width = unit(0.4, "cm"), 
+                           height = unit(0.4, "cm"),
+                           interpolate = FALSE)
 
 map.sf <- sf::read_sf(
     "input/Administrative_district_Tokyo_2021/N03-21_13_210101.shp"
