@@ -1,0 +1,167 @@
+---
+title: "ggmice"
+subtitle: "https://github.com/amices/ggmice"
+author: "Maxwell"
+# date: '`r Sys.Date()`'
+# bibliography: references.bib
+link-citations: true
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+   html_document:
+      number_sections: TRUE
+      fig_caption: TRUE
+      toc: TRUE
+      toc_depth: 5
+      toc_float: TRUE
+      theme:
+         bootswatch: minty
+         # bootswatch: cosmo
+      highlight: espresso
+      # espresso, tango, zenburn
+      code_folding: show
+      # code_download: TRUE
+      fig_width: 10
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+
+## R Packages
+```{r, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(patchwork)
+library(broman)  # plot_crayons()
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(extrafont)  # "Candara"
+
+# Imputation
+library(mice)
+library(ggmice)
+
+# Interactivity
+library(plotly)
+library(crosstalk)
+
+# Descriptive Statistics
+library(naniar)
+library(psych)
+library(gtsummary)
+```
+
+## Environment
+```{r Environment}
+# rgb(73, 81, 112, maxColorValue = 255): "#495170"
+col.tw <- "#dbd7d2"  # Timberwolf
+col.os <- "#414a4c"  # Outer Space
+col.rp <- "#7851a9"  # Royal Purple
+col.pb <- "#1ca9c9"  # Pacific Blue
+col.cb <- "#b0b7c6"  # Cadet Blue
+col.el <- "#ceff1d"  # Electric Lime
+col.cg <- "#00cc99"  # Caribbean Green
+col.mt <- "#ff8243"  # Mango Tango
+col.rm <- "#e3256b"  # Razzmatazz
+col.plos.yellow <- "#D6E13D"  # PLOS ONE
+col.plos.pink <- "#CF00A3"  # PLOS ONE
+
+font.base <- "Candara"
+# font.base <- "Times New Roman"
+theme_set(theme_minimal(base_family = font.base))
+options(dplyr.summarise.inform = TRUE)
+# Twitter Logo and Acc
+t.img <- png::readPNG("fig/twitter_gray.png")
+t.grob <- grid::rasterGrob(t.img, 
+                           width = unit(0.35, "cm"), 
+                           height = unit(0.35, "cm"),
+                           interpolate = FALSE)
+```
+
+# Load DataSets {.tabset .tabset-fade .tabset-pills}
+```{r Load DataSets}
+dat <- boys
+```
+
+# EDA
+https://amices.org/ggmice/articles/ggmice.html
+```{r fig.height=10}
+glimpse(dat)
+# p <- dat %>% gg_miss_upset(nsets = n_var_miss(.),
+#                            nintersects = NA,
+#                            matrix.color = col.plos.yellow,
+#                            main.bar.color = col.plos.yellow,
+#                            sets.bar.color = col.plos.yellow,
+#                            number.angles = 0,
+#                            matrix.dot.alpha = 0.2,
+#                            # scale.intersections = "log10",
+#                            # scale.sets = "log10",
+#                            text.scale = c(2., 1., 1., 1, 2, 1.),
+#                            set_size.show = TRUE,
+#                            set_size.numbers_size = 5)
+
+p <- ggmice::plot_pattern(data = dat, vrb = "all", square = TRUE, 
+                          rotate = FALSE, cluster = NULL)
+p + theme_minimal(base_family = font.base)
+ggsave(filename = "fig/ggmice_01-1.jpg", width = 5, height = 5, dpi = 200)
+```
+
+# Imputation and Visualization
+## w/o Imputation
+```{r fig.height=7}
+p1 <- ggmice(dat, aes(age, bmi)) + 
+    geom_point(size = 1) + 
+    theme_minimal(base_family = font.base) + 
+    labs(x = NULL, title = "w/o imputation") + 
+    theme(legend.position = c(0.15, 0.9))
+
+p1
+```
+
+## Impute the Data and Visualize the Imputed Data
+```{r fig.height=20}
+imp <- mice::mice(dat, m = 5, printFlag = FALSE)
+
+p2 <- ggmice(imp, aes(age, bmi)) + 
+    geom_point(size = 1) + 
+    theme_minimal(base_family = font.base) + 
+    labs(title = "w/ imputation") + 
+    theme(legend.position = "none")
+
+p3 <- ggmice(imp, aes(x = .imp, y = bmi)) + 
+    geom_jitter(size = 1, height = 0, width = 0.25) + 
+    geom_boxplot(width = 0.25, size = 1, alpha = 0.75, outlier.shape = NA) + 
+    labs(x = "Imputation number", title = "box plot for each sampling") + 
+    theme_minimal(base_family = font.base) + 
+    theme(legend.position = "none") + 
+    annotation_custom(grob = t.grob, 
+                      xmin = 4.3, xmax = 4.3, 
+                      ymin = 30, ymax = 30) + 
+    annotate(geom = "text", x = 5, y = 30, 
+             label = "@Maxwell_110", 
+             size = 3, family = "Candara", color = col.tw)
+
+p1 / p2 / p3 + 
+    plot_annotation(
+    title = "ggmice", 
+    subtitle = "https://github.com/amices/ggmice", 
+    theme = theme(
+        title = element_text(size = 20, family = font.base), 
+        plot.subtitle = element_text(size = 10, family = font.base)
+    )
+    )
+ggsave(filename = "fig/ggmice_01-2.jpg", width = 5, height = 7, dpi = 200)
+```
