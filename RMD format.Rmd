@@ -90,13 +90,17 @@ library(broom.mixed)
 col.tw <- "#dbd7d2"  # Timberwolf
 col.os <- "#414a4c"  # Outer Space
 col.rp <- "#7851a9"  # Royal Purple
+col.pb <- "#1ca9c9"  # Pacific Blue
 col.cb <- "#b0b7c6"  # Cadet Blue
 col.el <- "#ceff1d"  # Electric Lime
+col.cg <- "#00cc99"  # Caribbean Green
+col.mt <- "#ff8243"  # Mango Tango
 col.rm <- "#e3256b"  # Razzmatazz
-col.plos.ye <- "#D6E13D"  # PLOS ONE Yellow
-col.plos.pink <- "#CF00A3"  # PLOS ONE Pink
-scale.col.1 <- c()
+col.plos.yellow <- "#D6E13D"  # PLOS ONE
+col.plos.pink <- "#CF00A3"  # PLOS ONE
+
 font.base <- "Candara"
+# font.base <- "Times New Roman"
 theme_set(theme_minimal(base_family = font.base))
 options(dplyr.summarise.inform = TRUE)
 # Twitter Logo and Acc
