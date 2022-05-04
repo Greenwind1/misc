@@ -33,8 +33,8 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 
 # Preparations {.tabset .tabset-fade .tabset-pills}
 
-## R Packages
-```{r, echo=FALSE, message=FALSE}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
 # Data manipulation
 library(tidyverse)
 library(data.table)
@@ -112,7 +112,7 @@ t.grob <- grid::rasterGrob(t.img,
                            interpolate = FALSE)
 ```
 
-# Load DataSets {.tabset .tabset-fade .tabset-pills}
-```{r Load DataSets}
+# DataSets {.tabset .tabset-fade .tabset-pills}
+```{r DataSets}
 
 ```
