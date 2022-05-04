@@ -89,15 +89,22 @@ library(broom.mixed)
 ## Environment
 ```{r Environment}
 # rgb(73, 81, 112, maxColorValue = 255): "#495170"
+col.tw <- "#dbd7d2"  # Timberwolf
 col.os <- "#414a4c"  # Outer Space
 col.rp <- "#7851a9"  # Royal Purple
+col.pb <- "#1ca9c9"  # Pacific Blue
 col.cb <- "#b0b7c6"  # Cadet Blue
 col.el <- "#ceff1d"  # Electric Lime
+col.cg <- "#00cc99"  # Caribbean Green
+col.mt <- "#ff8243"  # Mango Tango
 col.rm <- "#e3256b"  # Razzmatazz
-col.rd <- "#ee204d"  # Red
+col.sl <- "#fc2847"  # Scarlet
 col.plos.ye <- "#D6E13D"  # PLOS ONE Yellow
 col.plos.pink <- "#CF00A3"  # PLOS ONE Pink
-scale.col.1 <- c()
+
+col.bg <- "#262A33"
+col.fg <- "#393F4D"
+
 font.base <- "Candara"
 theme_set(theme_minimal(base_family = font.base))
 options(dplyr.summarise.inform = TRUE)
@@ -114,7 +121,7 @@ t.grob <- grid::rasterGrob(t.img,
 russians <- read_csv("input/Russian.csv")
 
 ne.jpn.sf <- ne_states(country = "Japan", returnclass = "sf") %>% 
-   rmapshaper::ms_filter_islands(min_area = 1e8)  # remove small islands
+    rmapshaper::ms_filter_islands(min_area = 1e10)  # remove small islands
 ```
 
 # Preprocessing
@@ -129,31 +136,49 @@ glimpse(ne.jpn.sf)
 
 # Draw map
 ```{r, fig.height=13}
+pop.jpn.sf <- ne.jpn.sf %>% 
+    mutate(
+        longitude = ifelse(name == "Nagasaki", 129.8, longitude), 
+        latitude = ifelse(name == "Nagasaki", 33.1, latitude), 
+        longitude = ifelse(name == "Kagoshima", 130.5, longitude), 
+        latitude = ifelse(name == "Kagoshima", 31.6, latitude), 
+    ) %>% 
+    tibble() %>% 
+    select(longitude, latitude, Pop) %>% 
+    st_as_sf(coords = c("longitude", "latitude"), crs = 4326) %>% 
+    st_transform(crs = st_crs(ne.jpn.sf)) %>% 
+    mutate(Pop.size = Pop / max(Pop) * 5)
+
 p1 <- ggplot(data = ne.jpn.sf) + 
-   geom_sf(mapping = aes(fill = Pop), 
-           size = 0.05, color = col.os) + 
-   geom_text(aes(x = longitude, y = latitude, label = Pop), 
-             data = ne.jpn.sf %>% filter(Pop > 100), 
-             color = col.os, cex = 1.5, family = font.base) + 
-   # geom_sf_text(mapping = aes(label = Pop), 
-   #              data = ne.jpn.sf %>% filter(Pop > 100), 
-   #              color = col.os, cex = 1.5, family = font.base) + 
-   scale_fill_gradient(
-      name = "Population", 
-      low = "white", high = col.rd, 
-      breaks = c(100, 200, 400, 800, 1600)
-      # as.numeric(quantile(ne.jpn.sf$Pop, probs = seq(0, 1, 0.1)))
-   ) + 
-   guides(fill = guide_colourbar(
-      barwidth = 1, barheight = 10, label.position = "left", 
-      ticks.linewidth = 2
-    )) + 
-   labs(x = NULL, y = NULL, title = "Russian Population by Prefecture") + 
-   theme(legend.position = c(0.8, 0.25), 
-         legend.title = element_text(size = 10))
+    geom_sf(mapping = aes(), size = 0.05, fill = col.fg, color = "gray50") + 
+    geom_sf(mapping = aes(size = Pop.size), data = pop.jpn.sf, 
+            color = col.sl, alpha = 0.5) + 
+    lims(x = c(128, 145), y = c(31, 45)) + 
+    geom_sf_text(mapping = aes(label = Pop), 
+                 data = ne.jpn.sf %>% filter(Pop > 100), 
+                 color = col.tw, cex = 2, family = font.base) + 
+    geom_text(aes(x = 133, y = 40, 
+                  label = "Only showing Pop figures above 100."), 
+              family = font.base, color = col.tw, size = 3) + 
+    labs(x = NULL, y = NULL, title = "Russian Population \nby Prefecture") + 
+    guides(size = guide_legend(title = "Pop Rerative Scale")) + 
+    theme(
+        title = element_text(color = col.tw, size = 20), 
+        legend.position = c(0.85, 0.15), 
+        legend.title = element_text(size = 10), 
+        legend.text = element_text(color = col.tw), 
+        # plot.margin = unit(c(0, 0, 0, 0), "pt"), 
+        plot.title = element_text(
+            margin = margin(t = 60, r = -50, b = -60, l = 50, unit = "pt")
+        ), 
+        plot.background = element_rect(fill = col.bg), 
+        # plot includes panel
+        panel.background = element_rect(fill = col.bg, color = col.bg), 
+        panel.grid = element_line(colour = col.bg), 
+    )
 
 p1
-ggsave(filename = "fig/russians.jpg", 
-       plot = p1, width = 6, height = 8, dpi = 200)
+ggsave(filename = "fig/russians.jpg", plot = p1, 
+       width = 5, height = 5.5, dpi = 200)
 ```
 
