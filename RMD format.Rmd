@@ -54,6 +54,12 @@ library(extrafont)  # "Candara"
 library(plotly)
 library(crosstalk)
 
+# Descriptive Statistics
+library(mice)
+library(ggmice)  # see src/imputation/ggmice_XX.Rmd
+library(psych)
+library(gtsummary)
+
 # GeoSpatial Analysis
 library(sf)  # simple feature
 library(spdep)  # helpful functions for mapping
@@ -61,17 +67,6 @@ library(rmapshaper)  # helpful functions for mapping
 library(tmap)  # map viewer
 library(leaflet)  # map viewer
 library(mapview)  # map viewer
-
-# Parallel
-library(purrr)
-library(foreach)
-library(doParallel)
-
-# Descriptive Statistics
-library(mice)
-library(ggmice)  # see src/imputation/ggmice_XX.Rmd
-library(psych)
-library(gtsummary)
 
 # Multi Level Model
 library(lme4)
@@ -83,6 +78,13 @@ library(rstan)
 library(bayesplot)
 library(broom)
 library(broom.mixed)
+
+# Parallel
+library(purrr)
+library(foreach)
+library(doParallel)
+
+source(file = "utility/helper_functions.R")
 ```
 
 ## Environment
