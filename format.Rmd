@@ -45,6 +45,7 @@ library(lubridate)
 
 # Visualisation
 library(ggplot2)
+library(ggalt)  # geom_encircle
 library(patchwork)
 library(broman)  # plot_crayons()
 library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
@@ -68,10 +69,15 @@ library(tmap)  # map viewer
 library(leaflet)  # map viewer
 library(mapview)  # map viewer
 
+# ML
+# library(tidymodels)
+# tidymodels::tidymodels_prefer()
+
 # Multi Level Model
 library(lme4)
 library(lmerTest)
 library(coefplot)
+# library(multilevelmod)
 
 # Stan
 library(rstan)
@@ -108,11 +114,13 @@ font.base <- "Candara"
 theme_set(theme_minimal(base_family = font.base))
 options(dplyr.summarise.inform = TRUE)
 # Twitter Logo and Acc
-t.img <- png::readPNG("fig/twitter.png")
-t.grob <- grid::rasterGrob(t.img, 
-                           width = unit(0.4, "cm"), 
-                           height = unit(0.4, "cm"),
-                           interpolate = FALSE)
+# Usage: add a code line below
+# annotation_custom(grob = icon.grob, xmin = 1, xmax = 1, ymin = 1, ymax = 1)
+icon.arr <- png::readPNG("fig/twitter.png")
+icon.grob <- grid::rasterGrob(icon.arr, 
+                              width = unit(0.12 * 3, "cm"), 
+                              height = unit(0.99 * 3, "cm"), 
+                              interpolate = FALSE)
 ```
 
 # DataSets {.tabset .tabset-fade .tabset-pills}

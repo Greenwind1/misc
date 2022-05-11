@@ -375,7 +375,7 @@ p1 <- lp.sf.stat %>%
     geom_sf(mapping = aes(fill = Price.Median)) + 
     rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
     geom_sf_text(aes(label = Price.Median), color = "white",
-                 cex = 3, family = "Candara") +
+                 cex = 3, family = "Candara") + 
     labs(x = NULL, y = NULL, title = "Median Price (1e6 JPY)") + 
     theme(title = element_text(size = 15),
           legend.position = c(0.05, 0.35), 
