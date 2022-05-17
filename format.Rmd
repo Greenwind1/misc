@@ -108,6 +108,13 @@ col.rm <- "#e3256b"  # Razzmatazz
 col.sl <- "#fc2847"  # Scarlet
 col.plos.yellow <- "#D6E13D"  # PLOS ONE Yellow
 col.plos.pink <- "#CF00A3"  # PLOS ONE Pink
+col.bmc.gray <- "#FFFDF6"  # BMC Gray
+col.bmc.purple <- "#BF12F8"  # BMC Purple
+col.bmc.navy <- "#1A2E4F"  # BMC Navy Blue
+col.bmc.blue <- "#014A81"  # BMC Blue
+col.bmc.sky <- "#0F99BE"  # BMC Sky Blue
+col.bmc.green <- "#004940"  # BMC Deep Green
+col.bmc.pink <- "#EF255F"  # BMC Pink
 
 font.base <- "Candara"
 # font.base <- "Times New Roman"
