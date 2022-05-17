@@ -1,7 +1,7 @@
 ---
-title: ""
+title: "Crude Oil Analysis"
 subtitle: ""
-author: ""
+author: "Maxwell"
 date: '`r Sys.Date()`'
 # bibliography: references.bib
 link-citations: true
@@ -108,6 +108,8 @@ col.rm <- "#e3256b"  # Razzmatazz
 col.sl <- "#fc2847"  # Scarlet
 col.plos.yellow <- "#D6E13D"  # PLOS ONE Yellow
 col.plos.pink <- "#CF00A3"  # PLOS ONE Pink
+col.bg <- "#262A33"
+col.fg <- "#393F4D"
 
 font.base <- "Candara"
 # font.base <- "Times New Roman"
@@ -116,14 +118,82 @@ options(dplyr.summarise.inform = TRUE)
 # Twitter Logo and Acc
 # Usage: add a code line below
 # annotation_custom(grob = icon.grob, xmin = 1, xmax = 1, ymin = 1, ymax = 1)
-icon.arr <- png::readPNG("fig/twitter.png")
+icon.arr <- png::readPNG("fig/twitter_gray.png")
 icon.grob <- grid::rasterGrob(icon.arr, 
-                              width = unit(1.20 * 3, "cm"), 
-                              height = unit(0.99 * 3, "cm"), 
+                              width = unit(1.20 * 0.3, "cm"), 
+                              height = unit(0.99 * 0.3, "cm"), 
                               interpolate = FALSE)
 ```
 
 # DataSets {.tabset .tabset-fade .tabset-pills}
 ```{r DataSets}
-
+data <- read_csv("input/2022-05_Commodity.csv", na = c("", "NA", ".."))
 ```
+
+# Preprocessing
+```{r}
+data <- data %>% mutate(
+    DATE = as.Date(paste0(
+        str_replace(DATE, pattern = "M", replacement = "-"), "-01"
+    ))
+)
+```
+
+```{r fig.height=6}
+event.l <- list(
+    name = c("Lehman\nShock", "COVID-19"), 
+    date = as.Date(c("2008-09-15", "2020-01-30")), 
+    color = c(col.sl, col.sl)  # col.tw is base.
+)
+
+p <- data %>% filter(DATE >= as.Date("2000-01-01")) %>% 
+    ggplot() + 
+    geom_point(aes(x = DATE, y = CRUDE_WTI), 
+               size = 1, color = col.plos.yellow) + 
+    geom_line(aes(x = DATE, y = CRUDE_WTI), 
+              color = col.plos.yellow, alpha = 0.5) + 
+    scale_x_date(date_breaks = "1 years" , date_labels = "%Y") + 
+    labs(x = NULL, y = NULL, title = "Timeline of WTI Crude Oil Price") + 
+    theme(
+        title = element_text(color = col.el, size = 20), 
+        axis.text = element_text(color = col.plos.yellow), 
+        legend.position = c(0.85, 0.15), 
+        legend.title = element_text(size = 10), 
+        legend.text = element_text(color = col.tw), 
+        # plot.margin = unit(c(0, 0, 0, 0), "pt"), 
+        plot.title = element_text(
+            margin = margin(t = 15, r = -50, b = -15, l = 50, unit = "pt")
+        ), 
+        plot.background = element_rect(fill = col.bg), 
+        # plot includes panel
+        panel.background = element_rect(fill = col.bg, color = col.bg), 
+        panel.grid.major = element_line(color = col.os, size = 0.1), 
+        panel.grid.minor = element_blank(), 
+    ) + 
+    annotation_custom(grob = icon.grob, 
+                      xmin = as.Date("2019-10-01"), 
+                      xmax = as.Date("2019-10-01"), 
+                      ymin = 125, ymax = 125) + 
+    annotate(geom = "text", x = as.Date("2021-01-01"), y = 125, 
+             label = "@Maxwell_110", size = 3, 
+             family = font.base, color = col.tw, alpha = 0.5)
+
+for (event.num in 1:length(event.l$name)) {
+    # cat(event.num, event.l$name[event.num], event.l$date[event.num])
+    event.date.next.m <- as_date(paste0(
+            year(event.l$date[event.num]), "-", 
+            month(event.l$date[event.num]) + 1, "-01"
+    ))
+    p <- p + annotate(
+        geom = "text", x = event.date.next.m, y = 5, 
+        label = event.l$name[event.num], 
+        color = event.l$color[event.num], 
+        size = 2.5, family = font.base, alpha = 0.9
+    )
+}
+
+plot(p)
+ggsave(filename = "fig/crude-oil_01_timeline.jpg", 
+       dpi = 175, width = 10, height = 6)
+```
+
