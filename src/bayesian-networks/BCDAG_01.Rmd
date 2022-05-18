@@ -1,12 +1,11 @@
 ---
-title: ""
-subtitle: ""
+title: "Bayesian structure and Causal learning of Gaussian DAGs"
+subtitle: "R package: BCDAG vignettes vol.1"
 author: ""
 date: '`r Sys.Date()`'
 # bibliography: references.bib
 link-citations: true
-# abstract: \singlespacing Abstract which has to be long enough to 
-#   take multiple lines otherwise one does not see the effect of single-spacing.
+abstract: \singlespacing This is the first of a series of three vignettes introducing the R package BCDAG. In this vignette we focus on functions `rDAG()` and `rDAGWishart()` which implement random generation of DAG structures and DAG parameters under the assumption that the joint distribution of variables X_1, ..., X_q is Gaussian and the corresponding model (Choleski) parameters follow a DAG-Wishart distribution. Finally, data generation from Gaussian DAG models is described.
 output: 
    html_document:
       number_sections: TRUE
@@ -31,8 +30,14 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 # knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
 ```
 
-# Preparations {.tabset .tabset-fade .tabset-pills}
+<br>
 
+<br>
+
+**Random data generation from Gaussian DAG models**  
+https://cran.r-project.org/web/packages/BCDAG/vignettes/bcdag_generatedata.html
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
 ## Packages
 ```{r Packages, echo=FALSE, message=FALSE}
 # Data manipulation
@@ -61,39 +66,15 @@ library(ggmice)  # see src/imputation/ggmice_XX.Rmd
 library(psych)
 library(gtsummary)
 
-# GeoSpatial Analysis
-library(sf)  # simple feature
-library(spdep)  # helpful functions for mapping
-library(rmapshaper)  # helpful functions for mapping
-library(tmap)  # map viewer
-library(leaflet)  # map viewer
-library(mapview)  # map viewer
-
-# Networks
-library(ggraph)
-library(tidygraph)
-library(BCDAG)  # Bayesian Causal Networks
-
-# ML
-# library(tidymodels)
-# tidymodels::tidymodels_prefer()
-
-# Multi Level Model
-library(lme4)
-library(lmerTest)
-library(coefplot)
-# library(multilevelmod)
-
-# Stan
-library(rstan)
-library(bayesplot)
-library(broom)
-library(broom.mixed)
-
 # Parallel
 library(purrr)
 library(foreach)
 library(doParallel)
+
+# BCDAG
+library(ggraph)
+library(tidygraph)
+library(BCDAG)
 
 source(file = "utility/helper_functions.R")
 ```
@@ -133,9 +114,38 @@ icon.grob <- grid::rasterGrob(icon.arr,
                               width = unit(1.20 * 3, "cm"), 
                               height = unit(0.99 * 3, "cm"), 
                               interpolate = FALSE)
+
+set.seed(2022)
 ```
 
-# DataSets {.tabset .tabset-fade .tabset-pills}
-```{r DataSets}
+# Generating a binary adjacency matrix w/ `rDAG` function
+<br>
+`> rDAG(q, w)`  
+rDAG() can be used to randomly generate a DAG structure $D = (V, E)$, 
+where $V = \{1, ..., q\}$ and $E \subseteq V \times V$.  
+
+`Arguments`  
+$q$: number of nodes  
+$w$: the degree of sparsity  
+
+`Details`  
+An adjacency matrix of the generated DAG, with element 1 at position $(u, v)$ indicating the presence of an edge $u \to v$.
+
+```{r}
+DAG <- rDAG(q = 10, w = 0.2)
+cat(class(DAG), sep = "\n")
+DAG
+```
+
+# Visualization of generated DAG via `tidygraph` and `ggraph`
+Reference: https://ggplot2-book.org/networks.html#networks  
+```{r}
+dag.tg <- tidygraph::as_tbl_graph(DAG)
+```
+
+
+# Generating Gaussian DAG parameters w/ `rDAGWishart` function
+```{r}
 
 ```
+
