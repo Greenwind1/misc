@@ -132,20 +132,133 @@ $w$: the degree of sparsity
 An adjacency matrix of the generated DAG, with element 1 at position $(u, v)$ indicating the presence of an edge $u \to v$.
 
 ```{r}
-DAG <- rDAG(q = 10, w = 0.2)
-cat(class(DAG), sep = "\n")
+q <- 20
+DAG <- rDAG(q = q, w = 0.5)
+class(DAG)
 DAG
 ```
 
 # Visualization of generated DAG via `tidygraph` and `ggraph`
 Reference: https://ggplot2-book.org/networks.html#networks  
+
+## Convert adjacency matrix to tidygraph object
+A tbl_graph object has Node and Edge Data.  
 ```{r}
-dag.tg <- tidygraph::as_tbl_graph(DAG)
+dag.tg <- tidygraph::as_tbl_graph(DAG, directed = TRUE)
+class(dag.tg)
+dag.tg
+```
+
+## Draw Networks
+`ggraph` makes ggplot object from tbl_graph object.  
+Layout **circlepack** is cool!  
+
+```{r fig.height=20}
+set_graph_style(plot_margin = margin(1, 1, 1, 1))
+class(ggraph(dag.tg))
+
+p1 <- ggraph(dag.tg, layout = "auto") + 
+    geom_edge_link(
+        arrow = grid::arrow(angle = 15, length = unit(3, "pt")), 
+        start_cap = circle(3, "pt"), 
+        end_cap = circle(3, "pt"), 
+        color = col.os, 
+        edge_width = 0.5, edge_alpha = 0.5
+    ) + 
+    geom_node_point(color = col.plos.pink, size = 2, alpha = 0.9) + 
+    theme_minimal(base_family = font.base) + 
+    labs(title = "auto", x = NULL, y = NULL) + 
+    theme(
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+    )
+
+p2 <- ggraph(dag.tg, layout = "circlepack") + 
+    geom_edge_link(
+        arrow = arrow(angle = 15, length = unit(3, "pt")), 
+        start_cap = circle(3, "pt"), 
+        end_cap = circle(3, "pt"), 
+        color = col.os, 
+        edge_width = 0.5, edge_alpha = 0.75
+    ) + 
+    geom_node_point(color = col.plos.pink, size = 2, alpha = 0.9) + 
+    theme_minimal(base_family = font.base) + 
+    labs(title = "circlepack", x = NULL, y = NULL) + 
+    theme(
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+    )
+
+p1 / p2
+ggsave(filename = "fig/BCDAG-01-1.jpg", dpi = 200, width = 5, height = 10)
 ```
 
 
 # Generating Gaussian DAG parameters w/ `rDAGWishart` function
-```{r}
+<br>
+Consider **a Gaussian DAG model** of the form  
+$f(X_1, ..., X_q | L,D) \sim N_q(0, (L D^{-1} L^T)^{-1})$,  
+where $(L, D)$ are model parameters providing the decomposition of the **precision (inverse-covariance) matrix** $\Omega = L D^{-1} L^T$; 
+specifically, $L$ is a $(q, q)$ matrix of coefficients such that for each $(u, v)$-element $L_{uv}$ with $u \neq v$, 
+we have $L_{uv} \neq 0$ if and only if $(u, v) \subset E$, 
+while $L_{uu} = 1$ for each $u = 1, ..., q$; 
+also, $D$ is a $(q, q)$ diagonal matrix with $(u, u)$-element $D_{uu}$. 
+The latter decomposition follows from the equivalent Structural Equation Model (SEM) representation of a Gaussian DAG model:
 
+$L^{⊤} x = \epsilon , \epsilon \sim N_q(0, D)$,
+
+where $x = (X_1, ..., X_q)^⊤$; see also Castelletti & Mascaro (2021). This is just a  Cholesky decomposition.
+
+Function `rDAGWishart` implements random sampling from 
+$(L, D)|D \sim \mathrm{DAGWishart} (a^D_c, U)$, 
+where $U$ is the `rate parameter` (a $(q, q)$ s.p.d. matrix) and $a^D_c$ (a $(q, 1)$ vector) is the `shape parameter` of the DAG-Wishart distribution. 
+This class of distributions was introduced by Ben David et al. (2015) as a `conjugate prior` for Gaussian DAG model-parameters. 
+In its compatible version (Peluso & Consonni, 2020), elements of the vector parameter $a^D_c$ are uniquely determined from a single common shape parameter $a \gt q - 1$.
+
+Inputs of rDAGWishart are:  
+the number of samples $n$, the underlying DAG $D$, 
+the common shape parameter $a$ and the rate parameter $U$. 
+Given the DAG $D$ generated before, the following example implements a single ($n = 1$) draw from a compatible DAG-Wishart distribution with parameters $a = q$, $U = I_q$:
+
+```{r}
+a <- q
+U <- diag(1, q)
+outDL <- rDAGWishart(n = 2, DAG, a, U)
+class(outDL)
 ```
 
+The output of rDAGWishart() consists of two elements, $L$ and $D$ referred above equation for Gaussian DAG.
+
+```{r}
+L <- outDL$L
+class(L)
+dim(L)
+class(L[, , 1])
+diag(L[, , 1])
+```
+```{r}
+D <- outDL$D
+class(D)
+dim(D)
+class(D[, , 1])
+sum(D[, , 1] > 0)
+```
+
+# Generating Data from a Gaussian DAG
+`> solve(a, h)`  
+If missing, b is taken to be an identity matrix and solve will return the inverse of a!
+
+```{r}
+# Precision matrix: L D^-1 L^T
+Omega <- L[, , 1] %*% solve(D[, , 1]) %*% t(L[, , 1])
+
+# Covariance matrix
+Sigma <- solve(Omega)
+```
+```{r}
+# MultiVariate Normal Distribution
+x.mvn <- mvtnorm::rmvnorm(n = 10, sigma = Sigma)
+dim(x.mvn)
+```
