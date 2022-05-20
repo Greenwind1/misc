@@ -118,6 +118,10 @@ t.grob <- grid::rasterGrob(t.img,
 
 # Load DataSets {.tabset .tabset-fade .tabset-pills}
 ```{r Load DataSets}
+jp.pop <- read_csv("input/Japan_pop.csv", 
+                   locale = locale(encoding = "cp932")) %>% 
+    filter(PREF != "沖縄県") %>% 
+    rename(TOTAL_POP = POP)  # unit 1,000
 russians <- read_csv("input/Russian.csv")
 
 ne.jpn.sf <- ne_states(country = "Japan", returnclass = "sf") %>% 
@@ -127,10 +131,12 @@ ne.jpn.sf <- ne_states(country = "Japan", returnclass = "sf") %>%
 # Preprocessing
 ```{r}
 ne.jpn.sf <- ne.jpn.sf %>% 
-   select(iso_3166_2, name, region, latitude, longitude) %>%
-   tibble::new_tibble(nrow = nrow(.), class = "sf") %>% 
-   left_join(russians %>% select(Prefecture_name, Pop), 
-             by = c("name" = "Prefecture_name"))
+    select(iso_3166_2, name, region, latitude, longitude) %>% 
+    tibble::new_tibble(nrow = nrow(.), class = "sf") %>% 
+    left_join(russians %>% select(Prefecture_name, Pop), 
+              by = c("name" = "Prefecture_name")) %>% 
+    arrange(iso_3166_2) %>% 
+    bind_cols(jp.pop %>% select(TOTAL_POP))
 glimpse(ne.jpn.sf)
 ```
 
@@ -144,10 +150,13 @@ pop.jpn.sf <- ne.jpn.sf %>%
         latitude = ifelse(name == "Kagoshima", 31.6, latitude), 
     ) %>% 
     tibble() %>% 
-    select(longitude, latitude, Pop) %>% 
+    select(longitude, latitude, Pop, TOTAL_POP) %>% 
     st_as_sf(coords = c("longitude", "latitude"), crs = 4326) %>% 
     st_transform(crs = st_crs(ne.jpn.sf)) %>% 
-    mutate(Pop.size = Pop / max(Pop) * 5)
+    mutate(
+        Pop.size = Pop / max(Pop) * 5, 
+        Rus.ratio = Pop / TOTAL_POP * 100  # %
+    )
 
 p1 <- ggplot(data = ne.jpn.sf) + 
     geom_sf(mapping = aes(), size = 0.05, fill = col.fg, color = "gray50") + 
@@ -157,11 +166,12 @@ p1 <- ggplot(data = ne.jpn.sf) +
     geom_sf_text(mapping = aes(label = Pop), 
                  data = ne.jpn.sf %>% filter(Pop > 100), 
                  color = col.tw, cex = 2, family = font.base) + 
-    geom_text(aes(x = 133, y = 40, 
-                  label = "Only showing Pop figures above 100."), 
-              family = font.base, color = col.tw, size = 3) + 
+    geom_text(aes(x = 133, y = 42, 
+                  label = "Only numbers > 100 are shown."), 
+              family = font.base, color = col.tw, size = 4) + 
     labs(x = NULL, y = NULL, title = "Russian Population \nby Prefecture") + 
-    guides(size = guide_legend(title = "Pop Rerative Scale")) + 
+    guides(size = guide_legend(title = "Rus Pop\n(Rerative Scale)", 
+                               keyheight = 0.5)) + 
     theme(
         title = element_text(color = col.tw, size = 20), 
         legend.position = c(0.85, 0.15), 
@@ -169,7 +179,7 @@ p1 <- ggplot(data = ne.jpn.sf) +
         legend.text = element_text(color = col.tw), 
         # plot.margin = unit(c(0, 0, 0, 0), "pt"), 
         plot.title = element_text(
-            margin = margin(t = 60, r = -50, b = -60, l = 50, unit = "pt")
+            margin = margin(t = 30, r = -00, b = -30, l = 00, unit = "pt")
         ), 
         plot.background = element_rect(fill = col.bg), 
         # plot includes panel
@@ -177,8 +187,36 @@ p1 <- ggplot(data = ne.jpn.sf) +
         panel.grid = element_line(colour = col.bg), 
     )
 
-p1
-ggsave(filename = "fig/russians.jpg", plot = p1, 
-       width = 5, height = 5.5, dpi = 200)
+p2 <- ggplot(data = ne.jpn.sf) + 
+    geom_sf(mapping = aes(), size = 0.05, fill = col.fg, color = "gray50") + 
+    geom_sf(mapping = aes(size = Rus.ratio), data = pop.jpn.sf, 
+            color = col.el, alpha = 0.5) + 
+    lims(x = c(128, 145), y = c(31, 45)) + 
+    geom_sf_text(mapping = aes(label = Rus.ratio), 
+                 data = pop.jpn.sf %>% filter(Rus.ratio > 5) %>% 
+                     mutate(Rus.ratio = round(Rus.ratio, 0)), 
+                 color = col.tw, cex = 2, family = font.base) + 
+    geom_text(aes(x = 133, y = 42, 
+                  label = "Only ratios > 5% are shown."), 
+              family = font.base, color = col.tw, size = 4) + 
+    labs(x = NULL, y = NULL, title = NULL) + 
+    guides(size = guide_legend(title = "Pop Ratio (%)")) + 
+    theme(
+        title = element_text(color = col.tw, size = 20), 
+        legend.position = c(0.85, 0.15), 
+        legend.title = element_text(size = 10), 
+        legend.text = element_text(color = col.tw), 
+        # plot.margin = unit(c(0, 0, 0, 0), "pt"), 
+        plot.title = element_text(
+            margin = margin(t = 30, r = -00, b = -30, l = 00, unit = "pt")
+        ), 
+        plot.background = element_rect(fill = col.bg), 
+        # plot includes panel
+        panel.background = element_rect(fill = col.bg, color = col.bg), 
+        panel.grid = element_line(colour = col.bg), 
+    )
+
+p1 + p2
+ggsave("fig/russians.png", width = 9, height = 5.5, dpi = 300)
 ```
 

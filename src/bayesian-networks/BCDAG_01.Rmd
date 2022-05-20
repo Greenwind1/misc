@@ -1,5 +1,5 @@
 ---
-title: "Bayesian structure and Causal learning of Gaussian DAGs"
+title: "Random data generation from Gaussian DAG models"
 subtitle: "R package: BCDAG vignettes vol.1"
 author: ""
 date: '`r Sys.Date()`'
@@ -47,7 +47,6 @@ library(janitor)  # janitor::row_to_names()
 library(DT)
 library(stringr)
 library(lubridate)
-
 # Visualisation
 library(ggplot2)
 library(ggalt)  # geom_encircle
@@ -55,27 +54,22 @@ library(patchwork)
 library(broman)  # plot_crayons()
 library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(extrafont)  # "Candara"
-
 # Interactivity
 library(plotly)
 library(crosstalk)
-
 # Descriptive Statistics
 library(mice)
 library(ggmice)  # see src/imputation/ggmice_XX.Rmd
 library(psych)
 library(gtsummary)
-
 # Parallel
 library(purrr)
 library(foreach)
 library(doParallel)
-
 # BCDAG
 library(ggraph)
 library(tidygraph)
 library(BCDAG)
-
 source(file = "utility/helper_functions.R")
 ```
 
@@ -101,7 +95,6 @@ col.bmc.blue <- "#014A81"  # BMC Blue
 col.bmc.sky <- "#0F99BE"  # BMC Sky Blue
 col.bmc.green <- "#004940"  # BMC Deep Green
 col.bmc.pink <- "#EF255F"  # BMC Pink
-
 font.base <- "Candara"
 # font.base <- "Times New Roman"
 theme_set(theme_minimal(base_family = font.base))
@@ -114,7 +107,6 @@ icon.grob <- grid::rasterGrob(icon.arr,
                               width = unit(1.20 * 3, "cm"), 
                               height = unit(0.99 * 3, "cm"), 
                               interpolate = FALSE)
-
 set.seed(2022)
 ```
 
@@ -156,7 +148,6 @@ Layout **circlepack** is cool!
 ```{r fig.height=20}
 set_graph_style(plot_margin = margin(1, 1, 1, 1))
 class(ggraph(dag.tg))
-
 p1 <- ggraph(dag.tg, layout = "auto") + 
     geom_edge_link(
         arrow = grid::arrow(angle = 15, length = unit(3, "pt")), 
@@ -173,7 +164,6 @@ p1 <- ggraph(dag.tg, layout = "auto") +
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(), 
     )
-
 p2 <- ggraph(dag.tg, layout = "circlepack") + 
     geom_edge_link(
         arrow = arrow(angle = 15, length = unit(3, "pt")), 
@@ -190,7 +180,6 @@ p2 <- ggraph(dag.tg, layout = "circlepack") +
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(), 
     )
-
 p1 / p2
 ggsave(filename = "fig/BCDAG-01-1.jpg", dpi = 200, width = 5, height = 10)
 ```
@@ -253,7 +242,6 @@ If missing, b is taken to be an identity matrix and solve will return the invers
 ```{r}
 # Precision matrix: L D^-1 L^T
 Omega <- L[, , 1] %*% solve(D[, , 1]) %*% t(L[, , 1])
-
 # Covariance matrix
 Sigma <- solve(Omega)
 ```
