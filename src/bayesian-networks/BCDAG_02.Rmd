@@ -85,6 +85,7 @@ source(file = "utility/helper_functions.R")
 col.tw <- "#dbd7d2"  # Timberwolf
 col.os <- "#414a4c"  # Outer Space
 col.rp <- "#7851a9"  # Royal Purple
+col.mb <- "#1a4876"  # Midnight Blue
 col.pb <- "#1ca9c9"  # Pacific Blue
 col.cb <- "#b0b7c6"  # Cadet Blue
 col.el <- "#ceff1d"  # Electric Lime
@@ -92,6 +93,11 @@ col.cg <- "#00cc99"  # Caribbean Green
 col.mt <- "#ff8243"  # Mango Tango
 col.rm <- "#e3256b"  # Razzmatazz
 col.sl <- "#fc2847"  # Scarlet
+
+col.bg <- "#524A4E"  # Background
+col.edge <- "#FDEFF4"  # Pale Pink
+col.node <- "#4ECCA3"  # Teal
+
 col.plos.yellow <- "#D6E13D"  # PLOS ONE Yellow
 col.plos.pink <- "#CF00A3"  # PLOS ONE Pink
 col.bmc.gray <- "#FFFDF6"  # BMC Gray
@@ -122,7 +128,8 @@ set.seed(2022)
 ## Generating a binary adjacency matrix w/ `rDAG` function
 ```{r}
 q <- 20
-DAG <- rDAG(q = q, w = 0.5)
+w <- 0.5
+DAG <- rDAG(q = q, w = w)
 class(DAG)
 DAG
 ```
@@ -148,6 +155,21 @@ sum(D[, , 1] > 0)
 ```
 
 # Generating Data from a Gaussian DAG
+
+<br>
+
+$p(X_1, ..., X_q, L, D, \mathfrak{D}) = p(X_1, ..., X_q | L, D, \mathfrak{D}) \cdot p(L, D | \mathfrak{D}) \cdot p(\mathfrak{D})$
+
+$p(X_1, ..., X_q | L, D, \mathfrak{D}) = N_{q} (0, \; (L D^{-1} L^T)^{-1})$  
+
+$p(L, D | \mathfrak{D}) = \mathrm{DAG \text{-} Wishart} (a^{\mathfrak{D}}_c, U)$
+
+$p(\mathfrak{D}) = \omega^{|S_{\mathfrak{D}}|} \; (1 - \omega)^{\frac{q(q-1)}{2} - |S_{\mathfrak{D}}|}$
+
+$L$ and $D$: model parameters providing the decomposition of the precision matrix  
+$U$ and $a^{\mathfrak{D}}_c$: hyper-parameters of prior to $(L, D)$  
+$\omega$ and $S_{\mathfrak{D}}$: hyper-parameters of prior to $\mathfrak{D}$;  a Binomial distribution on the number of edges in the graph
+
 ```{r}
 # Precision matrix: L D^-1 L^T
 Omega <- L[, , 1] %*% solve(D[, , 1]) %*% t(L[, , 1])
@@ -172,21 +194,83 @@ dag.tg
 set_graph_style(plot_margin = margin(1, 1, 1, 1))
 class(ggraph(dag.tg))
 
-ggraph(dag.tg, layout = "circlepack") + 
+p1 <- ggraph(dag.tg, layout = "circlepack") + 
     geom_edge_link(
         arrow = arrow(angle = 15, length = unit(3, "pt")), 
         start_cap = circle(3, "pt"), 
         end_cap = circle(3, "pt"), 
-        color = col.os, 
-        edge_width = 0.5, edge_alpha = 0.75
+        color = col.edge, 
+        edge_width = 0.25, edge_alpha = 0.75
     ) + 
-    geom_node_point(color = col.plos.pink, size = 2, alpha = 0.9) + 
+    geom_node_point(color = col.node, size = 2, alpha = 0.9) + 
     theme_minimal(base_family = font.base) + 
-    labs(title = "Circlepack w/ tidygraph and ggraph", x = NULL, y = NULL) + 
+    labs(title = "Gaussian DAG Structure for Synthesis", 
+         x = NULL, y = NULL) + 
     theme(
+        title = element_text(color = col.tw, size = 15), 
         axis.text = element_blank(),
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(), 
+        plot.background = element_rect(fill = col.bg), 
     )
+plot(p1)
 ggsave("fig/BCDAG-02-1.png", dpi = 300, width = 5, height = 5)
 ```
+
+
+# MCMC Sampler for DAG Parameters
+## learn_DAG
+Function `learn_DAG()` implements an MCMC algorithm to sample from the joint posterior of DAGs and DAG parameters. 
+This is based on a Partial Analytic Structure (PAS) algorithm (Godsill, 2012) which, at each iteration:
+
+1. Updates the DAG through a Metropolis-Hastings (MH) step where, given the current DAG, a new (direct successor) DAG is drawn from a suitable proposal distribution and accepted with a probability given by the MH acceptance rate (see also section A note on fast = TRUE).
+2. Samples from the posterior distribution of the (updated DAG) parameters; see also Castelletti & Consonni (2021) for more details.
+
+NOTE:  
+`> there is no package called graph`  
+See below solution,  
+https://stackoverflow.com/questions/31252102/bayesian-network-with-r
+> install.packages("BiocManager")
+> BiocManager::install(c("graph", "Rgraphviz"))
+
+```{r}
+out <- learn_DAG(
+    S = 5000, 
+    burn = 1000, 
+    data = x.mvn, 
+    # In this tutorial, these hyperparameter are known.
+    a = a, U = U, w = w, 
+    fast = FALSE, save.memory = FALSE, collapse = FALSE, verbose = TRUE)
+```
+
+## Outputs
+```{r}
+class(out)
+names(out)
+glimpse(out)
+```
+
+```{r}
+dim(out$Graphs)
+data.frame(
+    sample.no = 1:5000, 
+    inclusion.ratio = colSums(out$Graphs, dims = 2) / (q * (q - 1) / 2)
+) %>% ggplot() + 
+    geom_point(aes(x = sample.no, y = inclusion.ratio), 
+               color = col.node, size = 0.5) + 
+    lims(y = c(0, 1)) + 
+    labs(title = "MCMC Sampling for Edge Inclusion", 
+         x = "Sample No", y = "Edge Inclusion Ratio") + 
+    theme_minimal(base_family = font.base) + 
+    theme(
+        title = element_text(color = col.node, size = 15), 
+        axis.title = element_text(color = col.node, size = 12), 
+        axis.text = element_text(color = col.node, size = 10), 
+        panel.grid.minor = element_blank(), 
+        panel.grid.major = element_line(color = col.edge, linetype = 3,
+                                        size = 0.1),
+        plot.background = element_rect(fill = col.bg)
+    )
+ggsave("fig/BCDAG-02-2.png", dpi = 300, width = 8, height = 4)
+```
+

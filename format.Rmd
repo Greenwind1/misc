@@ -104,6 +104,7 @@ source(file = "utility/helper_functions.R")
 col.tw <- "#dbd7d2"  # Timberwolf
 col.os <- "#414a4c"  # Outer Space
 col.rp <- "#7851a9"  # Royal Purple
+col.mb <- "#1a4876"  # Midnight Blue
 col.pb <- "#1ca9c9"  # Pacific Blue
 col.cb <- "#b0b7c6"  # Cadet Blue
 col.el <- "#ceff1d"  # Electric Lime
