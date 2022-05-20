@@ -205,6 +205,7 @@ p1 <- ggraph(dag.tg, layout = "circlepack") +
     geom_node_point(color = col.node, size = 2, alpha = 0.9) + 
     theme_minimal(base_family = font.base) + 
     labs(title = "Gaussian DAG Structure for Synthesis", 
+         subtitle = "Nodes = 20, Edge Inclusion Ratio = 0.5", 
          x = NULL, y = NULL) + 
     theme(
         title = element_text(color = col.tw, size = 15), 
@@ -240,7 +241,8 @@ out <- learn_DAG(
     data = x.mvn, 
     # In this tutorial, these hyperparameter are known.
     a = a, U = U, w = w, 
-    fast = FALSE, save.memory = FALSE, collapse = FALSE, verbose = TRUE)
+    fast = FALSE, save.memory = FALSE, collapse = FALSE, verbose = FALSE
+)
 ```
 
 ## Outputs
@@ -250,16 +252,17 @@ names(out)
 glimpse(out)
 ```
 
-```{r}
+```{r, fig.height=4, fig.width=8}
 dim(out$Graphs)
 data.frame(
     sample.no = 1:5000, 
-    inclusion.ratio = colSums(out$Graphs, dims = 2) / (q * (q - 1) / 2)
+    inclusion.ratio = colSums(out$Graphs, dims = 2) / (q * (q - 1) / 2 + q)
 ) %>% ggplot() + 
     geom_point(aes(x = sample.no, y = inclusion.ratio), 
                color = col.node, size = 0.5) + 
     lims(y = c(0, 1)) + 
     labs(title = "MCMC Sampling for Edge Inclusion", 
+         subtitle = "Edge Inclusion Ratio = 0.5 (Theoretical)", 
          x = "Sample No", y = "Edge Inclusion Ratio") + 
     theme_minimal(base_family = font.base) + 
     theme(
