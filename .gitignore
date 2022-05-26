@@ -3,6 +3,8 @@
 **.lnk
 
 .Rproj.user
+.Rproj.user/shared
+.Rproj.user/**
 .Rhistory
 .RData
 .Ruserdata
