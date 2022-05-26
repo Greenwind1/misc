@@ -1,3 +1,4 @@
+.gitignore
 **.ovr
 **.lnk
 **geomorphons_pol.tif
