@@ -73,8 +73,8 @@ library(tidygraph)
 library(BCDAG)  # Bayesian Causal Networks
 
 # ML
-# library(tidymodels)
-# tidymodels::tidymodels_prefer()
+library(tidymodels)
+tidymodels::tidymodels_prefer()
 
 # Multi Level Model
 library(lme4)
@@ -140,5 +140,5 @@ icon.grob <- grid::rasterGrob(icon.arr,
 
 # Dataset {.tabset .tabset-fade .tabset-pills}
 ```{r Dataset}
-
+data("penguins")  # modeldata from tidymodels
 ```
