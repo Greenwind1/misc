@@ -1,0 +1,509 @@
+---
+title: "Elaborate on the output of learn_DAG() using get_ functions"
+subtitle: "R package: BCDAG vignettes vol.3"
+author: ""
+date: '`r Sys.Date()`'
+# bibliography: references.bib
+link-citations: true
+abstract: \singlespacing This is the third vignettes for the R package BCDAG. In this vignette, we show `how to use the output of learn_DAG() for posterior inference on DAGs, DAG parameters, and causal effect estimation`. Specifically, we introduce the functions of the `get_ family`. Remember that the output of learn_DAG() consists of an MCMC sample from the marginal posterior distribution of DAG structures (collapse = TRUE) and the joint posterior of DAGs and DAG parameters (collapse = FALSE)
+output: 
+   html_document:
+      number_sections: TRUE
+      fig_caption: TRUE
+      toc: TRUE
+      toc_depth: 5
+      toc_float: TRUE
+      theme:
+         bootswatch: minty
+         # bootswatch: cosmo
+      highlight: espresso
+      # espresso, tango, zenburn
+      code_folding: show
+      # code_download: TRUE
+      fig_width: 10
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+<br>
+
+<br>
+
+**Elaborate on the output of learn_DAG() using get_ functions**  
+https://cran.r-project.org/web/packages/BCDAG/vignettes/bcdag_getfamily.html
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(ggalt)  # geom_encircle
+library(patchwork)
+library(broman)  # plot_crayons()
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(extrafont)  # "Candara"
+
+# Interactivity
+library(plotly)
+library(crosstalk)
+
+# Descriptive Statistics
+library(mice)
+library(ggmice)  # see src/imputation/ggmice_XX.Rmd
+library(psych)
+library(gtsummary)
+
+# Parallel
+library(purrr)
+library(foreach)
+library(doParallel)
+
+# BCDAG
+library(ggraph)
+library(tidygraph)
+library(BCDAG)
+
+library(tictoc)
+source(file = "utility/helper_functions.R")
+```
+
+## Environment
+```{r Environment}
+# rgb(73, 81, 112, maxColorValue = 255)
+col.tw <- "#dbd7d2"  # Timberwolf
+col.os <- "#414a4c"  # Outer Space
+col.rp <- "#7851a9"  # Royal Purple
+col.mb <- "#1a4876"  # Midnight Blue
+col.pb <- "#1ca9c9"  # Pacific Blue
+col.cb <- "#b0b7c6"  # Cadet Blue
+col.el <- "#ceff1d"  # Electric Lime
+col.cg <- "#00cc99"  # Caribbean Green
+col.mt <- "#ff8243"  # Mango Tango
+col.rm <- "#e3256b"  # Razzmatazz
+col.sl <- "#fc2847"  # Scarlet
+
+col.bg <- "#524A4E"  # Background
+col.edge <- "#FDEFF4"  # Pale Pink
+col.node <- "#4ECCA3"  # Teal
+
+col.plos.yellow <- "#D6E13D"  # PLOS ONE Yellow
+col.plos.pink <- "#CF00A3"  # PLOS ONE Pink
+col.bmc.gray <- "#FFFDF6"  # BMC Gray
+col.bmc.purple <- "#BF12F8"  # BMC Purple
+col.bmc.navy <- "#1A2E4F"  # BMC Navy Blue
+col.bmc.blue <- "#014A81"  # BMC Blue
+col.bmc.sky <- "#0F99BE"  # BMC Sky Blue
+col.bmc.green <- "#004940"  # BMC Deep Green
+col.bmc.pink <- "#EF255F"  # BMC Pink
+
+font.base <- "Candara"
+# font.base <- "Times New Roman"
+theme_set(theme_minimal(base_family = font.base))
+options(dplyr.summarise.inform = TRUE)
+# Twitter Logo and Acc
+# Usage: add a code line below
+# annotation_custom(grob = icon.grob, xmin = 1, xmax = 1, ymin = 1, ymax = 1)
+icon.arr <- png::readPNG("fig/twitter_green.png")
+icon.grob <- grid::rasterGrob(icon.arr, 
+                              width = unit(.55 * 0.5, "cm"), 
+                              height = unit(0.44 * 0.5, "cm"), 
+                              interpolate = FALSE)
+```
+
+# Generating Data
+## Generating a binary adjacency matrix w/ `rDAG` function
+```{r}
+set.seed(2024)  # for RMarkDown
+
+q <- 10
+w <- 0.2
+DAG <- rDAG(q = q, w = w)
+class(DAG)
+DAG
+DAG.edge.n <- sum(DAG)
+```
+
+
+## Visualization of generated DAG via `tidygraph` and `ggraph`
+Reference:  
+- https://ggplot2-book.org/networks.html#networks  
+- https://cran.r-project.org/web/packages/ggraph/vignettes/tidygraph.html
+
+
+```{r fig.height=10}
+dag.tg <- tidygraph::as_tbl_graph(DAG, directed = TRUE)
+class(dag.tg)
+dag.tg
+
+set_graph_style(plot_margin = margin(1, 1, 1, 1))
+class(ggraph(dag.tg))
+
+p1 <- ggraph(dag.tg, layout = "fr") + 
+    geom_edge_link(
+        arrow = arrow(angle = 15, length = unit(3, "pt")), 
+        start_cap = circle(8, "pt"), 
+        end_cap = circle(8, "pt"), 
+        color = col.edge, 
+        edge_width = 0.25, edge_alpha = 0.75
+    ) + 
+    geom_node_point(color = col.node, size = 6, alpha = 0.9) + 
+    # https://www.rdocumentation.org/packages/ggraph/versions/2.0.5/topics/geom_node_text
+    geom_node_text(aes(label = name), 
+                   size = 3, color = col.bg, family = font.base) +
+    theme_minimal(base_family = font.base) + 
+    labs(title = "Gaussian DAG Structure for Synthesis", 
+         subtitle = paste0("Nodes: ", as.character(q), 
+                           ", Edges: ", as.character(DAG.edge.n), 
+                           " (Theoretical Edge Inclusion Ratio: 0.2)"), 
+         x = NULL, y = NULL) + 
+    theme(
+        title = element_text(color = col.tw, size = 10), 
+        plot.subtitle = element_text(color = col.tw, size = 6), 
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        plot.background = element_rect(fill = col.bg), 
+    )
+
+p1
+ggsave("fig/BCDAG-03-1.png", dpi = 300, width = 3.2, height = 3.6)
+```
+
+# Generating Synthetic Data from pre-defined DAG
+## Generating Gaussian DAG parameters w/ `rDAGWishart` function
+```{r}
+set.seed(2024)  # for RMarkDown
+
+a <- q
+U <- diag(1, q)
+outDL <- rDAGWishart(n = 2, DAG, a, U)
+class(outDL)
+
+L <- outDL$L
+class(L)
+dim(L)
+class(L[, , 1])
+diag(L[, , 1])
+
+D <- outDL$D
+class(D)
+dim(D)
+class(D[, , 1])
+sum(D[, , 1] > 0)
+```
+
+## Generating Data from a Gaussian DAG
+```{r}
+# Precision matrix: L D^-1 L^T
+Omega <- L[, , 1] %*% solve(D[, , 1]) %*% t(L[, , 1])
+
+# Covariance matrix
+Sigma <- solve(Omega)
+
+# MultiVariate Normal Distribution
+x.mvn <- mvtnorm::rmvnorm(n = 10, sigma = Sigma)
+dim(x.mvn)
+```
+
+
+# MCMC Sampler for DAG Parameters
+## learn_DAG
+```{r}
+tic()
+out <- learn_DAG(
+    S = 5000, 
+    burn = 1000, 
+    data = x.mvn, 
+    # In this tutorial, these hyperparameter are known.
+    a = a, U = U, w = w, 
+    fast = FALSE, save.memory = FALSE, 
+    # DAG structures (collapse = TRUE)
+    # The joint posterior of DAGs and DAG parameters (collapse = FALSE)
+    collapse = FALSE, 
+    verbose = FALSE
+)
+toc()
+```
+
+## Outputs
+```{r}
+class(out)
+names(out)
+glimpse(out)
+```
+
+## Visualization of MCMC Sampling
+```{r, fig.height=4, fig.width=8}
+dim(out$Graphs)
+theme_set(theme_minimal(base_family = font.base))
+
+data.frame(
+    sample.no = 1:5000, 
+    inclusion.ratio = colSums(out$Graphs, dims = 2) / (q * (q - 1) / 2 + q)
+) %>% ggplot() + 
+    geom_point(aes(x = sample.no, y = inclusion.ratio), 
+               color = col.node, size = 0.5) + 
+    lims(y = c(0, 1)) + 
+    labs(title = "MCMC Sampling for Edge Inclusion", 
+         subtitle = paste0("Theoretical Edge Inclusion Ratio: ", 
+                           as.character(w)), 
+         x = "MCMC Iteration", y = "Edge Inclusion Ratio") + 
+    theme(
+        title = element_text(color = col.node, size = 15), 
+        axis.title = element_text(color = col.node, size = 12), 
+        axis.text = element_text(color = col.node, size = 10), 
+        panel.grid.minor = element_line(color = col.cb, linetype = 3,
+                                        size = 0.1),
+        panel.grid.major = element_line(color = col.edge, linetype = 3,
+                                        size = 0.1),
+        plot.background = element_rect(fill = col.bg)
+    ) + 
+    annotation_custom(grob = icon.grob, 
+                      xmin = 4100, xmax = 4100, 
+                      ymin = 0.9, ymax = 0.9) + 
+    annotate(geom = "text", x = 4550, y = 0.9, 
+             label = "@Maxwell_110",  alpha = 0.3, 
+             size = 4, family = "Candara", color = col.node)
+ggsave("fig/BCDAG-03-2.png", dpi = 300, width = 8, height = 4)
+```
+
+# MCMC Diagnostics of Convergence
+Before using the MCMC output for posterior inference, it is common practice to perform some convergence checks. 
+Function `get_diagnostics()` provides graphical diagnostics of convergence for the MCMC output of `learn_DAG()`. 
+These are based on:  
+- the number of edges in the DAGs  
+- the posterior probability of edge inclusion for each possible edge u -> v  
+both monitored across MCMC iterations.  
+
+Input of the function is an object of class bcdag and the output consists of:  
+- a traceplot and running-mean plot of the number of edges in the DAGs (graph size)  
+- a collection of traceplots of the posterior probabilities of edge inclusion computed across MCMC iterations
+
+For each pair of distinct nodes (u, v), its posterior probability of inclusion at time s (s = 1, ..., S) is estimated as the proportion of DAGs visited by the MCMC up to time s which contain the directed edge u -> v. 
+Output is organized in q plots (one for each node v = 1, ..., q), each summarizing the posterior probabilities of edges u -> v (u = 1, ..., q).
+
+```{r}
+get_diagnostics(out)
+```
+
+# Posterior inference: DAG structure learning
+## summary
+We now show how to perform posterior inference of DAGs from the MCMC output.  
+To summarize the output of learn_DAG(), a `summary()` method for objects of class bcdag is available. When `summary()` is applied to a bcdag object, a printed message appears. This summarizes the type of bcdag object (see details on bcdag object types provided in the previous vignette) and the input arguments of learn_DAG() that generated the output. In addition, the function returns some graphical outputs representing the Median Probability DAG Model estimate (`MPM`: explained later), the estimated posterior probabilities of edge inclusion and the posterior distribution of the graph size.
+
+```{r}
+summary(out)
+```
+
+## get_edgeprobs
+Function `get_edgeprobs()` computes and returns the collection of posterior probabilities of edge inclusion, arranged as a (q, q) matrix, with (u, v)-element referring to edge u -> v
+```{r}
+out.edgeprobs <- get_edgeprobs(out)
+```
+
+```{r}
+rownames(DAG) <- paste0("u", 1:nrow(DAG))
+colnames(DAG) <- paste0("v", 1:ncol(DAG))
+DAG.df <- reshape2::melt(DAG)
+
+rownames(out.edgeprobs) <- paste0("u", 1:nrow(out.edgeprobs))
+colnames(out.edgeprobs) <- paste0("v", 1:ncol(out.edgeprobs))
+out.edgeprobs.df <- reshape2::melt(out.edgeprobs)
+
+L1 <- abs(L[, , 1])
+rownames(L1) <- paste0("u", 1:nrow(L1))
+colnames(L1) <- paste0("v", 1:ncol(L1))
+l1.df <- reshape2::melt(L1)
+```
+
+```{r fig.width=5, fig.height=10}
+theme_set(theme_minimal(base_family = font.base))
+
+p1 <- ggplot(data = DAG.df) + 
+    geom_tile(aes(x = Var2, y = Var1, fill = value)) + 
+    coord_equal() + 
+    labs(x = NULL, y = NULL, title = "Edge Probability Map", 
+         subtitle = expression(paste("Theoretical: ", {u %->% v}))) + 
+    theme(
+        panel.grid.minor = element_blank(), 
+        panel.grid.major = element_blank(), 
+        axis.text.x = element_text(size = 4, face = "italic"), 
+        axis.text.y = element_text(size = 4, face = "italic"), 
+        legend.position = c(0.9, 0.35)
+    ) + 
+    scale_fill_gradient(low = col.bg, high = col.node) + 
+    guides(
+        fill = guide_colourbar(
+            title = element_blank(), 
+            barwidth = 0.3, barheight = 5, 
+            label.theme = element_text(
+                family = font.base, size = 4, color = col.edge
+            ), 
+            label.position = "right", 
+            ticks.linewidth = 2
+        )
+    )
+
+p2 <- ggplot(data = out.edgeprobs.df) + 
+    geom_tile(aes(x = Var2, y = Var1, fill = value)) + 
+    coord_equal() + 
+    labs(x = NULL, y = NULL, title = NULL, 
+         subtitle = "Predicted") + 
+    theme(
+        panel.grid.minor = element_blank(), 
+        panel.grid.major = element_blank(), 
+        axis.text.x = element_text(size = 4, face = "italic"), 
+        axis.text.y = element_text(size = 4, face = "italic"), 
+        legend.position = "none"
+    ) + 
+    scale_fill_gradient(low = col.bg, high = col.node)
+
+
+p3 <- ggplot(data = l1.df) + 
+    geom_tile(aes(x = Var2, y = Var1, fill = value)) + 
+    coord_equal() + 
+    labs(x = NULL, y = NULL, title = "Triangular Matrix L", 
+         subtitle = "(in the Cholesky Decomposition of the Precision Matrix of a Bayesian network)") + 
+    theme(
+        plot.subtitle = element_text(size = 5), 
+        panel.grid.minor = element_blank(), 
+        panel.grid.major = element_blank(), 
+        axis.text.x = element_text(size = 4, face = "italic"), 
+        axis.text.y = element_text(size = 4, face = "italic"), 
+        legend.position = "none"
+    ) + 
+    scale_fill_gradient(low = col.bg, high = col.node)
+
+p1 / p2 / p3
+ggsave("fig/BCDAG-03-3.png", dpi = 300, width = 3.6, height = 3 * 3)
+```
+
+
+## get_MPMdag
+The MPM model returned in the output of summary() can be used as `a single DAG-model estimate` and is obtained by including all edges whose posterior median probability exceeds the threshold **0.5**. The MPM can be also drew by summary() function as DAG format.  
+Function `get_MPMdag()` applies to an object of class bcdag and returns the (q, q) adjacency matrix of the MPM:
+```{r}
+MPMdag <- get_MPMdag(out)
+sum(MPMdag)
+```
+
+```{r fig.height=10}
+mpm.dag.tg <- tidygraph::as_tbl_graph(MPMdag, directed = TRUE)
+class(mpm.dag.tg)
+mpm.dag.tg
+
+set_graph_style(plot_margin = margin(1, 1, 1, 1))
+class(ggraph(mpm.dag.tg))
+
+p.mpm <- ggraph(mpm.dag.tg, layout = "fr") + 
+    geom_edge_link(
+        arrow = arrow(angle = 15, length = unit(3, "pt")), 
+        start_cap = circle(8, "pt"), 
+        end_cap = circle(8, "pt"), 
+        color = col.edge, 
+        edge_width = 0.25, edge_alpha = 0.75
+    ) + 
+    geom_node_point(color = col.node, size = 6, alpha = 0.9) + 
+    geom_node_text(aes(label = name), 
+                   size = 3, color = col.bg, family = font.base) +
+    theme_minimal(base_family = font.base) + 
+    labs(title = "Median Probability DAG Model (MPM)", 
+         subtitle = paste0("Nodes: ", as.character(q), 
+                           ", Edges: ", as.character(sum(MPMdag)), 
+                           " (Theoretical: ", as.character(DAG.edge.n), ")"), 
+         x = NULL, y = NULL) + 
+    theme(
+        title = element_text(color = col.tw, size = 10), 
+        plot.subtitle = element_text(color = col.tw, size = 6), 
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        plot.background = element_rect(fill = col.bg), 
+    )
+
+p.mpm
+```
+
+
+## get_MAPdag
+As an alternative, the Maximum A Posterior DAG estimate (MAP) can be considered. This corresponds to the DAG with the highest MCMC frequency of visits and can be recovered through the function get_MAPdag():
+```{r}
+MAPdag <- get_MAPdag(out)
+sum(MAPdag)
+```
+
+```{r fig.height=10}
+map.dag.tg <- tidygraph::as_tbl_graph(MAPdag, directed = TRUE)
+class(map.dag.tg)
+map.dag.tg
+
+set_graph_style(plot_margin = margin(1, 1, 1, 1))
+class(ggraph(map.dag.tg))
+
+p.map <- ggraph(map.dag.tg, layout = "fr") + 
+    geom_edge_link(
+        arrow = arrow(angle = 15, length = unit(3, "pt")), 
+        start_cap = circle(8, "pt"), 
+        end_cap = circle(8, "pt"), 
+        color = col.edge, 
+        edge_width = 0.25, edge_alpha = 0.75
+    ) + 
+    geom_node_point(color = col.node, size = 6, alpha = 0.9) + 
+    geom_node_text(aes(label = name), 
+                   size = 3, color = col.bg, family = font.base) +
+    theme_minimal(base_family = font.base) + 
+    labs(title = "Maximum A Posterior DAG Model (MAP)", 
+         subtitle = paste0("Nodes: ", as.character(q), 
+                           ", Edges: ", as.character(sum(MAPdag)), 
+                           " (Theoretical: ", as.character(DAG.edge.n), ")"), 
+         x = NULL, y = NULL) + 
+    theme(
+        title = element_text(color = col.tw, size = 10), 
+        plot.subtitle = element_text(color = col.tw, size = 6), 
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        plot.background = element_rect(fill = col.bg), 
+    )
+
+p.mpm + p.map
+ggsave("fig/BCDAG-03-4.png", dpi = 300, width = 3.2 * 2, height = 3.6)
+```
+
+
+# Posterior inference: causal effect estimation
+In this last section, we introduce functions `causaleffect()` and `get_causaleffect()`, which allow to compute and estimate causal effects between variables. Specifically, we consider the causal effect on a response variable of interest consequent to a joint intervention on a given set of variables; see also Nandy et al. (2017) and Castelletti & Mascaro (2021) for formal definitions.
+
+For a given DAG, it is possible to identify and estimate the causal effect on a node Y consequent to a hypothetical hard intervention on node j using the rules of the **do-calculus** (Pearl, 2000).  
+A simple implementation of this set of rules and an estimation method for the causally sufficient case and for Gaussian data is provided by function `causaleffect()`.  
+The function takes as input;  
+- a numerical vector representing the labels of the intervened nodes (also called intervention target)  
+- a numerical value indicating the response variable  
+- the DAG model parameters L and D  
+see also Castelletti & Mascaro (2021) or our previous vignette for a detailed model description.
+```{r}
+
+```
+
+
+# References
+- Castelletti, F, Mascaro, A (2021). “Structural learning and estimation of joint causal effects among network-dependent variables”. Statistical Methods & Applications, 30(5), 1289-1314.
+
+- Castelletti F, Mascaro A (2022). “BCDAG: An R package for Bayesian structural and Causal learning of Gaussian DAGs.” arXiv pre-print.
+
+- Nandy, P, Maathuis, MH., Richardson, TS (2017). “Estimating the effect of joint interventions from observational data in sparse high-dimensional settings”. The Annals of Statistics, 45(2), 647-674.
+
+- Pearl J (2000). Causality: Models, Reasoning, and Inference. Cambridge University Press, Cambridge. ISBN 0-521-77362-8.

@@ -120,13 +120,13 @@ icon.grob <- grid::rasterGrob(icon.arr,
                               width = unit(.55 * 1., "cm"), 
                               height = unit(0.44 * 1., "cm"), 
                               interpolate = FALSE)
-
-set.seed(2022)
 ```
 
 # Generating Data
 ## Generating a binary adjacency matrix w/ `rDAG` function
 ```{r}
+set.seed(2022)
+
 q <- 20
 w <- 0.5
 DAG <- rDAG(q = q, w = w)
