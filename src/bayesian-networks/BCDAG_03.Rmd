@@ -315,6 +315,7 @@ out.edgeprobs <- get_edgeprobs(out)
 ```
 
 ```{r}
+DAG2 <- DAG
 rownames(DAG) <- paste0("u", 1:nrow(DAG))
 colnames(DAG) <- paste0("v", 1:ncol(DAG))
 DAG.df <- reshape2::melt(DAG)
@@ -494,8 +495,91 @@ The function takes as input;
 - a numerical value indicating the response variable  
 - the DAG model parameters L and D  
 see also Castelletti & Mascaro (2021) or our previous vignette for a detailed model description.
-```{r}
 
+## Understand the Difference between Single and Joint Interventions
+To better understand the difference between single and joint interventions, consider as an example the total causal effect on node Y = 1 (i.e. variable X_1) of a joint intervention on nodes X_i and X_j. And the total causal effects of two separate interventions on nodes X_i and X_j under the causal model represented by the DAG generated before:
+```{r}
+# Joint
+causaleffect(targets = c(2, 7), response = 1, 
+             L = L[, , 1], D = D[, , 1])
+# Single
+causaleffect(targets = c(2), response = 1, 
+             L = L[, , 1], D = D[, , 1])
+causaleffect(targets = c(7), response = 1, 
+             L = L[, , 1], D = D[, , 1])
+```
+
+The total causal effects produced are thus exactly the same for both variables in the two cases. However, if we slightly modify the DAG by adding an edge from node i to node j, so that:
+
+```{r fig.height=10}
+# i = 7, j = 2
+DAG2[7, 2] <- 1
+dag2.tg <- tidygraph::as_tbl_graph(DAG2, directed = TRUE)
+
+set_graph_style(plot_margin = margin(1, 1, 1, 1))
+
+ggraph(dag2.tg, layout = "fr") + 
+    geom_edge_link(
+        arrow = arrow(angle = 15, length = unit(3, "pt")), 
+        start_cap = circle(8, "pt"), 
+        end_cap = circle(8, "pt"), 
+        color = col.edge, 
+        edge_width = 0.25, edge_alpha = 0.75
+    ) + 
+    geom_node_point(color = col.node, size = 6, alpha = 0.9) + 
+    geom_node_text(aes(label = name), 
+                   size = 3, color = col.bg, family = font.base) +
+    theme_minimal(base_family = font.base) + 
+    labs(title = "Gaussian DAG Structure for Synthesis", 
+         subtitle = paste0("Nodes: ", as.character(q), 
+                           ", Edges: ", as.character(DAG.edge.n), 
+                           " (Theoretical Edge Inclusion Ratio: 0.2)"), 
+         x = NULL, y = NULL) + 
+    theme(
+        title = element_text(color = col.tw, size = 10), 
+        plot.subtitle = element_text(color = col.tw, size = 6), 
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        plot.background = element_rect(fill = col.bg), 
+    )
+```
+```{r}
+set.seed(2022)
+L2 <- L
+L2[7, 2, 1] <- runif(1)
+print(L2[7, 2, 1])
+
+# Joint
+causaleffect(targets = c(2, 7), response = 1, 
+             L = L2[, , 1], D = D[, , 1])
+# Single
+causaleffect(targets = c(2), response = 1, 
+             L = L2[, , 1], D = D[, , 1])
+causaleffect(targets = c(7), response = 1, 
+             L = L2[, , 1], D = D[, , 1])  # != 0
+```
+As it can be observed, this time a single intervention on X_7 produces a non-zero causal effect on X_1, while jointly intervening on X_2 and X_7 makes the total causal effect of X_7 on X1 zero. The effect of X_7 on X_1 was in fact mediated by X_2.
+
+## Esitimate Causal Effects
+The identification and estimation of causal effects requires the specification of a DAG. When the DAG is unknown, function `get_causaleffect()` can be used. 
+It applies to objects of class `bcdag`; the latter corresponds to the output of learn_DAG() and consists of a sample of size S from the posterior of DAGs and DAG parameters. In addition get_causaleffect() takes as input a numerical vector representing the labels of the intervened nodes (the intervention target) and a numerical value indicating the response variable. **Output of the get_causaleffect() function** is a sample of size S from the posterior distribution of the causal effect coefficients associated with the intervention targets:
+```{r}
+effects_out <- get_causaleffect(out, targets = c(2, 7), response = 1)
+head(effects_out)
+```
+
+Additionally, if BMA = TRUE, get_causaleffect() returns a Bayesian Model Average (BMA) estimate of the causal effect coefficients:
+```{r}
+## BMA estimate of causal effects
+round(get_causaleffect(
+    out, targets = c(2, 7), response = 1, BMA = TRUE
+), 3)
+
+## True causal effects
+round(causaleffect(
+    targets = c(2, 7), response = 1, L = L[, , 1], D = D[, , 1]
+), 3)
 ```
 
 
