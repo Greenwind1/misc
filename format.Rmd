@@ -80,6 +80,7 @@ tidymodels::tidymodels_prefer()
 library(lme4)
 library(lmerTest)
 library(coefplot)
+library(performance)  # Generic R^2, ICC, Over-dispersion, Heteroschedasticity
 # library(multilevelmod)
 
 # Stan
