@@ -3,8 +3,9 @@ title: ""
 subtitle: ""
 author: ""
 date: '`r Sys.Date()`'
-# bibliography: references.bib
+bibliography: references.bib
 link-citations: true
+zotero: "My Library"
 # abstract: \singlespacing Abstract which has to be long enough to 
 #   take multiple lines otherwise one does not see the effect of single-spacing.
 output: 
@@ -31,7 +32,9 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
 # Preparations {.tabset .tabset-fade .tabset-pills}
+
 ## Packages
+
 ```{r Packages, echo=FALSE, message=FALSE}
 # Data manipulation
 library(tidyverse)
@@ -138,7 +141,13 @@ icon.grob <- grid::rasterGrob(icon.arr,
                               interpolate = FALSE)
 ```
 
+
 # Dataset {.tabset .tabset-fade .tabset-pills}
 ```{r Dataset}
 data("penguins")  # modeldata from tidymodels
 ```
+
+
+# References
+Powered by ZOTERO  
+
