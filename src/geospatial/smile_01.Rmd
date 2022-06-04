@@ -124,7 +124,7 @@ p1 <- ggplot(data = liv_msoa) +
                                    color = col.tw),
         barwidth = 0.5
     )) + 
-    annotate(geom = "text", x = 336, y = 380, label = "@Maxwell_110",
+    annotate(geom = "text", x = 336, y = 382, label = "@Maxwell_110",
              alpha = 0.2, size = 3, family = "Candara", color = col.tw) + 
     theme(
         title = element_text(size = 15, color = col.tw), 
@@ -161,7 +161,7 @@ p2 <- ggplot(data = liv_lsoa) +
         plot.background = element_rect(fill = col.os, color = col.os)
     )
 
-p1 + p2 + plot_layout(ncol = 2, widths = c(5.5, 5))
+p1 + p2 + plot_layout(ncol = 2, widths = c(5.2, 5))
 ggsave(filename = "fig/smile_01-1.jpg", width = 9, height = 5, dpi = 200)
 ```
 
@@ -264,7 +264,7 @@ pred_lsoa <-
 ```
 
 # Visualization
-```{r}
+```{r fig.width=12, fig.height=9}
 p1 <- ggplot(data = liv_msoa) + 
     geom_sf(aes(fill = leb_est), lwd = .1, color = col.tw) + 
     scale_fill_carto_c(palette = "Teal") + 
@@ -320,7 +320,7 @@ p3 <- ggplot(data = pred_lsoa$pred_agg) +
                                    color = col.tw),
         barwidth = 0.5
     )) + 
-    annotate(geom = "text", x = 342, y = 379, label = "@Maxwell_110",
+    annotate(geom = "text", x = 336, y = 382, label = "@Maxwell_110",
          alpha = 0.5, size = 3, family = "Candara", color = col.sl) + 
     theme(
         title = element_text(size = 12, color = col.tw), 
@@ -334,7 +334,7 @@ p3 <- ggplot(data = pred_lsoa$pred_agg) +
     )
 
 p1 + p2 + p3 + 
-    plot_layout(ncol = 3, widths = c(5.5, 5, 5))
+    plot_layout(ncol = 3, widths = c(5.2, 5, 5))
 ggsave(filename = "fig/smile_01-2.jpg", width = 13.5, height = 5, dpi = 200)
 ```
 
