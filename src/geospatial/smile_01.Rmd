@@ -1,6 +1,6 @@
 ---
 title: "Smile Vignettes 01"
-subtitle: "Converting sf objects to spm"
+subtitle: "Converting sf objects to spm/Fitting models and making predictions"
 author: "Maxwell"
 date: '`r Sys.Date()`'
 bibliography: references.bib
@@ -32,7 +32,9 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 
 ------------------------------------------------------------------------
 
-See the vignette vol.1: <https://lcgodoy.me/smile/articles/sf-to-spm.html>
+See the vignette:  
+vol.1 <https://lcgodoy.me/smile/articles/sf-to-spm.html>
+vol.2 <https://lcgodoy.me/smile/articles/fit-and-pred.html>
 
 References:
 
@@ -41,6 +43,7 @@ References:
 2. Dealing with spatial misalignment to model the relationship between deprivation and life expectancy: a model-based geostatistical approach [@johnson2020]
 
 3. Pointless spatial modeling [@wilson2020]
+
 
 # Preparations {.tabset .tabset-fade .tabset-pills}
 ## Packages
@@ -79,6 +82,7 @@ source(file = "utility/environments.R")
 source(file = "utility/helper_functions.R")
 ```
 
+
 # Dataset {.tabset .tabset-fade .tabset-pills}
 
 A dataset containing containing the LSOA's for Liverpool along with estimates for Index of Multiple Deprivation. Data taken from the previous research [@johnson2020].
@@ -112,8 +116,8 @@ st_crs(liv_msoa)$input == st_crs(liv_lsoa)$input
 p1 <- ggplot(data = liv_msoa) + 
     geom_sf(aes(fill = leb_est), lwd = .1, color = col.tw) + 
     scale_fill_carto_c(palette = "Teal") + 
-    labs(title = "Estimated Life Expectancy at Birth", 
-         subtitle = "(Liverpool LSOA dataset)") + 
+    labs(title = "Life Expectancy at Birth (LEB)", 
+         subtitle = "(on Liverpool LSOA areas)") + 
     guides(fill = guide_colorbar(
         title = "LEB", 
         title.theme = element_text(size = 8, family = font.base, 
@@ -124,6 +128,7 @@ p1 <- ggplot(data = liv_msoa) +
              alpha = 0.2, size = 3, family = "Candara", color = col.tw) + 
     theme(
         title = element_text(size = 15, color = col.tw), 
+        plot.subtitle = element_text(size = 12, color = col.tw), 
         legend.text = element_text(color = col.tw), 
         legend.position = c(0.97, 0.8), 
         panel.grid = element_blank(), 
@@ -136,8 +141,8 @@ p1 <- ggplot(data = liv_msoa) +
 p2 <- ggplot(data = liv_lsoa) + 
     geom_sf(aes(fill = imdscore), lwd = .1, color = col.tw) + 
     scale_fill_carto_c(palette = "Purp") + 
-    labs(title = "Index of Multiple Deprivation", 
-         subtitle = "(Liverpool MSOA dataset)", 
+    labs(title = "Index of Multiple Deprivation (IMD)", 
+         subtitle = "(on Liverpool MSOA areas)", 
          caption = "Datasets taken from Johnson et al. 2020\nDOI: 10.1186/s12942-020-00200-w") + 
     guides(fill = guide_colorbar(
         title = "IMD", 
@@ -147,6 +152,8 @@ p2 <- ggplot(data = liv_lsoa) +
     )) + 
     theme(
         title = element_text(size = 15, color = col.tw), 
+        plot.subtitle = element_text(size = 12, color = col.tw), 
+        plot.caption = element_text(color = col.tw, size = 8.5), 
         legend.text = element_text(color = col.tw), 
         legend.position = c(0.97, 0.8), 
         panel.grid = element_blank(), 
@@ -154,12 +161,12 @@ p2 <- ggplot(data = liv_lsoa) +
         plot.background = element_rect(fill = col.os, color = col.os)
     )
 
-p1 + p2 + plot_layout(ncol = 2, widths = c(6, 5))
+p1 + p2 + plot_layout(ncol = 2, widths = c(5.5, 5))
 ggsave(filename = "fig/smile_01-1.jpg", width = 9, height = 5, dpi = 200)
 ```
 
 
-# Create `spm` object from sf object to estimate Gaussian process
+# Create `spm` object from sf object to make grids for Gaussian process fitting
 
 Assumption:  
 The LEB, denoted $Y(\cdot)$, is driven by **a stationary and isotropic continuous Gaussian process** over the region of study, such that, the observed data at the i-th MSOA area (denoted $A_i$) is an average of this underlying process.  
@@ -169,8 +176,11 @@ https://lcgodoy.me/smile/articles/sf-to-spm.html#:~:text=at%20the%20MSOA.-,Now,-
 ***
 
 When using the function `sf_to_spm`, the option `"type"` controls the method of integration. The options are "regular" (or "hexagonal") for numerical integration, or "random" for Monte Carlo integration.  
-Regardless of the "type" chosen, we have to generate a grid of points over the study region. When doing so, we may chose whether we want to approximate the integral within each area with the same precision or if we want the precision to vary according to the size of the polygon. This is controlled by the parameter `"by_polygon"`, which is a boolean scalar. When set to TRUE, all the integrals will be estimated with the same precision, regardless of the size of the polygon. On the other hand, if this parameter is set to FALSE, the grid of points will be generated over the whole study region and, afterwards, the points will be attributed to the areas they are contained in. This way, larger polygons will contain more points and, thus, the respective integrals will have a smaller numerical error.  
+
+Regardless of the "type" chosen, we have to generate a grid of points over the study region. When doing so, we may chose whether we want to approximate the integral within each area with the same precision or if we want the precision to vary according to the size of the polygon. This is controlled by the parameter `"by_polygon"`, which is a boolean scalar. When set to **TRUE**, all the integrals will be estimated with the same precision, regardless of the size of the polygon. On the other hand, if this parameter is set to **FALSE**, the grid of points will be generated over the whole study region and, afterwards, the points will be attributed to the areas they are contained in. This way, larger polygons will contain more points and, thus, the respective integrals will have a smaller numerical error.  
+
 Lastly, there exists a parameter called `"npts"`. This parameter controls the number of points used to compute this integrals. We may either input a vector with the same length as the number of areas or a scalar. When inputting a scalar, this scalar will stand for the number of points over the whole city if by_polygon = FALSE and the number of points per polygon (area) otherwise.  
+
 If we wish to estimate the LEB in the LSOA areas, we will need to create a spm object associated with this variable, fit the model, and then compute the predictions. The chunk of code below shows how to convert the liv_msoa (of class sf) to a spm object. In this case, we are generating a grid of 1000 points over the whole city of Liverpool, then we will be attributing each of these points to the area they are contained in. Also, the `"poly_ids"` argument is a string indicating the variable in the liv_msoa dataset that contains the unique identifier associated with each area. The argument `"var_ids"` is a string as well but this indicates the response variable.
 
 ```{r}
@@ -186,6 +196,148 @@ msoa_spm <- sf_to_spm(
 ```
 
 A Gaussian random field (GRF) within statistics, is a random field involving Gaussian probability density functions of the variables. **A one-dimensional GRF is also called a Gaussian process.** An important special case of a GRF is the Gaussian free field.
+
+
+# Fitting
+```{r}
+theta_st_msoa <- c("phi" = 1)
+
+# 1) it is important to NAME the initial values for each parameter
+# 2) to estimate "nu" from the data we only need to provide an initial value for such parameter
+# 3) uncomment the code below to do so.
+# 4) Note that it is possible to set the boundaries for the parameter space on which we want to optmize the likelihood.
+
+# theta_st_msoa <- c("phi" = 1, "nu" = 1)
+# fit_msoa1 <-
+#     fit_spm(x = msoa_spm,
+#             theta_st = theta_st_msoa,
+#             model = "matern",
+#             nu = .5,
+#             lower = c(1e-16, 1e-16),
+#             upper = c(Inf, 1),
+#             opt_method = "L-BFGS-B",
+#             control   = list(maxit = 500))
+
+fit_msoa1 <-
+    fit_spm(x = msoa_spm,
+            theta_st = theta_st_msoa,
+            model = "matern",
+            nu = .5,
+            apply_exp = TRUE,
+            opt_method = "L-BFGS-B",
+            control   = list(maxit = 500))
+
+fit_msoa2 <-
+    fit_spm(x = msoa_spm,
+            theta_st = theta_st_msoa,
+            model = "matern",
+            nu = 1.5,
+            apply_exp = TRUE,
+            opt_method = "L-BFGS-B",
+            control    = list(maxit = 500))
+
+fit_msoa3 <-
+    fit_spm(x = msoa_spm,
+            theta_st = theta_st_msoa,
+            model = "matern",
+            nu = 2.5,
+            apply_exp = TRUE,
+            opt_method = "L-BFGS-B",
+            control   = list(maxit = 500))
+```
+
+According to stats::AIC, the best model is the one with $\nu = .5$
+```{r}
+c("m1" = AIC(fit_msoa1), "m2" = AIC(fit_msoa2), "m3" = AIC(fit_msoa3))
+```
+
+```{r}
+summary_spm_fit(fit_msoa1, sig = .05)
+```
+
+# Prediction
+```{r}
+pred_lsoa <-
+    predict_spm(x = liv_lsoa,
+                spm_obj = fit_msoa1,
+                id_var = "lsoa11cd")
+```
+
+# Visualization
+```{r}
+p1 <- ggplot(data = liv_msoa) + 
+    geom_sf(aes(fill = leb_est), lwd = .1, color = col.tw) + 
+    scale_fill_carto_c(palette = "Teal") + 
+    labs(title = "LEB", 
+         subtitle = "(on Liverpool LSOA areas)") + 
+    guides(fill = guide_colorbar(
+        title = "LEB", 
+        title.theme = element_text(size = 8, family = font.base, 
+                                   color = col.tw),
+        barwidth = 0.5
+    )) + 
+    theme(
+        title = element_text(size = 15, color = col.tw), 
+        plot.subtitle = element_text(size = 12, color = col.tw), 
+        legend.text = element_text(color = col.tw), 
+        legend.position = c(0.97, 0.8), 
+        panel.grid = element_blank(), 
+        axis.title = element_blank(), 
+        axis.text = element_text(color = col.tw, size = 5), 
+        plot.background = element_rect(fill = col.os, color = col.os)
+    )
+
+p2 <- ggplot(data = pred_lsoa$pred_agg) + 
+    geom_sf(aes(fill = mu_pred), lwd = .1, color = col.tw) + 
+    scale_fill_carto_c(palette = "Teal") + 
+    labs(title = "Predicted LEB for Finer-grained Regions", 
+         subtitle = "(on Liverpool MSOA areas)") + 
+    guides(fill = guide_colorbar(
+        title = "LEB", 
+        title.theme = element_text(size = 8, family = font.base, 
+                                   color = col.tw),
+        barwidth = 0.5
+    )) + 
+    theme(
+        title = element_text(size = 12, color = col.tw), 
+        plot.subtitle = element_text(size = 12, color = col.tw), 
+        legend.text = element_text(color = col.tw), 
+        legend.position = c(0.97, 0.8), 
+        panel.grid = element_blank(), 
+        axis.title = element_blank(), 
+        axis.text = element_blank(), 
+        plot.background = element_rect(fill = col.os, color = col.os)
+    )
+
+p3 <- ggplot(data = pred_lsoa$pred_agg) + 
+    geom_sf(aes(fill = se_pred), lwd = .1, color = col.tw) + 
+    scale_fill_carto_c(palette = "RedOr") + 
+    labs(title = "Standard Errors for predicted LEB", 
+         subtitle = "(on Liverpool MSOA areas)") + 
+    guides(fill = guide_colorbar(
+        title = "Errors of \nLEB", 
+        title.theme = element_text(size = 8, family = font.base, 
+                                   color = col.tw),
+        barwidth = 0.5
+    )) + 
+    annotate(geom = "text", x = 342, y = 379, label = "@Maxwell_110",
+         alpha = 0.5, size = 3, family = "Candara", color = col.sl) + 
+    theme(
+        title = element_text(size = 12, color = col.tw), 
+        plot.subtitle = element_text(size = 12, color = col.tw), 
+        legend.text = element_text(color = col.tw), 
+        legend.position = c(0.97, 0.8), 
+        panel.grid = element_blank(), 
+        axis.title = element_blank(), 
+        axis.text = element_blank(), 
+        plot.background = element_rect(fill = col.os, color = col.os)
+    )
+
+p1 + p2 + p3 + 
+    plot_layout(ncol = 3, widths = c(5.5, 5, 5))
+ggsave(filename = "fig/smile_01-2.jpg", width = 13.5, height = 5, dpi = 200)
+```
+
 
 # References
 
