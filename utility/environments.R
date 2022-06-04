@@ -1,0 +1,54 @@
+library(ggplot2)
+
+# colors ----
+col.tw <- rgb(219, 215, 210, maxColorValue = 255)  # TimberWolf
+col.os <- rgb(65, 74, 76, maxColorValue = 255)     # Outer Space
+col.rp <- rgb(120, 81, 169, maxColorValue = 255)   # Royal Purple
+col.mb <- rgb(26, 72, 118, maxColorValue = 255)    # Midnight Blue
+col.pb <- rgb(28, 169, 201, maxColorValue = 255)   # Pacific Blue
+col.cb <- rgb(176, 183, 198, maxColorValue = 255)  # Cadet Blue
+col.el <- rgb(206, 255, 29, maxColorValue = 255)   # Electric Lime
+col.cg <- rgb(0, 204, 153, maxColorValue = 255)    # Caribbean Green
+col.mt <- rgb(255, 130, 67, maxColorValue = 255)   # Mango Tango
+col.rm <- rgb(227, 37, 107, maxColorValue = 255)   # RazzMatazz
+col.sl <- rgb(252, 40, 71, maxColorValue = 255)    # ScarLet
+col.plos.yellow <- rgb(214, 225, 61, maxColorValue = 255)   # PLOS Yellow
+col.plos.pink <- rgb(207, 0, 163, maxColorValue = 255)      # PLOS Pink
+col.bmc.gray <- rgb(255, 253, 246, maxColorValue = 255)   # BMC Gray
+col.bmc.purple <- rgb(191, 18, 248, maxColorValue = 255)  # BMC Purple
+col.bmc.navy <- rgb(26, 46, 79, maxColorValue = 255)      # BMC Navy Blue
+col.bmc.blue <- rgb(1, 74, 129, maxColorValue = 255)      # BMC Blue
+col.bmc.sky <- rgb(15, 153, 190, maxColorValue = 255)     # BMC Sky Blue
+col.bmc.green <- rgb(0, 73, 64, maxColorValue = 255)      # BMC Deep Green
+col.bmc.pink <- rgb(239, 37, 95, maxColorValue = 255)     # BMC Pink
+
+
+# fonts ----
+font.base <- "Candara"
+# font.base <- "Times New Roman"
+theme_set(theme_minimal(base_family = font.base))
+
+# dplyr ----
+options(dplyr.summarise.inform = TRUE)
+
+# ggplot2
+png_to_grob <-function(png.file.name = "fig/twitter.png",
+                       width = unit(1.20 * 3, "cm"),
+                       height = unit(0.99 * 3, "cm"),
+                       interpolate = FALSE) {
+    # Usage: 
+    # Add a code line below
+    # + annotation_custom(
+    #   grob = icon.grob, xmin = 1, xmax = 1, ymin = 1, ymax = 1
+    # )
+    # +
+    # annotate(geom = "text", x = 1, y = 1, label = "@Maxwell_110", 
+    #   alpha = 0.5, size = 4, family = "Candara", color = col.tw)
+    
+    icon.arr <- png::readPNG(png.file.name)
+    icon.grob <- grid::rasterGrob(icon.arr, 
+                                  width = width,
+                                  height = height,
+                                  interpolate = interpolate)
+    return(icon.grob)
+}

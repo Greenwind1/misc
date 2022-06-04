@@ -1,6 +1,7 @@
 library(stringr)
 library(DT)
 
+# create empty dataframe ----
 create.empty.df <- function(nrow, ncol, colnames = c()) {
     if(missing(ncol) && length(colnames) > 0) {
         ncol <- length(colnames)
@@ -10,6 +11,7 @@ create.empty.df <- function(nrow, ncol, colnames = c()) {
     )
 }
 
+# ymd converter ----
 ymd.conv <- function(date.code) {
     if (is.na(date.code)) return(NA)
     if (str_sub(date.code, end = 1) == 3) {
@@ -29,6 +31,7 @@ ymd.conv <- function(date.code) {
 vect.ymd.conv <- Vectorize(ymd.conv)
 
 
+# table viewer ----
 # Reference: https://rstudio.github.io/DT/
 view.table <- function(df, rownames = TRUE,
                        head.n = 100, pagelen = 10, width = '175px',

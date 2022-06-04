@@ -1,13 +1,12 @@
 ---
 title: "Smile Vignettes 01"
-subtitle: "1. Converting of sf objects to spm"
+subtitle: "Converting sf objects to spm"
 author: "Maxwell"
 date: '`r Sys.Date()`'
 bibliography: references.bib
 link-citations: true
 zotero: "My Library"
-# abstract: \singlespacing Abstract which has to be long enough to 
-#   take multiple lines otherwise one does not see the effect of single-spacing.
+abstract: \singlespacing The purpose of this vignette is to illustrate how to convert sf objects to objects support by the smile package. Besides these two packages, we are going to use the ggplot2 package for the data visualization.
 output: 
     html_document:
         number_sections: TRUE
@@ -30,8 +29,18 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 # knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
 ```
-See vignette vol.1:  
-https://lcgodoy.me/smile/articles/sf-to-spm.html
+
+------------------------------------------------------------------------
+
+See the vignette vol.1: <https://lcgodoy.me/smile/articles/sf-to-spm.html>
+
+References:
+
+1. A geostatistical model for combined analysis of point-level and area-level data using INLA and SPDE [@moraga2017]
+
+2. Dealing with spatial misalignment to model the relationship between deprivation and life expectancy: a model-based geostatistical approach [@johnson2020]
+
+3. Pointless spatial modeling [@wilson2020]
 
 # Preparations {.tabset .tabset-fade .tabset-pills}
 ## Packages
@@ -62,86 +71,121 @@ library(sf)  # simple feature
 library(smile)  # geospatial analysis
 library(spdep)  # helpful functions for mapping
 library(rmapshaper)  # helpful functions for mapping
-
-source(file = "utility/helper_functions.R")
 ```
 
 ## Environment
 ```{r Environment, echo=FALSE, message=FALSE}
-col.tw <- rgb(219, 215, 210, maxColorValue = 255)  # TimberWolf
-col.os <- rgb(65, 74, 76, maxColorValue = 255)     # Outer Space
-col.rp <- rgb(120, 81, 169, maxColorValue = 255)   # Royal Purple
-col.mb <- rgb(26, 72, 118, maxColorValue = 255)    # Midnight Blue
-col.pb <- rgb(28, 169, 201, maxColorValue = 255)   # Pacific Blue
-col.cb <- rgb(176, 183, 198, maxColorValue = 255)  # Cadet Blue
-col.el <- rgb(206, 255, 29, maxColorValue = 255)   # Electric Lime
-col.cg <- rgb(0, 204, 153, maxColorValue = 255)    # Caribbean Green
-col.mt <- rgb(255, 130, 67, maxColorValue = 255)   # Mango Tango
-col.rm <- rgb(227, 37, 107, maxColorValue = 255)   # RazzMatazz
-col.sl <- rgb(252, 40, 71, maxColorValue = 255)    # ScarLet
-col.plos.yellow <- rgb(214, 225, 61, maxColorValue = 255)   # PLOS Yellow
-col.plos.pink <- rgb(207, 0, 163, maxColorValue = 255)      # PLOS Pink
-col.bmc.gray <- rgb(255, 253, 246, maxColorValue = 255)   # BMC Gray
-col.bmc.purple <- rgb(191, 18, 248, maxColorValue = 255)  # BMC Purple
-col.bmc.navy <- rgb(26, 46, 79, maxColorValue = 255)      # BMC Navy Blue
-col.bmc.blue <- rgb(1, 74, 129, maxColorValue = 255)      # BMC Blue
-col.bmc.sky <- rgb(15, 153, 190, maxColorValue = 255)     # BMC Sky Blue
-col.bmc.green <- rgb(0, 73, 64, maxColorValue = 255)      # BMC Deep Green
-col.bmc.pink <- rgb(239, 37, 95, maxColorValue = 255)     # BMC Pink
-
-font.base <- "Candara"
-# font.base <- "Times New Roman"
-theme_set(theme_minimal(base_family = font.base))
-options(dplyr.summarise.inform = TRUE)
-
-# Twitter Logo and Account
-# Usage: add a code line below
-# annotation_custom(grob = icon.grob, xmin = 1, xmax = 1, ymin = 1, ymax = 1)
-# +
-# annotate(geom = "text", x = 1, y = 1, label = "@Maxwell_110", 
-# alpha = 0.5, size = 4, family = "Candara", color = col.tw)
-icon.arr <- png::readPNG("fig/twitter.png")
-icon.grob <- grid::rasterGrob(icon.arr, 
-                              width = unit(1.20 * 3, "cm"), 
-                              height = unit(0.99 * 3, "cm"), 
-                              interpolate = FALSE)
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
 ```
-
 
 # Dataset {.tabset .tabset-fade .tabset-pills}
-## Vignette
+
+A dataset containing containing the LSOA's for Liverpool along with estimates for Index of Multiple Deprivation. Data taken from the previous research [@johnson2020].
+
+`liv_lsoa`  
+- lsoa11cd: LSOA code  
+- lsoa11cd: LSOA name  
+- male: Male population  
+- female: Female population  
+- imdscore: Index of Multiple Deprivation (IMD)  
+- area: LMSOA area, in km$^2$  
+
+`liv_msoa`  
+- msoa11cd: MSOA code  
+- msoa11cd: MSOA name  
+- leb_est: Estimated life expectancy at birth, in years  
+- area: MSOA area, in km$^2$  
+
+## Load
 ```{r Vignette}
-data("liv_lsoa")
-data("liv_msoa")
+data("liv_lsoa")  # high resolution
+data("liv_msoa")  # middle resolution
+
+# check CRS
+st_crs(liv_msoa)$input == st_crs(liv_lsoa)$input
+# TRUE
 ```
 
-https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-L01-v3_1.html
+## Map Check
+```{r fig.height=8}
+p1 <- ggplot(data = liv_msoa) + 
+    geom_sf(aes(fill = leb_est), lwd = .1, color = col.tw) + 
+    scale_fill_carto_c(palette = "Teal") + 
+    labs(title = "Estimated Life Expectancy at Birth", 
+         subtitle = "(Liverpool LSOA dataset)") + 
+    guides(fill = guide_colorbar(
+        title = "LEB", 
+        title.theme = element_text(size = 8, family = font.base, 
+                                   color = col.tw),
+        barwidth = 0.5
+    )) + 
+    annotate(geom = "text", x = 336, y = 380, label = "@Maxwell_110",
+             alpha = 0.2, size = 3, family = "Candara", color = col.tw) + 
+    theme(
+        title = element_text(size = 15, color = col.tw), 
+        legend.text = element_text(color = col.tw), 
+        legend.position = c(0.97, 0.8), 
+        panel.grid = element_blank(), 
+        axis.title = element_blank(), 
+        axis.text = element_text(color = col.tw, size = 5), 
+        plot.background = element_rect(fill = col.os, color = col.os)
+    )
+# Due to used CRS coordinates, check ggplot_build(p1)$data for annotation
 
-Land Price Open Dataset
-  
-L01_006/_100: Price (JPY/m$^{2}$)  
-L01_007: Price Change (%)  
-L01_022: District Code  
-L01_023: City  
-L01_024: Address  
+p2 <- ggplot(data = liv_lsoa) + 
+    geom_sf(aes(fill = imdscore), lwd = .1, color = col.tw) + 
+    scale_fill_carto_c(palette = "Purp") + 
+    labs(title = "Index of Multiple Deprivation", 
+         subtitle = "(Liverpool MSOA dataset)", 
+         caption = "Datasets taken from Johnson et al. 2020\nDOI: 10.1186/s12942-020-00200-w") + 
+    guides(fill = guide_colorbar(
+        title = "IMD", 
+        title.theme = element_text(size = 8, family = font.base, 
+                                   color = col.tw),
+        barwidth = 0.5
+    )) + 
+    theme(
+        title = element_text(size = 15, color = col.tw), 
+        legend.text = element_text(color = col.tw), 
+        legend.position = c(0.97, 0.8), 
+        panel.grid = element_blank(), 
+        axis.text = element_blank(), 
+        plot.background = element_rect(fill = col.os, color = col.os)
+    )
 
-# Tokyo
-```{r Tokyo}
-admin.sf <- sf::read_sf(
-    "input/Administrative_district_Tokyo_2021/N03-21_13_210101.shp"
-) %>% rmapshaper::ms_filter_islands(min_area = 1e8)
-
-lp.sf <- sf::read_sf("input/Land-Price_Tokyo_2022/L01-22_13.shp")
-
-# print(st_crs(admin.sf))  # JGD2011
-# print(st_crs(lp.sf))  # JGD2000
-
-admin.sf <- admin.sf %>% st_transform("+proj=longlat +ellps=WGS84")
-lp.sf <- lp.sf %>% st_transform("+proj=longlat +ellps=WGS84")
+p1 + p2 + plot_layout(ncol = 2, widths = c(6, 5))
+ggsave(filename = "fig/smile_01-1.jpg", width = 9, height = 5, dpi = 200)
 ```
 
+
+# Create `spm` object from sf object to estimate Gaussian process
+
+Assumption:  
+The LEB, denoted $Y(\cdot)$, is driven by **a stationary and isotropic continuous Gaussian process** over the region of study, such that, the observed data at the i-th MSOA area (denoted $A_i$) is an average of this underlying process.  
+See the following contents:  
+https://lcgodoy.me/smile/articles/sf-to-spm.html#:~:text=at%20the%20MSOA.-,Now,-%2C%20suppose%20we%20are
+
+***
+
+When using the function `sf_to_spm`, the option `"type"` controls the method of integration. The options are "regular" (or "hexagonal") for numerical integration, or "random" for Monte Carlo integration.  
+Regardless of the "type" chosen, we have to generate a grid of points over the study region. When doing so, we may chose whether we want to approximate the integral within each area with the same precision or if we want the precision to vary according to the size of the polygon. This is controlled by the parameter `"by_polygon"`, which is a boolean scalar. When set to TRUE, all the integrals will be estimated with the same precision, regardless of the size of the polygon. On the other hand, if this parameter is set to FALSE, the grid of points will be generated over the whole study region and, afterwards, the points will be attributed to the areas they are contained in. This way, larger polygons will contain more points and, thus, the respective integrals will have a smaller numerical error.  
+Lastly, there exists a parameter called `"npts"`. This parameter controls the number of points used to compute this integrals. We may either input a vector with the same length as the number of areas or a scalar. When inputting a scalar, this scalar will stand for the number of points over the whole city if by_polygon = FALSE and the number of points per polygon (area) otherwise.  
+If we wish to estimate the LEB in the LSOA areas, we will need to create a spm object associated with this variable, fit the model, and then compute the predictions. The chunk of code below shows how to convert the liv_msoa (of class sf) to a spm object. In this case, we are generating a grid of 1000 points over the whole city of Liverpool, then we will be attributing each of these points to the area they are contained in. Also, the `"poly_ids"` argument is a string indicating the variable in the liv_msoa dataset that contains the unique identifier associated with each area. The argument `"var_ids"` is a string as well but this indicates the response variable.
+
+```{r}
+msoa_spm <- sf_to_spm(
+    sf_obj = liv_msoa, 
+    n_pts = 1000, 
+    type = "regular", 
+    by_polygon = FALSE, 
+    poly_ids = "msoa11cd", 
+    var_ids = "leb_est", 
+    trunc_d = NULL
+)
+```
 
 
 # References
-Powered by ZOTERO  
 
+Powered by ZOTERO

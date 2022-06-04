@@ -175,7 +175,7 @@ p1 <- ggraph(dag.tg, layout = "fr") +
         axis.text = element_blank(),
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(), 
-        plot.background = element_rect(fill = col.bg), 
+        plot.background = element_rect(fill = col.bg, color = col.bg), 
     )
 
 p1
@@ -269,7 +269,7 @@ data.frame(
                                         size = 0.1),
         panel.grid.major = element_line(color = col.edge, linetype = 3,
                                         size = 0.1),
-        plot.background = element_rect(fill = col.bg)
+        plot.background = element_rect(fill = col.bg, color = col.bg)
     ) + 
     annotation_custom(grob = icon.grob, 
                       xmin = 4100, xmax = 4100, 
@@ -432,7 +432,7 @@ p.mpm <- ggraph(mpm.dag.tg, layout = "fr") +
         axis.text = element_blank(),
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(), 
-        plot.background = element_rect(fill = col.bg), 
+        plot.background = element_rect(fill = col.bg, color = col.bg), 
     )
 
 p.mpm
@@ -477,7 +477,7 @@ p.map <- ggraph(map.dag.tg, layout = "fr") +
         axis.text = element_blank(),
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(), 
-        plot.background = element_rect(fill = col.bg), 
+        plot.background = element_rect(fill = col.bg, color = col.bg), 
     )
 
 p.mpm + p.map
@@ -541,7 +541,7 @@ ggraph(dag2.tg, layout = "fr") +
         axis.text = element_blank(),
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(), 
-        plot.background = element_rect(fill = col.bg), 
+        plot.background = element_rect(fill = col.bg, color = col.bg), 
     )
 ```
 ```{r}
