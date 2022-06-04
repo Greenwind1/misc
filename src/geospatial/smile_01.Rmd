@@ -185,6 +185,7 @@ msoa_spm <- sf_to_spm(
 )
 ```
 
+A Gaussian random field (GRF) within statistics, is a random field involving Gaussian probability density functions of the variables. **A one-dimensional GRF is also called a Gaussian process.** An important special case of a GRF is the Gaussian free field.
 
 # References
 

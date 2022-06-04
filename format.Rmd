@@ -113,5 +113,5 @@ data("penguins")  # modeldata from tidymodels
 
 
 # References
-Powered by ZOTERO  
+
 
