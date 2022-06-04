@@ -1,7 +1,7 @@
 ---
-title: ""
-subtitle: ""
-author: ""
+title: "Smile Vignettes 01"
+subtitle: "1. Converting of sf objects to spm"
+author: "Maxwell"
 date: '`r Sys.Date()`'
 bibliography: references.bib
 link-citations: true
@@ -30,6 +30,8 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 # knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
 ```
+See vignette vol.1:  
+https://lcgodoy.me/smile/articles/sf-to-spm.html
 
 # Preparations {.tabset .tabset-fade .tabset-pills}
 ## Packages
@@ -44,15 +46,10 @@ library(lubridate)
 
 # Visualisation
 library(ggplot2)
-library(ggalt)  # geom_encircle
 library(patchwork)
 library(broman)  # plot_crayons()
 library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(extrafont)  # "Candara"
-
-# Interactivity
-library(plotly)
-library(crosstalk)
 
 # Descriptive Statistics
 library(mice)
@@ -62,38 +59,9 @@ library(gtsummary)
 
 # GeoSpatial Analysis
 library(sf)  # simple feature
+library(smile)  # geospatial analysis
 library(spdep)  # helpful functions for mapping
 library(rmapshaper)  # helpful functions for mapping
-library(tmap)  # map viewer
-library(leaflet)  # map viewer
-library(mapview)  # map viewer
-
-# Networks
-library(ggraph)
-library(tidygraph)
-library(BCDAG)  # Bayesian Causal Networks
-
-# ML
-library(tidymodels)
-tidymodels::tidymodels_prefer()
-
-# Multi Level Model
-library(lme4)
-library(lmerTest)
-library(coefplot)
-library(performance)  # Generic R^2, ICC, Over-dispersion, Heteroschedasticity
-# library(multilevelmod)
-
-# Stan
-library(rstan)
-library(bayesplot)
-library(broom)
-library(broom.mixed)
-
-# Parallel
-library(purrr)
-library(foreach)
-library(doParallel)
 
 source(file = "utility/helper_functions.R")
 ```
@@ -141,9 +109,37 @@ icon.grob <- grid::rasterGrob(icon.arr,
 
 
 # Dataset {.tabset .tabset-fade .tabset-pills}
-```{r Dataset}
-data("penguins")  # modeldata from tidymodels
+## Vignette
+```{r Vignette}
+data("liv_lsoa")
+data("liv_msoa")
 ```
+
+https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-L01-v3_1.html
+
+Land Price Open Dataset
+  
+L01_006/_100: Price (JPY/m$^{2}$)  
+L01_007: Price Change (%)  
+L01_022: District Code  
+L01_023: City  
+L01_024: Address  
+
+# Tokyo
+```{r Tokyo}
+admin.sf <- sf::read_sf(
+    "input/Administrative_district_Tokyo_2021/N03-21_13_210101.shp"
+) %>% rmapshaper::ms_filter_islands(min_area = 1e8)
+
+lp.sf <- sf::read_sf("input/Land-Price_Tokyo_2022/L01-22_13.shp")
+
+# print(st_crs(admin.sf))  # JGD2011
+# print(st_crs(lp.sf))  # JGD2000
+
+admin.sf <- admin.sf %>% st_transform("+proj=longlat +ellps=WGS84")
+lp.sf <- lp.sf %>% st_transform("+proj=longlat +ellps=WGS84")
+```
+
 
 
 # References
