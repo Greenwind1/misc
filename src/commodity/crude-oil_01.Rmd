@@ -32,7 +32,6 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
 # Preparations {.tabset .tabset-fade .tabset-pills}
-
 ## Packages
 ```{r Packages, echo=FALSE, message=FALSE}
 # Data manipulation
@@ -61,23 +60,9 @@ library(ggmice)  # see src/imputation/ggmice_XX.Rmd
 library(psych)
 library(gtsummary)
 
-# GeoSpatial Analysis
-library(sf)  # simple feature
-library(spdep)  # helpful functions for mapping
-library(rmapshaper)  # helpful functions for mapping
-library(tmap)  # map viewer
-library(leaflet)  # map viewer
-library(mapview)  # map viewer
-
 # ML
 # library(tidymodels)
 # tidymodels::tidymodels_prefer()
-
-# Multi Level Model
-library(lme4)
-library(lmerTest)
-library(coefplot)
-# library(multilevelmod)
 
 # Stan
 library(rstan)
@@ -85,60 +70,41 @@ library(bayesplot)
 library(broom)
 library(broom.mixed)
 
-# Parallel
-library(purrr)
-library(foreach)
-library(doParallel)
-
 source(file = "utility/helper_functions.R")
+source(file = "utility/environments.R")
 ```
 
 ## Environment
 ```{r Environment}
-# rgb(73, 81, 112, maxColorValue = 255)
-col.tw <- "#dbd7d2"  # Timberwolf
-col.os <- "#414a4c"  # Outer Space
-col.rp <- "#7851a9"  # Royal Purple
-col.pb <- "#1ca9c9"  # Pacific Blue
-col.cb <- "#b0b7c6"  # Cadet Blue
-col.el <- "#ceff1d"  # Electric Lime
-col.cg <- "#00cc99"  # Caribbean Green
-col.mt <- "#ff8243"  # Mango Tango
-col.rm <- "#e3256b"  # Razzmatazz
-col.sl <- "#fc2847"  # Scarlet
-col.plos.yellow <- "#D6E13D"  # PLOS ONE Yellow
-col.plos.pink <- "#CF00A3"  # PLOS ONE Pink
 col.bg <- "#262A33"
 col.fg <- "#393F4D"
 
-font.base <- "Candara"
-# font.base <- "Times New Roman"
-theme_set(theme_minimal(base_family = font.base))
-options(dplyr.summarise.inform = TRUE)
-# Twitter Logo and Acc
-# Usage: add a code line below
-# annotation_custom(grob = icon.grob, xmin = 1, xmax = 1, ymin = 1, ymax = 1)
-icon.arr <- png::readPNG("fig/twitter_gray.png")
-icon.grob <- grid::rasterGrob(icon.arr, 
-                              width = unit(1.20 * 0.3, "cm"), 
-                              height = unit(0.99 * 0.3, "cm"), 
-                              interpolate = FALSE)
+icon.grob <- png_to_grob(png.file.name = "fig/twitter_yellow.png", 
+                         width = unit(0.5 * 0.8, "cm"),
+                         height = unit(0.4 * 0.8, "cm"),
+                         interpolate = FALSE)
 ```
 
+
 # DataSets {.tabset .tabset-fade .tabset-pills}
+Reference:  
+https://www.worldbank.org/en/research/commodity-markets
 ```{r DataSets}
-data <- read_csv("input/2022-05_Commodity.csv", na = c("", "NA", ".."))
+data <- read_csv("input/2022-06_Commodity.csv", na = c("", "NA", ".."))
 ```
+
 
 # Preprocessing
 ```{r}
 data <- data %>% mutate(
     DATE = as.Date(paste0(
-        str_replace(DATE, pattern = "M", replacement = "-"), "-01"
+        str_replace(Month, pattern = "M", replacement = "-"), "-01"
     ))
 )
 ```
 
+
+# Visualization for all data period
 ```{r fig.height=6}
 event.l <- list(
     name = c("Lehman\nShock", "COVID-19"), 
@@ -196,4 +162,3 @@ plot(p)
 ggsave(filename = "fig/crude-oil_01_timeline.png", 
        dpi = 300, width = 8, height = 4.8)
 ```
-
