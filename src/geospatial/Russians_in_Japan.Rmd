@@ -140,8 +140,7 @@ ne.jpn.sf <- ne.jpn.sf %>%
 glimpse(ne.jpn.sf)
 ```
 
-# Draw map
-```{r, fig.height=13}
+```{r}
 pop.jpn.sf <- ne.jpn.sf %>% 
     mutate(
         longitude = ifelse(name == "Nagasaki", 129.8, longitude), 
@@ -155,9 +154,13 @@ pop.jpn.sf <- ne.jpn.sf %>%
     st_transform(crs = st_crs(ne.jpn.sf)) %>% 
     mutate(
         Pop.size = Pop / max(Pop) * 5, 
-        Rus.ratio = Pop / TOTAL_POP * 100  # %
+        Rus.ratio = Pop / (TOTAL_POP * 10000) * 100  # %
     )
+```
 
+
+# Draw map
+```{r, fig.height=13}
 p1 <- ggplot(data = ne.jpn.sf) + 
     geom_sf(mapping = aes(), size = 0.05, fill = col.fg, color = "gray50") + 
     geom_sf(mapping = aes(size = Pop.size), data = pop.jpn.sf, 
@@ -167,9 +170,9 @@ p1 <- ggplot(data = ne.jpn.sf) +
                  data = ne.jpn.sf %>% filter(Pop > 100), 
                  color = col.tw, cex = 2, family = font.base) + 
     geom_text(aes(x = 133, y = 42, 
-                  label = "Only numbers > 100 are shown."), 
-              family = font.base, color = col.tw, size = 4) + 
-    labs(x = NULL, y = NULL, title = "Russian Population \nby Prefecture") + 
+                  label = "Figures are shown for 100 or more."), 
+              family = font.base, color = col.sl, size = 3) + 
+    labs(x = NULL, y = NULL, title = NULL) + 
     guides(size = guide_legend(title = "Rus Pop\n(Rerative Scale)", 
                                keyheight = 0.5)) + 
     theme(
@@ -181,7 +184,7 @@ p1 <- ggplot(data = ne.jpn.sf) +
         plot.title = element_text(
             margin = margin(t = 30, r = -00, b = -30, l = 00, unit = "pt")
         ), 
-        plot.background = element_rect(fill = col.bg), 
+        plot.background = element_rect(fill = col.bg, color = col.bg), 
         # plot includes panel
         panel.background = element_rect(fill = col.bg, color = col.bg), 
         panel.grid = element_line(colour = col.bg), 
@@ -189,18 +192,18 @@ p1 <- ggplot(data = ne.jpn.sf) +
 
 p2 <- ggplot(data = ne.jpn.sf) + 
     geom_sf(mapping = aes(), size = 0.05, fill = col.fg, color = "gray50") + 
-    geom_sf(mapping = aes(size = Rus.ratio), data = pop.jpn.sf, 
+    geom_sf(mapping = aes(size = Rus.ratio * 1000), data = pop.jpn.sf, 
             color = col.el, alpha = 0.5) + 
     lims(x = c(128, 145), y = c(31, 45)) + 
     geom_sf_text(mapping = aes(label = Rus.ratio), 
-                 data = pop.jpn.sf %>% filter(Rus.ratio > 5) %>% 
-                     mutate(Rus.ratio = round(Rus.ratio, 0)), 
-                 color = col.tw, cex = 2, family = font.base) + 
+                 data = pop.jpn.sf %>% filter(Rus.ratio > 0.001) %>% 
+                     mutate(Rus.ratio = round(Rus.ratio * 1000, 1)), 
+                 color = col.bg, cex = 2, family = font.base) + 
     geom_text(aes(x = 133, y = 42, 
-                  label = "Only ratios > 5% are shown."), 
-              family = font.base, color = col.tw, size = 4) + 
+                  label = "Figures are shown for 0.001% or more."), 
+              family = font.base, color = col.el, size = 3) + 
     labs(x = NULL, y = NULL, title = NULL) + 
-    guides(size = guide_legend(title = "Pop Ratio (%)")) + 
+    guides(size = guide_legend(title = "Rerative Pop Ratio\n (x 1000%)")) + 
     theme(
         title = element_text(color = col.tw, size = 20), 
         legend.position = c(0.85, 0.15), 
@@ -210,13 +213,16 @@ p2 <- ggplot(data = ne.jpn.sf) +
         plot.title = element_text(
             margin = margin(t = 30, r = -00, b = -30, l = 00, unit = "pt")
         ), 
-        plot.background = element_rect(fill = col.bg), 
+        plot.background = element_rect(fill = col.bg, color = col.bg), 
         # plot includes panel
         panel.background = element_rect(fill = col.bg, color = col.bg), 
         panel.grid = element_line(colour = col.bg), 
     )
 
-p1 + p2
-ggsave("fig/russians.png", width = 9, height = 5.5, dpi = 300)
+p1 + p2 + plot_annotation(
+    title = "Russian Population by Prefecture", 
+    theme = theme(title = element_text(color = col.tw, size = 20))
+)
+ggsave("fig/russians.png", width = 9, height = 9 * 0.6, dpi = 200)
 ```
 
