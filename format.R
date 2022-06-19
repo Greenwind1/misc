@@ -33,14 +33,20 @@ library(tmap)  # map viewer
 library(leaflet)  # map viewer
 library(mapview)  # map viewer
 
+# Networks
+library(ggraph)
+library(tidygraph)
+library(BCDAG)  # Bayesian Causal Networks
+
 # ML
-# library(tidymodels)
-# tidymodels::tidymodels_prefer()
+library(tidymodels)
+tidymodels::tidymodels_prefer()
 
 # Multi Level Model
 library(lme4)
 library(lmerTest)
 library(coefplot)
+library(performance)  # Generic R^2, ICC, Over-dispersion, Heteroschedasticity
 # library(multilevelmod)
 
 # Stan
@@ -54,23 +60,11 @@ library(purrr)
 library(foreach)
 library(doParallel)
 
-source(file = "utility/helper_functions.R")
-
 
 # Environment ----
-# rgb(73, 81, 112, maxColorValue = 255)
-col.tw <- "#dbd7d2"  # Timberwolf
-col.os <- "#414a4c"  # Outer Space
-col.rp <- "#7851a9"  # Royal Purple
-col.pb <- "#1ca9c9"  # Pacific Blue
-col.cb <- "#b0b7c6"  # Cadet Blue
-col.el <- "#ceff1d"  # Electric Lime
-col.cg <- "#00cc99"  # Caribbean Green
-col.mt <- "#ff8243"  # Mango Tango
-col.rm <- "#e3256b"  # Razzmatazz
-col.sl <- "#fc2847"  # Scarlet
-col.plos.yellow <- "#D6E13D"  # PLOS ONE Yellow
-col.plos.pink <- "#CF00A3"  # PLOS ONE Pink
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+# icon.grob <- png_to_grob()
 
 font.base <- "Candara"
 # font.base <- "Times New Roman"
@@ -78,4 +72,5 @@ theme_set(theme_minimal(base_family = font.base))
 options(dplyr.summarise.inform = TRUE)
 
 
-# Load DataSets ----
+# DataSet ----
+data("penguins")  # modeldata from tidymodels

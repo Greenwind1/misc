@@ -28,7 +28,7 @@ m1 <- metabin(
 )
 
 png(file = "fig/forest-plot_01.png", width = 3600, height = 1100, res = 300)
-forest.meta(
+meta::forest.meta(
     x = m1,
     sortvar = TE, 
     layout = "RevMan5",  # c("RevMan5", "JAMA", "subgroup")
