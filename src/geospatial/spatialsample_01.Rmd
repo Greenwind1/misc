@@ -87,33 +87,50 @@ admin.sf <- sf::read_sf(
 # Spatial Clustering CV
 coords: A vector of variable names, typically spatial coordinates, to partition the data into disjointed sets via k-means clustering. `This argument is ignored (with a warning) if data is an sf object.`
 ```{r}
-cluster.folds <- spatial_clustering_cv(admin.sf)
+cluster.folds.kmeans <- spatial_clustering_cv(admin.sf, 
+                                              cluster_function = "kmeans")
+cluster.folds.hclust <- spatial_clustering_cv(admin.sf, 
+                                              cluster_function = "hclust")
 ```
 
 ## Get the CV Results
 ```{r}
-admin.sf <- admin.sf %>% add_column(Fold = NA, .after = "N03_007")
-for (i in 1:nrow(cluster.folds)) {
-    in_id <- cluster.folds$splits[[i]]$in_id
-    out_id <- cluster.folds$splits[[i]]$out_id
-    admin.sf[out_id, "Fold"] <- paste0("Fold", i)
-}
 admin.sf <- admin.sf %>% 
-    mutate(Fold = factor(Fold, levels = paste0("Fold", 1:10), 
-                         labels = paste0("Fold-", 1:10)))
+    add_column(Fold.kmeans = NA, .after = "N03_007") %>% 
+    add_column(Fold.hclust = NA, .after = "Fold.kmeans")
+
+for (i in 1:nrow(cluster.folds.kmeans)) {
+    in_id <- cluster.folds.kmeans$splits[[i]]$in_id
+    out_id <- cluster.folds.kmeans$splits[[i]]$out_id
+    admin.sf[out_id, "Fold.kmeans"] <- paste0("Fold", i)
+}
+
+for (i in 1:nrow(cluster.folds.hclust)) {
+    in_id <- cluster.folds.hclust$splits[[i]]$in_id
+    out_id <- cluster.folds.hclust$splits[[i]]$out_id
+    admin.sf[out_id, "Fold.hclust"] <- paste0("Fold", i)
+}
+
+admin.sf <- admin.sf %>% 
+    mutate(
+        Fold.kmeans = factor(Fold.kmeans, levels = paste0("Fold", 1:10), 
+                             labels = paste0("Fold-", 1:10)), 
+        Fold.hclust = factor(Fold.hclust, levels = paste0("Fold", 1:10), 
+                             labels = paste0("Fold-", 1:10))
+    )
 ```
 
 
 # Visuailization
 ```{r}
-autoplot(cluster.folds)
+autoplot(cluster.folds.kmeans)
 ```
 ```{r fig.height=5}
 p1 <- ggplot(data = admin.sf) + 
-    geom_sf(aes(fill = Fold), lwd = .1, color = col.tw) + 
+    geom_sf(aes(fill = Fold.kmeans), lwd = .1, color = col.tw) + 
     scale_fill_carto_d(palette = "Vivid") + 
     labs(title = "Spatial Clustering CV", 
-         subtitle = "Tokyo District") + 
+         subtitle = "with kmeans") + 
     annotate(geom = "text", x = 139, y = 35.55, label = "@Maxwell_110",
              alpha = 0.2, size = 4, family = "Candara", color = col.tw) +
     theme(
@@ -128,9 +145,28 @@ p1 <- ggplot(data = admin.sf) +
         axis.text = element_text(color = col.tw, size = 5), 
         plot.background = element_rect(fill = col.os, color = col.os)
     )
-plot(p1)
+
+p2 <- ggplot(data = admin.sf) + 
+    geom_sf(aes(fill = Fold.hclust), lwd = .1, color = col.tw) + 
+    scale_fill_carto_d(palette = "Vivid") + 
+    labs(subtitle = "with hclust") + 
+    theme(
+        title = element_text(size = 17, color = col.tw), 
+        plot.subtitle = element_text(size = 14, color = col.tw), 
+        legend.text = element_text(color = col.tw), 
+        legend.position = c(0.98, 0.88), 
+        legend.key.size = unit(12, "points"), 
+        legend.title = element_blank(), 
+        panel.grid = element_blank(), 
+        axis.title = element_blank(), 
+        axis.text = element_text(color = col.tw, size = 5), 
+        plot.background = element_rect(fill = col.os, color = col.os)
+    )
+
+p1 / p2
+
 ggsave(filename = "fig/spatialsample_01-1.jpg", 
-       width = 10, height = 5, dpi = 200)
+       width = 10, height = 5 * 2, dpi = 200)
 ```
 
 
