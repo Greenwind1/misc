@@ -1,0 +1,138 @@
+---
+title: "spatialsample"
+subtitle: "Vignette: 01"
+author: "@Maxwell_110"
+date: '`r Sys.Date()`'
+bibliography: references.bib
+link-citations: true
+zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: minty
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 10
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+https://github.com/tidymodels/spatialsample/
+
+***
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(ggalt)  # geom_encircle
+library(patchwork)
+library(broman)  # plot_crayons()
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(extrafont)  # "Candara"
+
+# GeoSpatial Analysis
+library(sf)  # simple feature
+library(spdep)  # helpful functions for mapping
+library(rmapshaper)  # helpful functions for mapping
+library(tmap)  # map viewer
+library(leaflet)  # map viewer
+library(mapview)  # map viewer
+library(spatialsample)
+
+# ML
+library(tidymodels)
+tidymodels::tidymodels_prefer()
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+# icon.grob <- png_to_grob()
+```
+
+
+# Dataset {.tabset .tabset-fade .tabset-pills}
+```{r Dataset}
+data("ames", package = "modeldata")
+admin.sf <- sf::read_sf(
+    "input/Administrative_district_Tokyo_2021/N03-21_13_210101.shp"
+) %>% rmapshaper::ms_filter_islands(min_area = 1e8)
+```
+
+# Spatial Clustering CV
+coords: A vector of variable names, typically spatial coordinates, to partition the data into disjointed sets via k-means clustering. `This argument is ignored (with a warning) if data is an sf object.`
+```{r}
+cluster.folds <- spatial_clustering_cv(admin.sf)
+```
+
+## Get the CV Results
+```{r}
+admin.sf <- admin.sf %>% add_column(Fold = NA, .after = "N03_007")
+for (i in 1:nrow(cluster.folds)) {
+    in_id <- cluster.folds$splits[[i]]$in_id
+    out_id <- cluster.folds$splits[[i]]$out_id
+    admin.sf[out_id, "Fold"] <- paste0("Fold", i)
+}
+admin.sf <- admin.sf %>% 
+    mutate(Fold = factor(Fold, levels = paste0("Fold", 1:10), 
+                         labels = paste0("Fold-", 1:10)))
+```
+
+
+# Visuailization
+```{r}
+autoplot(cluster.folds)
+```
+```{r fig.height=5}
+p1 <- ggplot(data = admin.sf) + 
+    geom_sf(aes(fill = Fold), lwd = .1, color = col.tw) + 
+    scale_fill_carto_d(palette = "Vivid") + 
+    labs(title = "Spatial Clustering CV", 
+         subtitle = "Tokyo District") + 
+    annotate(geom = "text", x = 139, y = 35.55, label = "@Maxwell_110",
+             alpha = 0.2, size = 4, family = "Candara", color = col.tw) +
+    theme(
+        title = element_text(size = 17, color = col.tw), 
+        plot.subtitle = element_text(size = 14, color = col.tw), 
+        legend.text = element_text(color = col.tw), 
+        legend.position = c(0.98, 0.88), 
+        legend.key.size = unit(12, "points"), 
+        legend.title = element_blank(), 
+        panel.grid = element_blank(), 
+        axis.title = element_blank(), 
+        axis.text = element_text(color = col.tw, size = 5), 
+        plot.background = element_rect(fill = col.os, color = col.os)
+    )
+plot(p1)
+ggsave(filename = "fig/spatialsample_01-1.jpg", 
+       width = 10, height = 5, dpi = 200)
+```
+
+
+# References
+
