@@ -1,13 +1,13 @@
 # CLUSTERING SIMILAR SPATIAL PATTERNS
 # https://nowosad.github.io/post/motif-bp5/
 
-library(sf)
-library(stars)
-library(motif)
-library(tmap)
-library(dplyr)
-library(readr)
-library(osfr)
+library(sf) # Simple Features for R
+library(stars) # Spatiotemporal Arrays, Raster and Vector Data Cubes
+library(motif) # Local Pattern Analysis
+library(tmap) # Thematic Maps
+library(dplyr) # A Grammar of Data Manipulation
+library(readr) # Read Rectangular Text Data
+library(osfr) # Interface to the 'Open Science Framework' ('OSF')
 
 # Download Datasets ----
 # osf_retrieve_node("xykzv") %>%
@@ -79,3 +79,4 @@ tm_shape(eco_data) +
     tm_borders(col = "black") +
     tm_layout(legend.show = FALSE,
               title.position = c("LEFT", "TOP"))
+
