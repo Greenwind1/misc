@@ -21,6 +21,9 @@ col.bmc.blue <- rgb(1, 74, 129, maxColorValue = 255)      # BMC Blue
 col.bmc.sky <- rgb(15, 153, 190, maxColorValue = 255)     # BMC Sky Blue
 col.bmc.green <- rgb(0, 73, 64, maxColorValue = 255)      # BMC Deep Green
 col.bmc.pink <- rgb(239, 37, 95, maxColorValue = 255)     # BMC Pink
+col.sage.purple <- rgb(122, 107, 130, maxColorValue = 255)  # SAGE Purple
+col.sage.red <- rgb(175, 33, 38, maxColorValue = 255)       # SAGE Red
+col.sage.red <- rgb(238, 238, 238, maxColorValue = 255)     # SAGE Gray
 
 
 # fonts ----
