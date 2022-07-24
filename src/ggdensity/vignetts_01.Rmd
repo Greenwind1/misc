@@ -1,11 +1,11 @@
 ---
-title: ""
-subtitle: ""
-author: ""
+title: "ggdensity: vignettes"
+subtitle: "https://github.com/jamesotto852/ggdensity"
+author: "Maxwell"
 date: '`r Sys.Date()`'
-bibliography: references.bib
-link-citations: true
-zotero: "My Library"
+# bibliography: references.bib
+# link-citations: true
+# zotero: "My Library"
 # abstract: \singlespacing Abstract which has to be long enough to 
 #   take multiple lines otherwise one does not see the effect of single-spacing.
 output: 
@@ -21,7 +21,7 @@ output:
         highlight: espresso  # espresso, tango, zenburn
         code_folding: show
         # code_download: TRUE
-        fig_width: 15
+        fig_width: 10
 editor_options: 
     chunk_output_type: console
 ---
@@ -32,6 +32,8 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
 ***
+
+ggdensity extends ggplot2 providing more interpretable visualizations of density estimates based on highest density regions (HDRs). ggdensity offers drop-in replacements for ggplot2 functions:
 
 # Preparations {.tabset .tabset-fade .tabset-pills}
 ## Packages
@@ -46,6 +48,7 @@ library(lubridate)
 
 # Visualisation
 library(ggplot2)
+library(ggdensity)
 library(ggalt)  # geom_encircle
 library(patchwork)
 library(broman)  # plot_crayons()
@@ -69,33 +72,6 @@ library(rmapshaper)  # helpful functions for mapping
 library(tmap)  # map viewer
 library(leaflet)  # map viewer
 library(mapview)  # map viewer
-
-# Networks
-library(ggraph)
-library(tidygraph)
-library(BCDAG)  # Bayesian Causal Networks
-
-# ML
-library(tidymodels)
-tidymodels::tidymodels_prefer()
-
-# Multi Level Model
-library(lme4)
-library(lmerTest)
-library(coefplot)
-library(performance)  # Generic R^2, ICC, Over-dispersion, Heteroschedasticity
-# library(multilevelmod)
-
-# Stan
-library(rstan)
-library(bayesplot)
-library(broom)
-library(broom.mixed)
-
-# Parallel
-library(purrr)
-library(foreach)
-library(doParallel)
 ```
 
 ## Environment
@@ -107,13 +83,28 @@ source(file = "utility/helper_functions.R")
 theme_update(panel.grid.minor = element_blank())
 ```
 
+# Dataset
+```{r}
+df <- data.frame("x" = rnorm(1000), "y" = rnorm(1000))
+```
 
-# Dataset {.tabset .tabset-fade .tabset-pills}
-```{r Dataset}
-data("penguins")  # modeldata from tidymodels
+- instead of ggplot2::geom_density_2d_filled(), use ggdensity::geom_hdr()
+- instead of ggplot2::geom_density_2d(), use ggdensity::geom_hdr_lines()
+
+# geom_density_2d_filled() vs. geom_hdr()
+https://github.com/jamesotto852/ggdensity#geom_density_2d_filled-vsgeom_hdr
+
+While it’s a nice looking plot, it isn’t immediately clear how we should understand it. That’s because geom_density_2d_filled() generates its contours as equidistant level sets of the estimated bivariate density, i.e. taking horizontal slices of the 3d surface at equally-spaced heights, and projecting the intersections down into the plane. So you get a general feel of where the density is high, but not much else. To interpret a contour, you would need to multiply its height by the area it bounds, which of course is very challenging to do by just looking at it.
+
+geom_hdr() tries to get around this problem by presenting you with regions of the estimated distribution that are immediately interpretable:
+
+```{r fig.height=20}
+p <- ggplot(df, aes(x, y)) + coord_equal()
+p1 <- p + geom_density_2d_filled(contour_var = "ndensity")
+p2 <- p + geom_hdr(probs = seq(0, 0.9, 0.1))
+
+p1 / p2
 ```
 
 
 # References
-
-
