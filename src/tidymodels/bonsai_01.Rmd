@@ -31,10 +31,12 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 # knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
 ```
 
-***
+------------------------------------------------------------------------
 
 # Preparations {.tabset .tabset-fade .tabset-pills}
+
 ## Packages
+
 ```{r Packages, echo=FALSE, message=FALSE}
 # Data manipulation
 library(tidyverse)
@@ -52,53 +54,20 @@ library(broman)  # plot_crayons()
 library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(extrafont)  # "Candara"
 
-# Interactivity
-library(plotly)
-library(crosstalk)
-
 # Descriptive Statistics
 library(mice)
 library(ggmice)  # see src/imputation/ggmice_XX.Rmd
 library(psych)
 library(gtsummary)
 
-# GeoSpatial Analysis
-library(sf)  # simple feature
-library(spdep)  # helpful functions for mapping
-library(rmapshaper)  # helpful functions for mapping
-library(tmap)  # map viewer
-library(leaflet)  # map viewer
-library(mapview)  # map viewer
-
-# Networks
-library(ggraph)
-library(tidygraph)
-library(BCDAG)  # Bayesian Causal Networks
-
 # ML
 library(tidymodels)
+library(bonsai)
 tidymodels::tidymodels_prefer()
-
-# Multi Level Model
-library(lme4)
-library(lmerTest)
-library(coefplot)
-library(performance)  # Generic R^2, ICC, Over-dispersion, Heteroschedasticity
-# library(multilevelmod)
-
-# Stan
-library(rstan)
-library(bayesplot)
-library(broom)
-library(broom.mixed)
-
-# Parallel
-library(purrr)
-library(foreach)
-library(doParallel)
 ```
 
 ## Environment
+
 ```{r Environment, echo=FALSE, message=FALSE}
 source(file = "utility/environments.R")
 source(file = "utility/helper_functions.R")
@@ -107,13 +76,47 @@ source(file = "utility/helper_functions.R")
 theme_update(panel.grid.minor = element_blank())
 ```
 
-
 # Dataset {.tabset .tabset-fade .tabset-pills}
+
 ```{r Dataset}
-data("penguins")  # modeldata from tidymodels
+data("penguins", package = "modeldata")  # modeldata from tidymodels
+glimpse(penguins)
 ```
 
+```{r}
+view.table(penguins)
+```
+
+# Missing Pattern
+
+```{r}
+p <- ggmice::plot_pattern(data = penguins, 
+                          vrb = "all", square = TRUE, 
+                          rotate = FALSE, cluster = NULL)
+p + theme_minimal(base_family = font.base) + 
+    theme(panel.grid = element_blank())
+```
+
+# Conditional Randomom Forests
+
+@hothorn2006
+
+```{r}
+rf_mod <- rand_forest() %>% 
+    set_engine(engine = "partykit") %>% 
+    set_mode(mode = "classification") %>% 
+    fit(formula = species ~ flipper_length_mm + island, 
+        data = penguins)
+```
+
+# LGBM
+
+```{r}
+bt_mod <- boost_tree() %>% 
+    set_engine(engine = "lightgbm") %>% 
+    set_mode(mode = "classification") %>% 
+    fit(formula = species ~ flipper_length_mm + island, 
+        data = penguins)
+```
 
 # References
-
-

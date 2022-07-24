@@ -110,7 +110,7 @@ theme_update(panel.grid.minor = element_blank())
 
 # Dataset {.tabset .tabset-fade .tabset-pills}
 ```{r Dataset}
-data("penguins")  # modeldata from tidymodels
+data("penguins", package = "modeldata")  # modeldata from tidymodels
 ```
 
 
