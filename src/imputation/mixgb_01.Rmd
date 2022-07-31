@@ -1,0 +1,236 @@
+---
+title: "mixgb"
+subtitle: "vignettes"
+author: "Maxwell"
+date: '`r Sys.Date()`'
+bibliography: references.bib
+link-citations: true
+zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: minty
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 15
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+***
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(ggalt)  # geom_encircle
+library(patchwork)
+library(broman)  # plot_crayons()
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(extrafont)  # "Candara"
+
+# Descriptive Statistics
+library(mice)
+library(ggmice)  # see src/imputation/ggmice_XX.Rmd
+library(psych)
+library(gtsummary)
+library(mixgb)
+
+# ML
+library(tidymodels)
+tidymodels::tidymodels_prefer()
+
+library(tictoc)
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+# icon.grob <- png_to_grob()
+
+theme_update(panel.grid.minor = element_blank())
+```
+
+
+# Dataset {.tabset .tabset-fade .tabset-pills}
+```{r Dataset}
+glimpse(nhanes3_newborn)
+```
+
+
+# Descriptive Stats
+```{r}
+nhanes3_newborn %>% tbl_summary(by = HSSEX, missing_text = "NA")
+```
+
+
+# Create NAs in Dataset
+```{r fig.width=10, fig.height=30}
+set.seed(2022)
+df.na <- createNA(data = nhanes3_newborn,
+                  var.names = c("HSHSIZER", "HSAGEIR", 
+                                "HSSEX", "DMARETHN", "HYD1"), 
+                  p = 0.1)
+p1 <- plot_pattern(data = df.na, vrb = "all", square = TRUE, 
+                   rotate = TRUE, cluster = NULL) + 
+    theme_minimal(base_family = font.base) + 
+    scale_fill_carto_d(palette = "Safe", direction = -1) + 
+    theme(
+        axis.text.x = element_text(size = 8, angle = 90), 
+        axis.text.y = element_text(size = 6), 
+        panel.grid = element_blank()
+    )
+p1
+ggsave("fig/mixgb_01-1.jpg", width = 4, height = 12)
+```
+
+
+
+# Imputation with XGBoost
+## Tune nrounds
+```{r}
+set.seed(2022)
+tic()
+cv.results <- mixgb_cv(data = df.na, 
+                       nfold = 10, 
+                       nrounds = 100, 
+                       early_stopping_rounds = 1, 
+                       response = "BMPHEAD", 
+                       select_features = NULL, 
+                       stringsAsFactors = FALSE, 
+                       verbose = FALSE)
+cv.results$response
+cv.results$best.nrounds
+toc()
+```
+
+## impute with XGBoost
+```{r}
+xgb.params.list <- list(max_depth = 6, 
+                        gamma = 0.1, 
+                        eta = 0.3, 
+                        min_child_weight = 1, 
+                        subsample = 1, 
+                        colsample_bytree = 1, 
+                        colsample_bylevel = 1, 
+                        colsample_bynode = 1, 
+                        nthread = 2, 
+                        tree_method = "auto", 
+                        gpu_id = 0, 
+                        predictor = "auto")
+
+tic()
+imputed.data <- mixgb(
+    data = df.na, 
+    m = 5,  # The number of imputed datasets
+    maxit = 1,  # The number of imputation iterations
+    ordinalAsInteger = TRUE, 
+    bootstrap = TRUE,  # Whether to use bootstrapping for multiple imputation.
+    pmm.type = "auto",  # The types of predictive mean matching (PMM).
+    pmm.k = 5,  # The number of donors for predictive mean matching.
+    pmm.link = "prob",  # The link for predictive mean matching binary variables
+    initial.num = "normal",  # Initial imputation method for numeric type data
+    initial.int = "mode",  # Initial imputation method for integer type data
+    initial.fac = "mode",  # Initial imputation method for factor type data
+    save.models = FALSE, 
+    save.vars = NULL, 
+    verbose = FALSE, 
+    xgb.params = xgb.params.list, 
+    nrounds = 20,
+    early_stopping_rounds = 1,
+    print_every_n = 10L,
+    xgboost_verbose = 0
+)
+toc()
+```
+
+
+# Visualization
+## plot_hist
+```{r fig.height=7}
+p2 <- plot_hist(imputation.list = imputed.data, 
+          var.name = "BMPHEAD", 
+          original.data = df.na) + 
+    labs(title = "mixgb::plot_hist", subtitle = "imputed variable: BMPHEAD") + 
+    theme(
+        title = element_text(size = 15, colour = col.os), 
+        axis.title = element_text(size = 10, colour = col.os)
+    )
+p2
+```
+
+## plot_2num
+```{r fig.height=7}
+p3 <- plot_2num(imputation.list = imputed.data, 
+                var.x = "BMPHEAD",
+                var.y = "BMPRECUM", 
+                original.data = df.na) + 
+    labs(title = "mixgb::plot_2num", 
+         subtitle = "imputed variable: BMPHEAD and BMPRECUM") + 
+    theme(
+        title = element_text(size = 15, colour = col.os), 
+        axis.title = element_text(size = 10, colour = col.os)
+    )
+p3
+```
+
+
+## plot_1num1fac
+```{r fig.height=7}
+p4 <- plot_1num1fac(imputation.list = imputed.data, 
+                     var.num = "BMPHEAD",
+                     var.fac = "HSSEX", 
+                     original.data = df.na) + 
+    labs(title = "mixgb::plot_1num1fac", 
+         subtitle = "imputed variable: BMPHEAD and HSSEX") + 
+    theme(
+        title = element_text(size = 15, colour = col.os), 
+        axis.title = element_text(size = 10, colour = col.os)
+    )
+p4
+```
+
+# Save Figure
+```{r, fig.width=10, fig.height=15}
+p2 + p3 + p4 + 
+    plot_layout(ncol = 1, heights = c(1, 1, 1)) + 
+    plot_annotation(
+        title = "R::mixgb", 
+        subtitle = "https://github.com/agnesdeng/mixgb", 
+        theme = theme(
+            title = element_text(size = 20, family = font.base),
+            plot.subtitle = element_text(size = 10, family = font.base)
+        )
+    )
+
+ggsave("fig/mixgb_01-2.jpg", width = 8, height = 12)
+```
+
+
+# References
+
+
