@@ -1,0 +1,147 @@
+---
+title: "ts2net"
+subtitle: ""
+author: ""
+date: '`r Sys.Date()`'
+bibliography: references.bib
+link-citations: true
+zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: minty
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 15
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+https://github.com/lnferreira/ts2net
+
+***
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(ggalt)  # geom_encircle
+library(patchwork)
+library(broman)  # plot_crayons()
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(extrafont)  # "Candara"
+
+# Networks
+library(ggraph)
+library(tidygraph)
+library(ts2net)
+library(BCDAG)  # Bayesian Causal Networks
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+# icon.grob <- png_to_grob()
+
+theme_update(panel.grid.minor = element_blank())
+```
+
+
+# Dataset {.tabset .tabset-fade .tabset-pills}
+```{r Dataset}
+# Generating a toy data set
+ts_dataset <- dataset_sincos_generate(
+    num_sin_series = 5, 
+    num_cos_series = 5, 
+    x_max = 8 * pi, 
+    ts_length = 100, 
+    jitter_amount = 0.25
+)
+names(ts_dataset) <- c(paste0("sin", 1:5), paste0("cos", 1:5))
+```
+
+#
+
+```{r}
+# Pairwise distance calculation
+D <- ts_dist(ts_dataset) 
+
+# KNN network construction
+knnet <- net_knn(D, k = 2)
+
+# weighted network construction
+wnet <- net_weighted(D)
+```
+
+# Visualization
+```{r}
+ts_dataset %>% as_tibble() %>% 
+    mutate(x = 8 * pi / 100 * 1:100) %>% 
+    pivot_longer(cols = names(ts_dataset), names_to = "types") %>% 
+    ggplot() + 
+    geom_line(aes(x = x, y = value, color = types))
+```
+
+# Epsilon-network
+```{r}
+# Epsilon-network construction
+ennet <- net_enn(D = D, eps = 0.5)
+```
+
+```{r}
+p1 <- ggraph(ennet, layout = "fr") + 
+    geom_edge_link(
+        arrow = arrow(angle = 15, length = unit(3, "pt")), 
+        start_cap = circle(8, "pt"), 
+        end_cap = circle(8, "pt"), 
+        color = col.tw, 
+        edge_width = 0.25, edge_alpha = 0.75
+    ) + 
+    geom_node_point(color = col.bmc.green.l, size = 10, alpha = 0.9) + 
+    geom_node_text(aes(label = name), 
+                   size = 3, color = col.sage.gray, family = font.base) +
+    theme_minimal(base_family = font.base) + 
+    labs(title = "Epsilon-network from a distance matrix", 
+         # subtitle = paste0(), 
+         x = NULL, y = NULL) + 
+    theme(
+        title = element_text(color = col.tw, size = 15), 
+        plot.subtitle = element_text(color = col.tw, size = 6), 
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        plot.background = element_rect(fill = col.os), 
+    )
+
+p1
+```
+
+
+
+# References
+
+
