@@ -1,3 +1,4 @@
+library(extrafont)  # "Candara"
 library(ggplot2)
 
 # colors ----

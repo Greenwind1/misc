@@ -1,7 +1,6 @@
 # Bayes Factor: simple demo
 # Mar.2021, Maxwell
-# ChangeLog:
-# 
+
 
 # 1. Library ----
 # Data manipulation
@@ -16,20 +15,24 @@ library(rstan)
 library(bayesplot)
 
 # Custom Functions
+source("./utility/environments.R")
 source("./utility/helper_functions.R")
+
+font.base <- "Times New Roman"
+theme_set(theme_minimal(base_family = font.base))
 
 # 2. Dataset ----
 data <- LightatNight4Weeks
 view.table(data)
 
 # 3. Naive EDA ----
-data %>% ggplot(mapping = aes(x = Light, y = BMGain, fill = Light)) +
-    geom_violin(width = 1, color = NA) +
-    geom_boxplot(width = 0.1, color = "snow", alpha = 0.2) +
-    scale_fill_brewer(palette = "Dark2") +
-    theme_minimal() +
-    labs(title = "Light vs BMGain") +
-    theme(legend.position = "none", plot.title = element_text(size = 15))
+data %>% ggplot(mapping = aes(x = Light, y = BMGain, fill = Light)) + 
+    geom_violin(width = 1, color = NA) + 
+    geom_boxplot(width = 0.1, color = "snow", alpha = 0.2) + 
+    scale_fill_brewer(palette = "Dark2") + 
+    labs(title = "Light vs BMGain") + 
+    theme(legend.position = "none", 
+          plot.title = element_text(size = 15))
 ggsave("./fig/bayes_factor_01.png", dpi=300)
 
 # 4. MCMC ----
