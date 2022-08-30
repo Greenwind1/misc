@@ -40,12 +40,26 @@ col.pr.blue <- rgb(0, 114, 151, maxColorValue = 255)        # Blue (theme)
 
 
 # fonts ----
+# extrafont::fonttable()
 font.base <- "Candara"
 # font.base <- "Times New Roman"
 theme_set(theme_minimal(base_family = font.base))
 
+
+# theme ----
+font.face <- "italic"
+theme_update(
+    title = element_text(face = font.face), 
+    text = element_text(face = font.face), 
+    axis.title = element_text(face = font.face), 
+    axis.text = element_text(face = font.face), 
+    panel.grid.minor = element_blank()
+)
+
+
 # dplyr ----
 options(dplyr.summarise.inform = TRUE)
+
 
 # ggplot2
 png_to_grob <-function(png.file.name = "fig/twitter.png",
