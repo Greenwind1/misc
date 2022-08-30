@@ -13,8 +13,10 @@ col.c.g <- rgb(0, 204, 153, maxColorValue = 255)    # Caribbean Green
 col.mt <- rgb(255, 130, 67, maxColorValue = 255)    # Mango Tango
 col.rm <- rgb(227, 37, 107, maxColorValue = 255)    # RazzMatazz
 col.sl <- rgb(252, 40, 71, maxColorValue = 255)     # ScarLet
+
 col.plos.yellow <- rgb(214, 225, 61, maxColorValue = 255)   # PLOS Yellow
 col.plos.pink <- rgb(207, 0, 163, maxColorValue = 255)      # PLOS Pink
+
 col.bmc.gray.p <- rgb(255, 253, 246, maxColorValue = 255)   # BMC Pale Gray
 col.bmc.purple <- rgb(191, 18, 248, maxColorValue = 255)    # BMC Purple
 col.bmc.navy <- rgb(26, 46, 79, maxColorValue = 255)        # BMC Navy Blue
@@ -23,9 +25,18 @@ col.bmc.sky <- rgb(15, 153, 190, maxColorValue = 255)       # BMC Sky Blue
 col.bmc.green.d <- rgb(0, 73, 64, maxColorValue = 255)      # BMC Deep Green
 col.bmc.green.l <- rgb(0, 203, 170, maxColorValue = 255)    # BMC Light Green
 col.bmc.pink <- rgb(239, 37, 95, maxColorValue = 255)       # BMC Pink
+
 col.sage.purple <- rgb(122, 107, 130, maxColorValue = 255)  # SAGE Purple
 col.sage.red <- rgb(175, 33, 38, maxColorValue = 255)       # SAGE Red
 col.sage.gray <- rgb(238, 238, 238, maxColorValue = 255)    # SAGE Gray
+
+# https://www.sciencedirect.com/journal/psychiatry-research
+col.pr.pale.blue <- rgb(233, 243, 255, maxColorValue = 255) # Pale Blue
+col.pr.gray <- rgb(245, 245, 245, maxColorValue = 255)      # Pale Gray
+col.pr.black <- rgb(30, 20, 20, maxColorValue = 255)        # Dark Gray
+col.pr.pink <- rgb(249, 175, 168, maxColorValue = 255)      # Pink (theme)
+col.pr.orange <- rgb(255, 138, 68, maxColorValue = 255)     # Orange (theme)
+col.pr.blue <- rgb(0, 114, 151, maxColorValue = 255)        # Blue (theme)
 
 
 # fonts ----
