@@ -81,6 +81,44 @@ data("penguins", package = "modeldata")  # modeldata from tidymodels
 ```
 
 
+# Quick Start
+```{r}
+ggpk_box_and_scatter <- ggpacket() +
+    geom_point(position = position_jitter(width = 0.2), alpha = 0.5) + 
+    geom_boxplot(outlier.shape = NA, fill = NA, color = col.os)
+
+codes = "1. Sets ggplot layer together:
+    ggpk_box_and_scatter <- ggpacket() + 
+        geom_point(position = position_jitter(width = 0.2), alpha = 0.5) + 
+        geom_boxplot(outlier.shape = NA, fill = NA, color = col.os)
+
+2. Add ggpacket class object to ggplot function:
+    ggplot(penguins, aes(x = species, y = body_mass_g, color = sex)) + 
+        ggpk_box_and_scatter()"
+
+ggplot(penguins, aes(x = species, y = body_mass_g, color = sex)) + 
+    ggpk_box_and_scatter() + 
+    labs(
+        x = "Penguin species", y = "Body mass (g)", 
+        title = "ggplot using ggpacket: using penguin dataset", 
+        subtitle = codes, caption = "@ Maxwell_110"
+    ) + 
+    theme(
+        axis.title = element_text(size = 12, color = col.os), 
+        plot.title = element_text(size = 15, color = col.os), 
+        plot.caption = element_text(size = 10, color = "gray"), 
+        plot.subtitle = element_text(
+            size = 8, 
+            margin = margin(t = 20, b = -90),
+            color = col.plos.pink
+        ), 
+        axis.text = element_text(size = 12, color = col.os)
+    )
+
+ggsave("fig/ggpacket_1.jpg", width = 7, height = 5)
+```
+
+
 # References
 
 

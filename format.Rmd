@@ -102,9 +102,9 @@ library(doParallel)
 ```{r Environment, echo=FALSE, message=FALSE}
 source(file = "utility/environments.R")
 source(file = "utility/helper_functions.R")
-# icon.grob <- png_to_grob()
 
-theme_update(panel.grid.minor = element_blank())
+fn.prefix <- "_"
+# icon.grob <- png_to_grob()
 ```
 
 
