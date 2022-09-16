@@ -83,3 +83,6 @@ png_to_grob <-function(png.file.name = "fig/twitter.png",
                                   interpolate = interpolate)
     return(icon.grob)
 }
+
+# plot(1:25, rep(1, 25), pch = c(1:25), cex = 2,)
+# text(1:25, rep(1, 25), pos = 1, labels = c(1:25))
