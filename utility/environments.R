@@ -53,6 +53,7 @@ theme_update(
     text = element_text(face = font.face), 
     axis.title = element_text(face = font.face), 
     axis.text = element_text(face = font.face), 
+    panel.grid.major = element_line(size = 0.25), 
     panel.grid.minor = element_blank()
 )
 
