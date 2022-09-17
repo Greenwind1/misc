@@ -2,6 +2,10 @@ library(extrafont)  # "Candara"
 library(ggplot2)
 
 # colors ----
+crgb <- col2rgb(cc <- colors())
+colnames(crgb) <- cc
+# head(t(crgb))
+
 col.tw <- rgb(219, 215, 210, maxColorValue = 255)   # TimberWolf
 col.os <- rgb(65, 74, 76, maxColorValue = 255)      # Outer Space
 col.r.p <- rgb(120, 81, 169, maxColorValue = 255)   # Royal Purple
