@@ -5,6 +5,8 @@ library(ggplot2)
 crgb <- col2rgb(cc <- colors())
 colnames(crgb) <- cc
 # head(t(crgb))
+# display_carto_all()
+# RColorBrewer::display.brewer.all()
 
 col.tw <- rgb(219, 215, 210, maxColorValue = 255)   # TimberWolf
 col.os <- rgb(65, 74, 76, maxColorValue = 255)      # Outer Space
