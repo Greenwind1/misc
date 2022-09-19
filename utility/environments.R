@@ -7,6 +7,7 @@ colnames(crgb) <- cc
 # head(t(crgb))
 # display_carto_all()
 # RColorBrewer::display.brewer.all()
+# ggsci::scale_color_npg()
 
 col.tw <- rgb(219, 215, 210, maxColorValue = 255)   # TimberWolf
 col.os <- rgb(65, 74, 76, maxColorValue = 255)      # Outer Space
