@@ -56,10 +56,10 @@ theme_set(theme_minimal(base_family = font.base))
 # theme ----
 font.face <- "italic"
 theme_update(
-    title = element_text(face = font.face), 
-    text = element_text(face = font.face), 
-    axis.title = element_text(face = font.face), 
-    axis.text = element_text(face = font.face), 
+    title = element_text(face = font.face, color = col.os), 
+    text = element_text(face = font.face, color = col.os), 
+    axis.title = element_text(face = font.face, color = col.os), 
+    axis.text = element_text(face = font.face, color = col.os), 
     panel.grid.major = element_line(size = 0.25), 
     panel.grid.minor = element_blank()
 )

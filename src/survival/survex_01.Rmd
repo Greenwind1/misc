@@ -6,7 +6,7 @@ date: '`r Sys.Date()`'
 bibliography: references.bib
 link-citations: true
 zotero: "My Library"
-# abstract: \singlespacing Abstract which has to be long enough to 
+# abstract: \singlespacing Abstract which has to be long enough to
 #   take multiple lines otherwise one does not see the effect of single-spacing.
 output: 
     html_document:
@@ -49,6 +49,7 @@ library(ggplot2)
 library(ggalt)  # geom_encircle
 library(patchwork)
 library(broman)  # plot_crayons()
+library(ggsci)  # Journal palette
 library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(extrafont)  # "Candara"
 
@@ -81,6 +82,7 @@ fn.prefix <- "survex-01_"
 # icon.grob <- png_to_grob()
 ```
 
+https://medium.com/responsibleml/survex-model-agnostic-explainability-for-survival-analysis-94444e6ce83d
 
 # Create a Model and an Explainer
 ```{r}
@@ -100,16 +102,69 @@ model_performance(explainer)
 
 # visualize permutation-based feature importance
 ```{r}
-model.pfi <- model_parts(explainer)
-model.pfi.df <- model.pfi$result
-plot(model.pfi)
-ggsave(paste0("fig/", fn.prefix, "pfi.jpg"), width = 5, height = 4, dpi = 300)
+exp.pfi <- model_parts(explainer)
+exp.pfi.df <- exp.pfi$result
+```
+
+```{r}
+exp.pfi.df %>% 
+    select(-permutation, -label, -`_baseline_`) %>% 
+    pivot_longer(cols = `_full_model_`:prior, names_to = "Group") %>% 
+    ggplot() + 
+    geom_smooth(aes(x = times, y = value, color = Group), method = "loess") + 
+    labs(title = "Time-dependent Permutation Feature Importance", 
+         subtitle = "using ranger (RF) and survex package", 
+         x = "Survival Time", y = "Brier score loss", 
+         caption = "@ Maxwell_110") + 
+    scale_color_npg(alpha = 0.75) + 
+    theme(
+        legend.title = element_blank(), 
+        legend.position = c(0.8, 0.8), 
+        legend.spacing.y = unit(0.1, "npc"), 
+        legend.key.size = unit(0.05, "npc"), 
+        title = element_text(size = 13), 
+        plot.caption = element_text(size = 7, color = "gray77"), 
+        plot.subtitle = element_text(size = 12), 
+        axis.title = element_text(size = 12)
+    )
+
+# plot(exp.pfi)
+ggsave(paste0("fig/", fn.prefix, "pfi.jpg"), width = 6, height = 4, dpi = 300)
 ```
 
 
 # explain one prediction with SurvSHAP(t)
 ```{r}
-plot(predict_parts(explainer, veteran[1, -c(3, 4)]))
+exp.pdp <- predict_parts(explainer, veteran[1, -c(3, 4)])
+exp.pdp.df <- exp.pdp$result %>% as_tibble() %>% 
+    mutate(times = exp.pdp$eval_times)
+```
+
+```{r}
+exp.pdp.df %>% 
+    # select() %>% 
+    pivot_longer(cols = trt:prior, names_to = "Group") %>% 
+    ggplot() + 
+    geom_line(aes(x = times, y = value, color = Group), size = 0.75) + 
+    # geom_smooth(aes(x = times, y = value, color = Group), method = "loess") + 
+    labs(title = "Time-dependent SurvSHAP Values", 
+         subtitle = "using ranger (RF) and survex package", 
+         x = "Survival Time", y = "", 
+         caption = "@ Maxwell_110") + 
+    scale_color_npg(alpha = 0.75) + 
+    theme(
+        legend.title = element_blank(), 
+        legend.position = c(0.8, 0.85), 
+        legend.spacing.y = unit(0.05, "npc"), 
+        legend.key.size = unit(0.04, "npc"), 
+        title = element_text(size = 13), 
+        plot.caption = element_text(size = 7, color = "gray77"), 
+        plot.subtitle = element_text(size = 12), 
+        axis.title = element_text(size = 12)
+    )
+
+# plot(exp.pdp)
+ggsave(paste0("fig/", fn.prefix, "pdp.jpg"), width = 6, height = 4, dpi = 300)
 ```
 
 
