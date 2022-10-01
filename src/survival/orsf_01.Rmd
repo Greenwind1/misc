@@ -1,0 +1,113 @@
+---
+title: "orsf 01"
+subtitle: "Vignette"
+author: "Maxwell"
+date: '`r Sys.Date()`'
+bibliography: references.bib
+link-citations: true
+zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: minty
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 15
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+***
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(ggalt)  # geom_encircle
+library(patchwork)
+library(broman)  # plot_crayons()
+library(ggsci)  # Journal palette
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(extrafont)  # "Candara"
+
+# Descriptive Statistics
+library(mice)
+library(ggmice)  # see src/imputation/ggmice_XX.Rmd
+library(psych)
+library(gtsummary)
+
+# Survival Analysis
+library(aorsf)
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+
+fn.prefix <- "orsf-01_"
+# icon.grob <- png_to_grob()
+
+set.seed(2022)
+```
+
+
+# Dataset {.tabset .tabset-fade .tabset-pills}
+Mayo Clinic Primary Biliary Cholangitis Data  
+These data are a light modification of the survival::pbc data.  
+A data frame with 276 rows and 20 variables.  
+```{r Dataset}
+glimpse(pbc_orsf)
+```
+
+
+# Fit with orsf
+```{r}
+pred_horizon <- 365.25 * 5
+index_train <- sample(nrow(pbc_orsf), 150) 
+
+pbc_orsf_train <- pbc_orsf[index_train, ]
+pbc_orsf_test <- pbc_orsf[-index_train, ]
+
+fit <- orsf(data = pbc_orsf_train, 
+            formula = Surv(time, status) ~ . - id, 
+            oobag_pred_horizon = pred_horizon)
+
+fit
+```
+
+
+# PDP
+```{r}
+pd_oob <- orsf_pd_oob(fit, pred_spec = list(bili = 1:5))
+
+pd_oob
+```
+
+
+# References
+
+
