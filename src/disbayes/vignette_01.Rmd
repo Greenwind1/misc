@@ -65,40 +65,7 @@ library(ggmice)  # see src/imputation/ggmice_XX.Rmd
 library(psych)
 library(gtsummary)
 
-# GeoSpatial Analysis
-library(sf)  # simple feature
-library(spdep)  # helpful functions for mapping
-library(rmapshaper)  # helpful functions for mapping
-library(tmap)  # map viewer
-library(leaflet)  # map viewer
-library(mapview)  # map viewer
-
-# Networks
-library(ggraph)
-library(tidygraph)
-library(BCDAG)  # Bayesian Causal Networks
-
-# ML
-library(tidymodels)
-tidymodels::tidymodels_prefer()
-
-# Multi Level Model
-library(lme4)
-library(lmerTest)
-library(coefplot)
-library(performance)  # Generic R^2, ICC, Over-dispersion, Heteroschedasticity
-# library(multilevelmod)
-
-# Stan
-library(rstan)
-library(bayesplot)
-library(broom)
-library(broom.mixed)
-
-# Parallel
-library(purrr)
-library(foreach)
-library(doParallel)
+library(disbayes)
 ```
 
 ## Environment
@@ -106,17 +73,86 @@ library(doParallel)
 source(file = "utility/environments.R")
 source(file = "utility/helper_functions.R")
 
-fn.prefix <- "_"
+fn.prefix <- "disbayes-01_"
 # icon.grob <- png_to_grob()
 ```
 
 
 # Dataset {.tabset .tabset-fade .tabset-pills}
+`ihdengland`  
+Ischemic heart disease in England  
+sex: "male" or "female".  
+ageyr: Year of age.  
+location: Name of the location, which is either a city region or region in England.  
+num_mort: Numerator behind the estimate of mortality  
+num_inc: Numerator behind the estimate of incidence  
+num_prev: Numerator behind the estimate of prevalence  
+denom_mort: Denominator behind the estimate of mortality  
+denom_inc: Denominator behind the estimate of incidence  
+denom_prev: Denominator behind the estimate of prevalence  
+
 ```{r Dataset}
-data("penguins", package = "modeldata")  # modeldata from tidymodels
+data("ihdengland", package = "disbayes")
+glimpse(ihdengland)
+gtsummary::tbl_summary(ihdengland, by = gender)
+```
+
+```{r}
+ihdbristol <- ihdengland %>% filter(area=="Bristol", gender=="Male")
+ihdbristol %>% filter(between(age, 50, 55))
+```
+
+
+# Running disbayes
+eqage: Case fatalities (and incidence and remission rates) are assumed to be equal for all ages below this age, inclusive, when using the smoothed model.  
+
+```{r}
+dbres <- disbayes(
+    data = ihdbristol, 
+    age = "age", 
+    inc_num = "inc_num", inc_denom = "inc_denom", 
+    prev_num = "prev_num", prev_denom = "prev_denom",
+    mort_num = "mort_num", mort_denom = "mort_denom", 
+    eqage = 40
+)
+```
+
+```{r}
+dbres.tidy <- tidy(dbres) %>% 
+    rename(
+        p2.5 = `2.5%`, 
+        p25 = `25%`, 
+        p50 = `50%`,
+        p75 = `75%`, 
+        p97.5 = `97.5%`
+    )
+glimpse(dbres.tidy)
+
+p <- ggmice::plot_pattern(data = dbres.tidy, square = TRUE)
+p + theme_minimal(base_family = font.base)
+```
+
+
+# Viz
+```{r}
+# plot(dbres)
+dbres.tidy %>% filter(var == "cf") %>% 
+    ggplot() + 
+    geom_pointrange(aes(x = age, y = p50, ymin = p2.5, ymax = p97.5), 
+                    size = 0.1, color = col.plos.pink) + 
+    labs(y = NULL, title = "Estimated case fatality for IHD in England:", 
+         subtitle = "using R::disbayes package", 
+         caption = "@ Maxwell_110") + 
+    theme(
+        title = element_text(size = 10), 
+        plot.subtitle = element_text(size = 10), 
+        plot.caption = element_text(size = 7, color = "gray77"), 
+        axis.title = element_text(size = 10)
+    )
+ggsave(paste0("fig/", fn.prefix, "case-fatality.jpg"), 
+       width = 6, height = 4, dpi = 300)
 ```
 
 
 # References
-
-
+https://chjackson.github.io/disbayes/articles/disbayes.html
