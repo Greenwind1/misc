@@ -166,9 +166,3 @@ exp.pdp.df %>%
 # plot(exp.pdp)
 ggsave(paste0("fig/", fn.prefix, "pdp.jpg"), width = 6, height = 4, dpi = 300)
 ```
-
-
-# References
-
-
- 

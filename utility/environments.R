@@ -56,14 +56,17 @@ theme_set(theme_minimal(base_family = font.base))
 # theme ----
 font.face <- "italic"
 theme_update(
-    title = element_text(face = font.face, color = col.os, size = 10), 
-    plot.subtitle = element_text(face = font.face, color = col.os, size = 10), 
+    title = element_text(face = font.face, color = col.os, size = 9), 
+    plot.subtitle = element_text(face = font.face, color = col.os, size = 7), 
     text = element_text(face = font.face, color = col.os, size = 10), 
-    plot.caption = element_text(color = "gray77", size = 7), 
+    plot.caption = element_text(color = "gray77", size = 5), 
     axis.title = element_text(face = font.face, color = col.os), 
     axis.text = element_text(face = font.face, color = col.os), 
     panel.grid.major = element_line(size = 0.25), 
-    panel.grid.minor = element_blank()
+    panel.grid.minor = element_blank(), 
+    legend.position = c(0.9, 0.9), 
+    legend.text = element_text(size = 6), 
+    legend.key.size = unit(0.04, "npc")
 )
 
 
