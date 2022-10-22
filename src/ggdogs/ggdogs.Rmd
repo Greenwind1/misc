@@ -1,0 +1,103 @@
+---
+title: "ggdogs"
+subtitle: "vignettes 1.0"
+author: "Maxwell"
+date: '`r Sys.Date()`'
+bibliography: references.bib
+link-citations: true
+zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: minty
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 15
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+***
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(ggalt)  # geom_encircle
+library(patchwork)
+library(broman)  # plot_crayons()
+library(ggsci)  # Journal palette
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(extrafont)  # "Candara"
+
+library(ggdogs)
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+
+fn.prefix <- "ggdogs_"
+# icon.grob <- png_to_grob()
+```
+
+
+# Viz
+```{r}
+grid <- expand.grid(1:5, 5:1)
+
+df <- data.frame(
+    x = grid[, 1], 
+    y = grid[, 2], 
+    image = c("doge", "doge_strong", "chihuahua", "eyes", 
+              "gabe", "glasses", "tail", "surprised",
+              "thisisfine", "hearing", "pug", "ears",
+              "husky", "husky_2", "chilaquil", "santa",
+              "bryan", "vinny", "jake", "lucy", "puppie", 
+              "goofy", "snoopy", "scooby", "suspicious")
+)
+                           
+p1 <- ggplot(df) +
+    geom_dog(aes(x, y, dog = image), size = 3)+
+    xlim(c(0.25, 5.5)) + 
+    ylim(c(0.25, 5.5)) + 
+    labs(
+        title = "25 types of dogs using a ggdogs package", 
+        subtitle = "https://github.com/R-CoderDotCom/ggdogs", 
+        x = NULL, y = NULL, caption = "@ Maxwell_110"
+    ) + 
+    theme(
+        text = element_text(family = font.base, face = font.face), 
+        axis.text = element_blank(), 
+        panel.grid.major = element_blank()
+    )
+
+p1
+
+ggsave(paste0("fig/", fn.prefix, "1.0.jpg"), 
+       dpi = 300, width = 4, height = 4)
+```
