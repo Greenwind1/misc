@@ -1,0 +1,211 @@
+---
+title: "Auto accidents"
+subtitle: ""
+author: "Maxwell"
+date: '`r Sys.Date()`'
+# bibliography: references.bib
+link-citations: true
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+   html_document:
+      number_sections: TRUE
+      fig_caption: TRUE
+      toc: TRUE
+      toc_depth: 5
+      toc_float: TRUE
+      theme:
+         bootswatch: minty
+         # bootswatch: cosmo
+      highlight: espresso
+      # espresso, tango, zenburn
+      code_folding: show
+      # code_download: TRUE
+      fig_width: 10
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+
+## R Packages
+```{r, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(ggalt)  # geom_encircle
+library(patchwork)
+library(broman)  # plot_crayons()
+library(ggsci)  # Journal palette
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(extrafont)  # "Candara"
+
+# Interactivity
+library(plotly)
+library(crosstalk)
+
+# GeoSpatial Analysis
+library(sf)  # simple feature
+library(spdep)  # helpful functions for mapping
+library(rmapshaper)  # helpful functions for mapping
+library(tmap)  # map viewer
+library(leaflet)  # map viewer
+library(mapview)  # map viewer
+library(rnaturalearth)
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+
+col.bg <- "#262A33"
+col.fg <- "#393F4D"
+
+fn.prefix <- "_"
+# icon.grob <- png_to_grob()
+```
+
+
+# Load DataSets {.tabset .tabset-fade .tabset-pills}
+```{r Load DataSets}
+acc.df <- read_csv("input/auto-accidents_2020.csv") %>% 
+    filter(Prefecture != "Okinawa")
+
+ne.jpn.sf <-
+    rnaturalearth::ne_states(country = "Japan", returnclass = "sf") %>% 
+    rmapshaper::ms_filter_islands(min_area = 1e10)  # remove small islands
+```
+
+# Preprocessing
+```{r}
+ne.jpn.sf <- ne.jpn.sf %>% 
+    select(iso_3166_2, name, region, latitude, longitude) %>% 
+    tibble::new_tibble(nrow = nrow(.), class = "sf") %>% 
+    left_join(acc.df %>% select(Prefecture, Cases, `2015`) %>% 
+                  mutate(Cases_div_2015 = Cases / `2015`), 
+              by = c("name" = "Prefecture")) %>% 
+    arrange(iso_3166_2)
+glimpse(ne.jpn.sf)
+```
+
+```{r}
+acc.jpn.sf <- ne.jpn.sf %>% 
+    mutate(
+        longitude = ifelse(name == "Nagasaki", 129.8, longitude), 
+        latitude = ifelse(name == "Nagasaki", 33.1, latitude), 
+        longitude = ifelse(name == "Kagoshima", 130.5, longitude), 
+        latitude = ifelse(name == "Kagoshima", 31.6, latitude), 
+    ) %>% 
+    tibble() %>% 
+    select(longitude, latitude, Cases, Cases_div_2015) %>% 
+    st_as_sf(coords = c("longitude", "latitude"), crs = 4326) %>% 
+    st_transform(crs = st_crs(ne.jpn.sf)) %>% 
+    mutate(
+        Acc.size = Cases / max(Cases) * 5, 
+        Acc.ratio = Cases_div_2015 / max(Cases_div_2015) * 5
+    )
+```
+
+
+# Draw map
+```{r, fig.height=13}
+p1 <- ggplot(data = ne.jpn.sf) + 
+    geom_sf(mapping = aes(), size = 0.05, fill = col.fg, color = "gray50") + 
+    geom_sf(mapping = aes(size = Acc.size), data = acc.jpn.sf, 
+            color = col.sl, alpha = 0.5) + 
+    lims(x = c(128, 145), y = c(31, 45)) + 
+    geom_sf_text(mapping = aes(label = Cases), 
+                 data = acc.jpn.sf, 
+                 color = col.tw, cex = 1.5, family = font.base) + 
+    # geom_text(aes(x = 134, y = 39, 
+    #               label = "Only numbers 100 or more are shown."), 
+    #           color = col.sl, size = 4, family = "Times New Roman") + 
+    labs(title = "Number of motor vehicle accidents\n by prefecture in 2020", 
+         subtitle = "Data Source: https://www.itarda.or.jp/", 
+         caption = "@Maxwell_110", 
+         x = NULL, y = NULL) + 
+    guides(size = guide_legend(title = "Accidents\n(Rerative Scale)", 
+                               keyheight = 0.5)) + 
+    theme(
+        title = element_text(color = col.tw, size = 11), 
+        text = element_text(face = font.face), 
+        axis.text = element_text(color = col.tw, face = font.face), 
+        legend.position = c(0.85, 0.15), 
+        legend.title = element_text(size = 10), 
+        legend.text = element_text(color = col.tw), 
+        # plot.margin = unit(c(0, 0, 0, 0), "pt"), 
+        plot.title = element_text(
+            margin = margin(t = 25, r = -00, b = -25, l = 00, unit = "pt")
+        ), 
+        plot.subtitle = element_text(
+            color = col.tw, size = 9, 
+            margin = margin(t = 35, r = -00, b = -35, l = 00, unit = "pt")
+        ), 
+        plot.caption = element_text(color = "gray77", size = 7), 
+        plot.background = element_rect(fill = col.bg, color = col.bg), 
+        # plot includes panel
+        panel.background = element_rect(fill = col.bg, color = col.bg), 
+        panel.grid = element_line(colour = col.bg), 
+    )
+```
+
+```{r, fig.height=13}
+p2 <- ggplot(data = ne.jpn.sf) + 
+    geom_sf(mapping = aes(), size = 0.05, fill = col.fg, color = "gray50") + 
+    geom_sf(mapping = aes(size = Cases_div_2015), data = acc.jpn.sf, 
+            color = col.sl, alpha = 0.5) + 
+    lims(x = c(128, 145), y = c(31, 45)) + 
+    geom_sf_text(mapping = aes(label = round(Cases_div_2015, 0)), 
+                 data = acc.jpn.sf, 
+                 color = col.tw, cex = 1.5, family = font.base) + 
+    annotate(
+        geom = "text", 
+        x = 135, y = 31.75, 
+        label = "Indices calculated as, Accidents / (traffic vol * distance traveled). \nGreater risk of traffic accidents in Osaka, Tokyo, and Kanagawa. \nThe risk of automobile accidents is clearly concentrated in the major \nmetropolitan areas. \nData Source: https://www.itarda.or.jp/ \nTools: R::ggplot", 
+        hjust = 0, 
+        color = col.tw, size = 2, family = "Times New Roman"
+    ) + 
+    labs(title = "Number of motor vehicle accidents  in Japan in 2020\n normalized by traffic volume multiplied by \n distance traveled", 
+         caption = "#30DaysMapChallenge @Maxwell_110", 
+         x = NULL, y = NULL) + 
+    guides(size = guide_legend(title = NULL, keyheight = 0.5)) + 
+    theme(
+        title = element_text(family = "Times New Roman", face = "bold", 
+                             color = col.tw, size = 10), 
+        text = element_text(face = font.face), 
+        axis.text = element_text(color = col.tw, face = font.face), 
+        legend.position = c(0.25, 0.7), 
+        legend.title = element_text(size = 10), 
+        legend.text = element_text(color = col.tw), 
+        # plot.margin = unit(c(0, 0, 0, 0), "pt"), 
+        plot.title = element_text(
+            margin = margin(t = 10, r = -00, b = -10, l = 00, unit = "pt")
+        ), 
+        plot.subtitle = element_text(
+            color = col.tw, size = 9, 
+            margin = margin(t = 35, r = -00, b = -35, l = 00, unit = "pt")
+        ), 
+        plot.caption = element_text(family = "Times New Roman", 
+                                    color = col.bmc.green.l, size = 6), 
+        plot.background = element_rect(fill = col.bg, color = col.bg), 
+        # plot includes panel
+        panel.background = element_rect(fill = col.bg, color = col.bg), 
+        panel.grid = element_line(colour = col.bg), 
+    )
+
+p2
+ggsave("fig/auto-accidents.jpg", width = 4.5 * 1, height = 4.5 * 1.2)
+```
