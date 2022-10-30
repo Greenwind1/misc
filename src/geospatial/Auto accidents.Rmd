@@ -173,20 +173,21 @@ p2 <- ggplot(data = ne.jpn.sf) +
                  color = col.tw, cex = 1.5, family = font.base) + 
     annotate(
         geom = "text", 
-        x = 135, y = 31.75, 
-        label = "Indices calculated as, Accidents / (traffic vol * distance traveled). \nGreater risk of traffic accidents in Osaka, Tokyo, and Kanagawa. \nThe risk of automobile accidents is clearly concentrated in the major \nmetropolitan areas. \nData Source: https://www.itarda.or.jp/ \nTools: R::ggplot", 
+        x = 135, y = 31.8, 
+        label = "Indices calculated as, Accidents / (traffic vol * distance traveled). \nGreater risk of traffic accidents in Osaka, Tokyo, and Kanagawa. \nThe risk of automobile accidents is clearly concentrated in the major \nmetropolitan areas. However, if adjusted for confounding factors \nsuch as age, it would appear different.\nData Source: https://www.itarda.or.jp/ \nTools: R; ggplot; sf", 
         hjust = 0, 
         color = col.tw, size = 2, family = "Times New Roman"
     ) + 
     labs(title = "Number of motor vehicle accidents  in Japan in 2020\n normalized by traffic volume multiplied by \n distance traveled", 
-         caption = "#30DaysMapChallenge @Maxwell_110", 
+         caption = "#30DaysMapChallenge; @Maxwell_110", 
          x = NULL, y = NULL) + 
     guides(size = guide_legend(title = NULL, keyheight = 0.5)) + 
     theme(
         title = element_text(family = "Times New Roman", face = "bold", 
                              color = col.tw, size = 10), 
         text = element_text(face = font.face), 
-        axis.text = element_text(color = col.tw, face = font.face), 
+        axis.text = element_text(family = font.base, face = font.face,
+                                 color = col.pr.gray, size = 5),
         legend.position = c(0.25, 0.7), 
         legend.title = element_text(size = 10), 
         legend.text = element_text(color = col.tw), 
@@ -198,8 +199,9 @@ p2 <- ggplot(data = ne.jpn.sf) +
             color = col.tw, size = 9, 
             margin = margin(t = 35, r = -00, b = -35, l = 00, unit = "pt")
         ), 
-        plot.caption = element_text(family = "Times New Roman", 
-                                    color = col.bmc.green.l, size = 6), 
+        plot.caption = element_text(
+            family = "Times New Roman", color = col.c.b, size = 5.5
+        ), 
         plot.background = element_rect(fill = col.bg, color = col.bg), 
         # plot includes panel
         panel.background = element_rect(fill = col.bg, color = col.bg), 
