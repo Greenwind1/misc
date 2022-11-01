@@ -70,33 +70,7 @@ library(rmapshaper)  # helpful functions for mapping
 library(tmap)  # map viewer
 library(leaflet)  # map viewer
 library(mapview)  # map viewer
-
-# Networks
-library(ggraph)
-library(tidygraph)
-library(BCDAG)  # Bayesian Causal Networks
-
-# ML
-library(tidymodels)
-tidymodels::tidymodels_prefer()
-
-# Multi Level Model
-library(lme4)
-library(lmerTest)
-library(coefplot)
-library(performance)  # Generic R^2, ICC, Over-dispersion, Heteroschedasticity
-# library(multilevelmod)
-
-# Stan
-library(rstan)
-library(bayesplot)
-library(broom)
-library(broom.mixed)
-
-# Parallel
-library(purrr)
-library(foreach)
-library(doParallel)
+library(rnaturalearth)
 ```
 
 ## Environment
@@ -111,7 +85,28 @@ fn.prefix <- "_"
 
 # Dataset {.tabset .tabset-fade .tabset-pills}
 ```{r Dataset}
-data("penguins", package = "modeldata")  # modeldata from tidymodels
+ls.sf <- sf::read_sf(
+    "input/Landslide_Tokyo_2010/A26-10_13-g_SedimentDisasterHazardArea_Surface.shp"
+)
+sf::st_crs(ls.sf) <- "+proj=longlat +datum=WGS84"
+```
+
+
+# Viz
+```{r}
+m <- leaflet(data = ls.sf) %>%
+    addProviderTiles(
+        provider = "OpenStreetMap.HOT", 
+        # provider = "CartoDB.PositronNoLabels", 
+        options = providerTileOptions(opacity = 0.5)
+    ) %>% 
+    setView(lng = 139.700, lat = 35.695, zoom = 15) %>%
+    addPolygons(
+        fillColor = col.sl, fillOpacity = .5, 
+        stroke = TRUE, color = col.bmc.blue, 
+        weight = 1.0, dashArray = "1", opacity = .25 
+    )
+m
 ```
 
 

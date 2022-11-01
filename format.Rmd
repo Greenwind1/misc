@@ -68,7 +68,7 @@ library(sf)  # simple feature
 library(spdep)  # helpful functions for mapping
 library(rmapshaper)  # helpful functions for mapping
 library(tmap)  # map viewer
-library(leaflet)  # map viewer
+library(leaflet)  # map viewer, leaflet::providers
 library(mapview)  # map viewer
 
 # Networks

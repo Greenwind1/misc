@@ -1,0 +1,198 @@
+---
+title: "Japanese river in Tokyo"
+subtitle: ""
+author: "Maxwell"
+date: '`r Sys.Date()`'
+bibliography: references.bib
+link-citations: true
+# zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: minty
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 15
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+***
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(ggalt)  # geom_encircle
+library(patchwork)
+library(broman)  # plot_crayons()
+library(ggsci)  # Journal palette
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(extrafont)  # "Candara"
+
+# Interactivity
+library(plotly)
+library(crosstalk)
+
+# Descriptive Statistics
+library(mice)
+library(ggmice)  # see src/imputation/ggmice_XX.Rmd
+library(psych)
+library(gtsummary)
+
+# GeoSpatial Analysis
+library(sf)  # simple feature
+library(spdep)  # helpful functions for mapping
+library(rmapshaper)  # helpful functions for mapping
+library(tmap)  # map viewer
+library(leaflet)  # map viewer
+library(mapview)  # map viewer
+library(rnaturalearth)
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+
+fn.prefix <- "_"
+# icon.grob <- png_to_grob()
+```
+
+
+# Dataset {.tabset .tabset-fade .tabset-pills}
+https://nlftp.mlit.go.jp/ksj/index.html
+```{r Dataset}
+node.sf <- sf::read_sf(
+    "input/River_Tokyo_2008/W05-08_13-g_RiverNode.shp"
+)
+stream.sf <- sf::read_sf(
+    "input/River_Tokyo_2008/W05-08_13-g_Stream.shp"
+)
+
+tokyo.sf <- sf::read_sf(
+    "input/Tokyo_2022/N03-22_13_220101.shp"
+)
+
+sf::st_crs(node.sf) <- "+proj=longlat +datum=WGS84"
+sf::st_crs(stream.sf) <- "+proj=longlat +datum=WGS84"
+sf::st_crs(tokyo.sf) <- "+proj=longlat +datum=WGS84"
+```
+
+```{r}
+# tokyo.sf <- tokyo.sf %>% select(N03_004) %>% group_by(N03_004) %>% 
+#     summarise(.groups = "drop")
+# saveRDS(object = tokyo.sf, file = "input/Tokyo_2022/tokoy.sf.RDS")
+tokyo.sf <- readRDS(file = "input/Tokyo_2022/tokoy.sf.RDS")
+```
+
+
+# Viz
+```{r}
+m <- leaflet(data = stream.sf) %>%
+    addProviderTiles(
+        provider = providers$Stamen, 
+        layerId = NULL, 
+        options = providerTileOptions(opacity = 0.3)
+    ) %>%
+    setView(lng = 139.730, lat = 35.675, zoom = 12) %>% 
+    addPolygons(
+        data = tokyo.sf, 
+        fill = TRUE, 
+        fillColor = col.mt, 
+        fillOpacity = 0.1, 
+        stroke = FALSE, 
+        color = col.pr.gray,
+        weight = 2.0, 
+        dashArray = "1", 
+        opacity = .8 
+    ) %>% 
+    addPolylines(
+        layerId = NULL, 
+        group = NULL, 
+        stroke = TRUE, 
+        color = col.bmc.sky, 
+        weight = 3, 
+        opacity = 1.0, 
+        fill = FALSE, 
+        fillColor = NULL, 
+        fillOpacity = 1.0, 
+        dashArray = NULL, 
+        smoothFactor = 0.5, 
+        noClip = FALSE, 
+        popup = NULL, 
+        popupOptions = NULL, 
+        label = NULL, 
+        labelOptions = NULL, 
+        options = pathOptions(), 
+        highlightOptions = NULL, 
+        data = stream.sf
+    ) %>% 
+    addLabelOnlyMarkers(
+        lng = 139.90, lat = 35.567, 
+        label = "Rivers in central Tokyo", 
+        labelOptions = labelOptions(
+            noHide = T, 
+            direction = "bottom",
+            # textsize = "30px", 
+            textOnly = T,
+            style = list(
+                "color" = "white",
+                "font-family" = "Times New Roman", 
+                "font-weight" = "bold", 
+                "font-size" = "40px"
+                # "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                # "border-color" = "rgba(0,0,0,0.5)"
+            ))
+    ) %>% 
+    addLabelOnlyMarkers(
+        lng = 139.94, lat = 35.545, 
+        label = "@ Maxwell_110", 
+        labelOptions = labelOptions(
+            noHide = T, 
+            direction = "bottom",
+            # textsize = "30px", 
+            textOnly = T,
+            style = list(
+                "color" = "white",
+                "font-family" = "Times New Roman", 
+                "font-weight" = "bold", 
+                "font-size" = "20px"
+                # "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                # "border-color" = "rgba(0,0,0,0.5)"
+            ))
+    )
+m
+```
+
+# Save
+```{r}
+mapshot(
+    x = m, file = "fig/rivers_in_central-tokyo.jpg", 
+    remove_controls = c("zoomControl"), 
+    vheight = 1500, vwidth = 1500,  # pixel size
+)
+```
