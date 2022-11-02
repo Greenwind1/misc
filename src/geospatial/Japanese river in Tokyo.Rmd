@@ -92,14 +92,14 @@ node.sf <- sf::read_sf(
 stream.sf <- sf::read_sf(
     "input/River_Tokyo_2008/W05-08_13-g_Stream.shp"
 )
+flood.sf <- sf::read_sf("input/Flood_Tokyo_2020/A31-12_13.shp") %>% 
+    st_transform("+proj=longlat +datum=WGS84")
 
-tokyo.sf <- sf::read_sf(
-    "input/Tokyo_2022/N03-22_13_220101.shp"
-)
+# tokyo.sf <- sf::read_sf("input/Tokyo_2022/N03-22_13_220101.shp") %>% 
+#     st_transform("+proj=longlat +datum=WGS84")
 
 sf::st_crs(node.sf) <- "+proj=longlat +datum=WGS84"
 sf::st_crs(stream.sf) <- "+proj=longlat +datum=WGS84"
-sf::st_crs(tokyo.sf) <- "+proj=longlat +datum=WGS84"
 ```
 
 ```{r}
@@ -111,6 +111,7 @@ tokyo.sf <- readRDS(file = "input/Tokyo_2022/tokoy.sf.RDS")
 
 
 # Viz
+## Rivers
 ```{r}
 m <- leaflet(data = stream.sf) %>%
     addProviderTiles(
@@ -192,6 +193,99 @@ m
 ```{r}
 mapshot(
     x = m, file = "fig/rivers_in_central-tokyo.jpg", 
+    remove_controls = c("zoomControl"), 
+    vheight = 1500, vwidth = 1500,  # pixel size
+)
+```
+
+## Rivers and Floods
+```{r}
+m <- leaflet(data = stream.sf) %>%
+    addProviderTiles(
+        provider = providers$Stamen, 
+        layerId = NULL, 
+        options = providerTileOptions(opacity = 0.3)
+    ) %>%
+    setView(lng = 139.730, lat = 35.675, zoom = 12) %>% 
+    addPolygons(
+        data = tokyo.sf, 
+        fill = TRUE, 
+        fillColor = col.mt, 
+        fillOpacity = 0.1, 
+        stroke = FALSE, 
+        color = col.pr.gray,
+        weight = 2.0, 
+        dashArray = "1", 
+        opacity = .8 
+    ) %>% 
+    addPolylines(
+        layerId = NULL, 
+        group = NULL, 
+        stroke = TRUE, 
+        color = col.bmc.sky, 
+        weight = 3, 
+        opacity = 1.0, 
+        fill = FALSE, 
+        fillColor = NULL, 
+        fillOpacity = 1.0, 
+        dashArray = NULL, 
+        smoothFactor = 0.5, 
+        noClip = FALSE, 
+        popup = NULL, 
+        popupOptions = NULL, 
+        label = NULL, 
+        labelOptions = NULL, 
+        options = pathOptions(), 
+        highlightOptions = NULL, 
+        data = stream.sf
+    ) %>% 
+    addLabelOnlyMarkers(
+        lng = 139.91, lat = 35.567, 
+        label = htmltools::HTML("Areas at risk of flooding <br> in central Tokyo"), 
+        labelOptions = labelOptions(
+            noHide = T, 
+            direction = "bottom",
+            # textsize = "30px", 
+            textOnly = T,
+            style = list(
+                "color" = "white",
+                "font-family" = "Times New Roman", 
+                "font-weight" = "bold", 
+                "font-size" = "40px"
+                # "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                # "border-color" = "rgba(0,0,0,0.5)"
+            ))
+    ) %>% 
+    addPolygons(
+        fillColor = col.m.b, 
+        fillOpacity = .5, 
+        stroke = FALSE, 
+        data = flood.sf
+    ) %>% 
+    addLabelOnlyMarkers(
+        lng = 139.94, lat = 35.520, 
+        label = "@ Maxwell_110", 
+        labelOptions = labelOptions(
+            noHide = T, 
+            direction = "bottom",
+            # textsize = "30px", 
+            textOnly = T,
+            style = list(
+                "color" = "white",
+                "font-family" = "Times New Roman", 
+                "font-weight" = "bold", 
+                "font-size" = "20px"
+                # "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                # "border-color" = "rgba(0,0,0,0.5)"
+            ))
+    )
+m
+```
+
+# Save
+```{r}
+mapshot(
+    x = m, file = "fig/rivers-and-floods_in_central-tokyo.jpg", 
     remove_controls = c("zoomControl"), 
     vheight = 1500, vwidth = 1500,  # pixel size
 )
