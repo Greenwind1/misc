@@ -1,0 +1,286 @@
+---
+title: "Forests in Tokyo"
+subtitle: ""
+author: "Maxwell"
+date: '`r Sys.Date()`'
+bibliography: references.bib
+link-citations: true
+# zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: minty
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 15
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+***
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(ggalt)  # geom_encircle
+library(patchwork)
+library(broman)  # plot_crayons()
+library(ggsci)  # Journal palette
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(extrafont)  # "Candara"
+
+# Interactivity
+library(plotly)
+library(crosstalk)
+
+# Descriptive Statistics
+library(mice)
+library(ggmice)  # see src/imputation/ggmice_XX.Rmd
+library(psych)
+library(gtsummary)
+
+# GeoSpatial Analysis
+library(sf)  # simple feature
+library(spdep)  # helpful functions for mapping
+library(rmapshaper)  # helpful functions for mapping
+library(tmap)  # map viewer
+library(leaflet)  # map viewer
+library(mapview)  # map viewer
+library(rnaturalearth)
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+
+fn.prefix <- "_"
+# icon.grob <- png_to_grob()
+```
+
+
+# Dataset {.tabset .tabset-fade .tabset-pills}
+https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-A13-v3_2.html
+```{r Dataset}
+crs.base <- "+proj=longlat +datum=WGS84"
+
+forest.1.sf <- sf::read_sf(
+    "input/Forest_Tokyo_2015/a001130020160207.shp"
+) %>% select(AREA_SIZE) %>% st_transform(crs.base)
+
+forest.2.sf <- sf::read_sf(
+    "input/Forest_Tokyo_2015/a001130020160208.shp"
+) %>% select(AREA_SIZE) %>% st_transform(crs.base)
+
+forest.3.sf <- sf::read_sf(
+    "input/Forest_Tokyo_2015/a001130020160209.shp"
+) %>% select(AREA_SIZE) %>% st_transform(crs.base)
+
+nat.sf <- sf::read_sf(
+    "input/Nature_Conservation_2015/A11-06_13_NatureConservationArea.shp"
+) %>% select(A11_003)
+
+stream.sf <- sf::read_sf(
+    "input/River_Tokyo_2008/W05-08_13-g_Stream.shp"
+)
+
+
+st_crs(nat.sf) <- crs.base
+st_crs(stream.sf) <- crs.base
+```
+
+```{r}
+# tokyo.sf <- tokyo.sf %>% select(N03_004) %>% group_by(N03_004) %>% 
+#     summarise(.groups = "drop")
+# saveRDS(object = tokyo.sf, file = "input/Tokyo_2022/tokoy.sf.RDS")
+tokyo.sf <- readRDS(file = "input/Tokyo_2022/tokoy.sf.RDS")
+```
+
+
+# Viz
+## Forests
+```{r}
+m <- leaflet(data = tokyo.sf) %>%
+    addProviderTiles(
+        provider = providers$Stamen, 
+        layerId = NULL, 
+        options = providerTileOptions(opacity = 0.3)
+    ) %>%
+    setView(lng = 139.48, lat = 35.71, zoom = 11) %>% 
+    addPolygons(
+        fill = TRUE, 
+        fillColor = col.mt, 
+        fillOpacity = 0.075, 
+        stroke = TRUE, 
+        color = col.mt,
+        weight = 0.5, 
+        dashArray = "1", 
+        opacity = .25
+    ) %>% 
+    addPolygons(
+        data = forest.3.sf, 
+        layerId = NULL, 
+        group = NULL, 
+        stroke = FALSE, 
+        fill = TRUE,
+        # fill = FALSE,
+        fillColor = "#93FFD8", 
+        # fillColor = "#CFFFDC", 
+        fillOpacity = 0.9
+    ) %>% 
+    addPolygons(
+        data = nat.sf, 
+        layerId = NULL, 
+        group = NULL, 
+        stroke = TRUE, 
+        color = col.bmc.green.l,
+        weight = 1.0, 
+        dashArray = "1", 
+        opacity = 1.0, 
+        fill = TRUE,
+        # fill = FALSE, 
+        fillColor = col.bmc.green.l, 
+        fillOpacity = 0.75
+    ) %>% 
+    addPolylines(
+        data = stream.sf, 
+        layerId = NULL, 
+        group = NULL, 
+        stroke = TRUE, 
+        color = col.bmc.sky, 
+        weight = 1.5, 
+        opacity = 0.4, 
+        fill = FALSE, 
+        fillColor = NULL, 
+        fillOpacity = 1.0, 
+        dashArray = NULL, 
+        smoothFactor = 0.5, 
+        noClip = FALSE, 
+        popup = NULL, 
+        popupOptions = NULL, 
+        label = NULL, 
+        labelOptions = NULL, 
+        options = pathOptions(), 
+        highlightOptions = NULL
+    ) %>% 
+    addLabelOnlyMarkers(
+        lng = 139.11, lat = 35.67, 
+        label = htmltools::HTML("Natural Conservation Area"), 
+        labelOptions = labelOptions(
+            noHide = T, 
+            direction = "bottom",
+            # textsize = "30px", 
+            textOnly = T,
+            style = list(
+                "color" = col.bmc.green.l, 
+                "font-family" = "Times New Roman", 
+                "font-weight" = "bold", 
+                "font-size" = "20px"
+                # "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                # "border-color" = "rgba(0,0,0,0.5)"
+            ))
+    ) %>% 
+    addLabelOnlyMarkers(
+        lng = 139.925, lat = 35.57, 
+        label = "Tokyo Bay", 
+        labelOptions = labelOptions(
+            noHide = T, 
+            direction = "bottom",
+            # textsize = "30px", 
+            textOnly = T,
+            style = list(
+                "color" = "white", 
+                "font-family" = "Times New Roman", 
+                "font-weight" = "bold", 
+                "font-size" = "40px"
+                # "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                # "border-color" = "rgba(0,0,0,0.5)"
+            ))
+    ) %>% 
+    addLabelOnlyMarkers(
+        lng = 139.2, lat = 36., 
+        label = "Forests in Tokyo", 
+        labelOptions = labelOptions(
+            noHide = T, 
+            direction = "bottom",
+            # textsize = "30px", 
+            textOnly = T,
+            style = list(
+                "color" = col.bmc.green.l, 
+                "font-family" = "Times New Roman", 
+                "font-weight" = "bold", 
+                "font-size" = "70px"
+                # "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                # "border-color" = "rgba(0,0,0,0.5)"
+            ))
+    ) %>% 
+    addLabelOnlyMarkers(
+        lng = 139.3, lat = 35.94, 
+        label = "@ Maxwell_110", 
+        labelOptions = labelOptions(
+            noHide = T, 
+            direction = "bottom",
+            # textsize = "30px", 
+            textOnly = T,
+            style = list(
+                "color" = col.bmc.green.l, 
+                "font-family" = "Times New Roman", 
+                "font-weight" = "bold", 
+                "font-size" = "30px"
+                # "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                # "border-color" = "rgba(0,0,0,0.5)"
+            ))
+    ) %>% 
+    addLabelOnlyMarkers(
+        lng = 139.2, lat = 35.57, 
+        label = htmltools::HTML(
+            "Tokyo is an area extending in the direction of longitude, <br> with extremely different characteristics in the east and west. <br> The east side facing the bay is more urbanized. <br> In contrast, the west side retains a large amount of nature. <br> The forests in the west are the source of water for many rivers."), 
+        labelOptions = labelOptions(
+            noHide = T, 
+            direction = "bottom",
+            # textsize = "30px", 
+            textOnly = T,
+            style = list(
+                "color" = col.bmc.green.l, 
+                "font-family" = "Times New Roman", 
+                "font-weight" = "bold", 
+                "font-size" = "25px"
+                # "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                # "border-color" = "rgba(0,0,0,0.5)"
+            ))
+    )
+m
+```
+
+# Save
+```{r}
+mapshot(
+    x = m, file = "fig/forests_in_tokyo.jpg", 
+    remove_controls = c("zoomControl"), 
+    vheight = 1000, vwidth = 1600,  # pixel size
+)
+```
