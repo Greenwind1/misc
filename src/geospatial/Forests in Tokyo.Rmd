@@ -128,7 +128,7 @@ m <- leaflet(data = tokyo.sf) %>%
     addProviderTiles(
         provider = providers$Stamen, 
         layerId = NULL, 
-        options = providerTileOptions(opacity = 0.3)
+        options = providerTileOptions(opacity = 0.15)
     ) %>%
     setView(lng = 139.48, lat = 35.71, zoom = 11) %>% 
     addPolygons(
@@ -137,20 +137,20 @@ m <- leaflet(data = tokyo.sf) %>%
         fillOpacity = 0.075, 
         stroke = TRUE, 
         color = col.mt,
+        opacity = .4, 
         weight = 0.5, 
-        dashArray = "1", 
-        opacity = .25
+        dashArray = "1"
     ) %>% 
     addPolygons(
         data = forest.3.sf, 
         layerId = NULL, 
         group = NULL, 
-        stroke = FALSE, 
+        stroke = TRUE, 
+        color = "#93FFD8", 
+        opacity = 1.0, 
         fill = TRUE,
-        # fill = FALSE,
         fillColor = "#93FFD8", 
-        # fillColor = "#CFFFDC", 
-        fillOpacity = 0.9
+        fillOpacity = 0.75
     ) %>% 
     addPolygons(
         data = nat.sf, 
@@ -196,7 +196,7 @@ m <- leaflet(data = tokyo.sf) %>%
             # textsize = "30px", 
             textOnly = T,
             style = list(
-                "color" = col.bmc.green.l, 
+                "color" = "#40A798", 
                 "font-family" = "Times New Roman", 
                 "font-weight" = "bold", 
                 "font-size" = "20px"
@@ -222,7 +222,7 @@ m <- leaflet(data = tokyo.sf) %>%
             ))
     ) %>% 
     addLabelOnlyMarkers(
-        lng = 139.2, lat = 36., 
+        lng = 139.2, lat = 35.95, 
         label = "Forests in Tokyo", 
         labelOptions = labelOptions(
             noHide = T, 
@@ -230,7 +230,7 @@ m <- leaflet(data = tokyo.sf) %>%
             # textsize = "30px", 
             textOnly = T,
             style = list(
-                "color" = col.bmc.green.l, 
+                "color" = "#40A798", 
                 "font-family" = "Times New Roman", 
                 "font-weight" = "bold", 
                 "font-size" = "70px"
@@ -239,7 +239,7 @@ m <- leaflet(data = tokyo.sf) %>%
             ))
     ) %>% 
     addLabelOnlyMarkers(
-        lng = 139.3, lat = 35.94, 
+        lng = 139.3, lat = 35.90, 
         label = "@ Maxwell_110", 
         labelOptions = labelOptions(
             noHide = T, 
@@ -247,7 +247,7 @@ m <- leaflet(data = tokyo.sf) %>%
             # textsize = "30px", 
             textOnly = T,
             style = list(
-                "color" = col.bmc.green.l, 
+                "color" = "#40A798", 
                 "font-family" = "Times New Roman", 
                 "font-weight" = "bold", 
                 "font-size" = "30px"
@@ -256,7 +256,7 @@ m <- leaflet(data = tokyo.sf) %>%
             ))
     ) %>% 
     addLabelOnlyMarkers(
-        lng = 139.2, lat = 35.57, 
+        lng = 139.25, lat = 35.57, 
         label = htmltools::HTML(
             "Tokyo is an area extending in the direction of longitude, <br> with extremely different characteristics in the east and west. <br> The east side facing the bay is more urbanized. <br> In contrast, the west side retains a large amount of nature. <br> The forests in the west are the source of water for many rivers."), 
         labelOptions = labelOptions(
@@ -265,7 +265,7 @@ m <- leaflet(data = tokyo.sf) %>%
             # textsize = "30px", 
             textOnly = T,
             style = list(
-                "color" = col.bmc.green.l, 
+                "color" = "#40A798", 
                 "font-family" = "Times New Roman", 
                 "font-weight" = "bold", 
                 "font-size" = "25px"
