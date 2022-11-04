@@ -45,7 +45,7 @@ library(stringr)
 library(lubridate)
 
 # Visualisation
-library(ggplot2)
+library(ggplot2)  # RColorBrewer::display.brewer.all()
 library(ggalt)  # geom_encircle
 library(patchwork)
 library(broman)  # plot_crayons()

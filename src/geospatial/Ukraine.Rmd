@@ -1,0 +1,214 @@
+---
+title: "Ukraine"
+subtitle: ""
+author: "Maxwell"
+date: '`r Sys.Date()`'
+bibliography: references.bib
+link-citations: true
+# zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: minty
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 15
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+***
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)  # RColorBrewer::display.brewer.all()
+library(ggalt)  # geom_encircle
+library(patchwork)
+library(broman)  # plot_crayons()
+library(ggsci)  # Journal palette
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(extrafont)  # "Candara"
+
+# Interactivity
+library(plotly)
+library(crosstalk)
+
+# Descriptive Statistics
+library(mice)
+library(ggmice)  # see src/imputation/ggmice_XX.Rmd
+library(psych)
+library(gtsummary)
+
+# GeoSpatial Analysis
+library(sf)  # simple feature
+library(spdep)  # helpful functions for mapping
+library(rmapshaper)  # helpful functions for mapping
+library(tmap)  # map viewer
+library(leaflet)  # map viewer
+library(mapview)  # map viewer
+library(rnaturalearth)
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+
+col.u.b <- "#0057B8"
+col.u.y <- "#FFD700"
+
+fn.prefix <- "_"
+# icon.grob <- png_to_grob()
+```
+
+
+# Dataset {.tabset .tabset-fade .tabset-pills}
+https://acleddata.com/ukraine-crisis/#data
+```{r Dataset}
+crs.base <- "+proj=longlat +datum=WGS84"
+
+u.df <- readxl::read_excel(
+    "input/Ukraine/Ukraine_Black_Sea_2020_2022_Oct28.xlsx"
+) %>% 
+    # st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = crs.base) %>% 
+    filter(EVENT_DATE > "2022-02-23") %>% 
+    select(EVENT_TYPE, SUB_EVENT_TYPE, LONGITUDE, LATITUDE)
+
+ne.u.sf <- ne_states(country = "Ukraine", returnclass = "sf") %>% 
+    select(name_en) %>% st_transform(crs = crs.base)
+
+ne.crimea.sf <- ne_states(country = "Russia", returnclass = "sf") %>% 
+    select(name_en) %>% st_transform(crs = crs.base) %>% 
+    filter(name_en == "Autonomous Republic of Crimea")
+
+ne.u.sf <- ne.u.sf %>% bind_rows(ne.crimea.sf)
+ne.u.sf.agg <- ne.u.sf %>% summarise()
+```
+
+
+# Viz
+## Tragic Events
+```{r}
+pal <- colorFactor(
+  # palette = carto_pal(name = "Antique"), 
+  palette = "Dark2", 
+  domain = u.df$EVENT_TYPE
+)
+
+m <- leaflet(data = ne.u.sf) %>%
+    addProviderTiles(
+        provider = providers$Stamen, 
+        layerId = NULL, 
+        options = providerTileOptions(opacity = 0.3)
+    ) %>%
+    setView(lng = 31.3, lat = 49.2, zoom = 7) %>% 
+    addPolygons(
+        stroke = TRUE, 
+        color = col.os, 
+        weight = 1, 
+        opacity = .5, 
+        dashArray = "1", 
+        fill = FALSE, 
+        fillColor = col.u.y, 
+        fillOpacity = 0.1
+    ) %>% 
+    addPolygons(
+        data = ne.u.sf.agg, 
+        stroke = TRUE, 
+        color = col.u.b,
+        weight = 3.0, 
+        opacity = 1.0, 
+        dashArray = "1", 
+        fill = FALSE,
+        fillColor = col.u.y, 
+        fillOpacity = 0.05
+    ) %>% 
+    addCircles(
+        data = u.df,
+        lng = ~ LONGITUDE,
+        lat = ~ LATITUDE, 
+        radius = 12,  # default: 10
+        stroke = TRUE, 
+        color = ~ pal(EVENT_TYPE), 
+        weight = 6,  # default: 5
+        opacity = 1,
+        fill = TRUE, 
+        # fillColor = ~ pal(EVENT_TYPE), 
+        fillOpacity = 1
+    ) %>% 
+    addLegend(position = "bottomright", 
+              pal = pal, 
+              values = u.df$EVENT_TYPE, 
+              opacity = 0.5) %>% 
+    addLabelOnlyMarkers(
+        lng = 31.4, lat = 53.4, 
+        label = htmltools::HTML(
+            "Tragic Events in Ukraine since 2022-02-24"
+        ), 
+        labelOptions = labelOptions(
+            noHide = T, 
+            direction = "bottom",
+            # textsize = "30px", 
+            textOnly = T,
+            style = list(
+                "color" = col.u.b, 
+                "font-family" = "Times New Roman", 
+                "font-weight" = "bold", 
+                "font-size" = "80px"
+                # "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                # "border-color" = "rgba(0,0,0,0.5)"
+            ))
+    ) %>% 
+    addLabelOnlyMarkers(
+        lng = 25.5, lat = 45.6, 
+        label = "@ Maxwell_110", 
+        labelOptions = labelOptions(
+            noHide = T, 
+            direction = "bottom",
+            # textsize = "30px", 
+            textOnly = T,
+            style = list(
+                "color" = col.u.y, 
+                "font-family" = "Times New Roman", 
+                "font-weight" = "bold", 
+                "font-size" = "40px"
+                # "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                # "border-color" = "rgba(0,0,0,0.5)"
+            ))
+    )
+
+m
+```
+
+# Save
+```{r}
+mapshot(
+    x = m, file = "fig/ukraine.jpg", 
+    remove_controls = c("zoomControl"), 
+    vheight = 1000 * 1.3, vwidth = 1600 * 1.05,  # pixel size
+)
+```
