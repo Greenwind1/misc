@@ -1,3 +1,4 @@
+library(ggmap)
 library(tidyverse)
 
 zip.df <- read_csv("./codes/input/KEN_ALL_ROME.CSV",
@@ -16,7 +17,7 @@ fujieda.df[, "ADDRESS"] <-
 # samp <- fujieda.df[sample(1:nrow(fujieda.df), 1), "ADDRESS"][[1]]
 samp <- as.character(fujieda.df[sample(1:nrow(fujieda.df), 1), "ZIP"][[1]])
 
-register_google(key = "")
+register_google(key = "")  # Check the gcp api-key in credential
 LonLatData <- geocode(samp, source = "google")
 LonLatData <- geocode("426-0004", source = "google")
 
