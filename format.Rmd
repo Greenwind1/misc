@@ -51,7 +51,7 @@ library(patchwork)
 library(broman)  # plot_crayons()
 library(ggsci)  # Journal palette
 library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
-library(extrafont)  # "Candara"
+library(extrafont)  # fonttable(); "Candara"
 
 # Interactivity
 library(plotly)
