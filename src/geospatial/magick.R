@@ -1,0 +1,10 @@
+library(magick)
+
+fig1 <- image_read("fig/OSM-OSM.jpg")  # (2100 x 2100)
+fig2 <- image_read("fig/OSM-Stamen.jpg")
+fig3 <- image_read("fig/OSM-OpenRailwayMap.jpg")
+fig4 <- image_read("fig/OSM-CartoDB.DarkMatter.jpg")
+img1 <- image_append(c(fig2, fig1), stack = FALSE)
+img2 <- image_append(c(fig3, fig4), stack = FALSE)
+img <- image_append(c(img1, img2), stack = TRUE)
+image_write(img, path = "fig/OSM-Tiles.jpg")

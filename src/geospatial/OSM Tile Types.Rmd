@@ -1,0 +1,340 @@
+---
+title: "Tile Types of Leaflet using OSM"
+subtitle: ""
+author: "Maxwell"
+date: '`r Sys.Date()`'
+bibliography: references.bib
+link-citations: true
+# zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: minty
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 15
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+***
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(ggalt)  # geom_encircle
+library(patchwork)
+library(broman)  # plot_crayons()
+library(ggsci)  # Journal palette
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(extrafont)  # "Candara"
+
+# Interactivity
+library(plotly)
+library(crosstalk)
+
+# Descriptive Statistics
+library(mice)
+library(ggmice)  # see src/imputation/ggmice_XX.Rmd
+library(psych)
+library(gtsummary)
+
+# GeoSpatial Analysis
+library(sf)  # simple feature
+library(spdep)  # helpful functions for mapping
+library(rmapshaper)  # helpful functions for mapping
+library(tmap)  # map viewer
+library(leaflet)  # map viewer
+library(mapview)  # map viewer
+library(rnaturalearth)
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+
+fn.prefix <- "_"
+# icon.grob <- png_to_grob()
+```
+
+
+# Dataset {.tabset .tabset-fade .tabset-pills}
+```{r Dataset}
+crs.base <- "+proj=longlat +datum=WGS84"
+
+tokyo.sf <- readRDS(file = "input/Tokyo_2022/tokoy.sf.RDS")
+```
+
+## Central Tokyo
+```{r}
+admin.sf <- sf::read_sf(
+    "input/Administrative_district_Tokyo_2021/N03-21_13_210101.shp"
+) %>% 
+    rmapshaper::ms_filter_islands(min_area = 1e8) %>% 
+    st_transform(crs = crs.base)
+
+
+admin.code <- readxl::read_excel(
+    "input/AdminiBoundary_CD.xlsx", skip = 1
+) %>% rename("District" = "行政区域コード")
+
+admin.sf <- admin.sf %>% 
+    rename(District = N03_007) %>% 
+    select(District) %>%
+    group_by(District) %>%
+    summarise(.groups = "drop") %>%
+    left_join(admin.code %>% select(District, City), by = "District") %>% 
+    filter(District <= 13123) %>% 
+    select(geometry) %>% 
+    summarise(.groups = "drop") %>% 
+    sfheaders::sf_remove_holes()
+```
+
+
+# Viz
+http://leaflet-extras.github.io/leaflet-providers/preview/
+
+## Stamen
+```{r}
+col.1 <- col.bmc.pink
+
+m.1 <- leaflet() %>%
+    addProviderTiles(
+        provider = providers$Stamen, 
+        layerId = NULL, 
+        options = providerTileOptions(opacity = 0.5)
+    ) %>%
+    setView(lng = 139.74, lat = 35.675, zoom = 13) %>% 
+    addPolygons(
+        data = admin.sf, 
+        fill = FALSE, 
+        fillColor = col.mt, 
+        fillOpacity = 0.1, 
+        stroke = TRUE, 
+        color = col.1,
+        weight = 5.0, 
+        dashArray = "1", 
+        opacity = .8
+    ) %>% 
+    addLabelOnlyMarkers(
+        lng = 139.86, lat = 35.58, 
+        label = "Stamen", 
+        labelOptions = labelOptions(
+            noHide = T, 
+            direction = "bottom",
+            # textsize = "30px", 
+            textOnly = T,
+            style = list(
+                "color" = col.1,
+                "font-family" = "Times New Roman", 
+                "font-weight" = "bold", 
+                "font-size" = "90px"
+                # "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                # "border-color" = "rgba(0,0,0,0.5)"
+            ))
+    ) %>% 
+    addLabelOnlyMarkers(
+        lng = 139.89, lat = 35.55, 
+        label = "@Maxwell_110", 
+        labelOptions = labelOptions(
+            noHide = T, 
+            direction = "bottom",
+            # textsize = "30px", 
+            textOnly = T,
+            style = list(
+                "color" = "white",
+                "font-family" = "Times New Roman", 
+                "font-weight" = "bold", 
+                "font-size" = "40px"
+                # "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                # "border-color" = "rgba(0,0,0,0.5)"
+            ))
+    )
+m.1
+```
+
+```{r}
+mapshot(
+    x = m.1, file = "fig/OSM-Stamen.jpg", 
+    # remove_controls = c("zoomControl"), 
+    vheight = 2100, vwidth = 2100,  # pixel size
+)
+```
+
+## OSM (Basic)
+```{r}
+col.1 <- col.os
+
+m.2 <- leaflet() %>%
+    addProviderTiles(
+        provider = providers$OpenStreetMap, 
+        layerId = NULL, 
+        options = providerTileOptions(opacity = 0.8)
+    ) %>%
+    setView(lng = 139.74, lat = 35.675, zoom = 13) %>% 
+    addPolygons(
+        data = admin.sf, 
+        fill = FALSE, 
+        fillColor = col.mt, 
+        fillOpacity = 0.1, 
+        stroke = TRUE, 
+        color = col.1,
+        weight = 5.0, 
+        dashArray = "1", 
+        opacity = .8
+    ) %>% 
+    addLabelOnlyMarkers(
+        lng = 139.86, lat = 35.58, 
+        label = "OpenStreetMap", 
+        labelOptions = labelOptions(
+            noHide = T, 
+            direction = "bottom",
+            # textsize = "30px", 
+            textOnly = T,
+            style = list(
+                "color" = col.1,
+                "font-family" = "Times New Roman", 
+                "font-weight" = "bold", 
+                "font-size" = "70px"
+                # "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                # "border-color" = "rgba(0,0,0,0.5)"
+            ))
+    )
+
+m.2
+```
+
+```{r}
+mapshot(
+    x = m.2, file = "fig/OSM-OSM.jpg", 
+    # remove_controls = c("zoomControl"), 
+    vheight = 2100, vwidth = 2100,  # pixel size
+)
+```
+
+## Open Railway Map
+```{r}
+col.1 <- col.bmc.purple
+
+m.3 <- leaflet() %>%
+    addProviderTiles(
+        provider = providers$OpenRailwayMap, 
+        layerId = NULL, 
+        options = providerTileOptions(opacity = 0.8)
+    ) %>%
+    setView(lng = 139.74, lat = 35.675, zoom = 13) %>% 
+    addPolygons(
+        data = admin.sf, 
+        fill = FALSE, 
+        fillColor = col.mt, 
+        fillOpacity = 0.1, 
+        stroke = TRUE, 
+        color = col.1,
+        weight = 5.0, 
+        dashArray = "1", 
+        opacity = .8
+    ) %>% 
+    addLabelOnlyMarkers(
+        lng = 139.86, lat = 35.58, 
+        label = "OpenRailwayMap", 
+        labelOptions = labelOptions(
+            noHide = T, 
+            direction = "bottom",
+            # textsize = "30px", 
+            textOnly = T,
+            style = list(
+                "color" = col.1,
+                "font-family" = "Times New Roman", 
+                "font-weight" = "bold", 
+                "font-size" = "70px"
+                # "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                # "border-color" = "rgba(0,0,0,0.5)"
+            ))
+    )
+
+m.3
+```
+
+```{r}
+mapshot(
+    x = m.3, file = "fig/OSM-OpenRailwayMap.jpg", 
+    # remove_controls = c("zoomControl"), 
+    vheight = 2100, vwidth = 2100,  # pixel size
+)
+```
+
+## CartoDB.DarkMatter
+```{r}
+col.1 <- col.el
+
+m.4 <- leaflet() %>%
+    addProviderTiles(
+        provider = providers$CartoDB.DarkMatter, 
+        layerId = NULL, 
+        options = providerTileOptions(opacity = 0.8)
+    ) %>%
+    setView(lng = 139.74, lat = 35.675, zoom = 13) %>% 
+    addPolygons(
+        data = admin.sf, 
+        fill = FALSE, 
+        fillColor = col.mt, 
+        fillOpacity = 0.1, 
+        stroke = TRUE, 
+        color = col.1,
+        weight = 5.0, 
+        dashArray = "1", 
+        opacity = .8
+    ) %>% 
+    addLabelOnlyMarkers(
+        lng = 139.86, lat = 35.58, 
+        label = "CartoDB.DarkMatter", 
+        labelOptions = labelOptions(
+            noHide = T, 
+            direction = "bottom",
+            # textsize = "30px", 
+            textOnly = T,
+            style = list(
+                "color" = col.1,
+                "font-family" = "Times New Roman", 
+                "font-weight" = "bold", 
+                "font-size" = "65px"
+                # "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                # "border-color" = "rgba(0,0,0,0.5)"
+            ))
+    )
+
+m.4
+```
+
+```{r}
+mapshot(
+    x = m.4, file = "fig/OSM-CartoDB.DarkMatter.jpg", 
+    # remove_controls = c("zoomControl"), 
+    vheight = 2100, vwidth = 2100,  # pixel size
+)
+```
