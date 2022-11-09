@@ -69,6 +69,7 @@ library(spdep)  # helpful functions for mapping
 library(rmapshaper)  # helpful functions for mapping
 library(tmap)  # map viewer
 library(ggmap)  # map viewer, googlemap (need to register)
+# register_google(key = "...")
 library(leaflet)  # map viewer, leaflet::providers
 library(mapview)  # map viewer
 
