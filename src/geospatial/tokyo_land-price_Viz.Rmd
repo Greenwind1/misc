@@ -1,0 +1,631 @@
+---
+title: "Tokyo Land Price Viz for 30DaysMapChallenge"
+subtitle: "Spatial Clustering with ClustGeo"
+author: "Maxwell"
+date: '`r Sys.Date()`'
+# bibliography: references.bib
+link-citations: true
+output: 
+   html_document:
+      number_sections: TRUE
+      fig_caption: TRUE
+      toc: TRUE
+      toc_depth: 5
+      toc_float: TRUE
+      theme:
+         bootswatch: minty
+         # bootswatch: cosmo
+      highlight: espresso
+      # espresso, tango, zenburn
+      code_folding: hide
+      # code_download: TRUE
+      fig_width: 10
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+
+## Load libraries
+```{r, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(plotly)
+library(patchwork)
+library(broman)  # plot_crayons()
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(RColorBrewer)  # display.brewer.all()
+library(extrafont)  # "Candara"
+
+# GeoSpatial Analysis
+library(sf)  # simple feature
+library(spdep)  # helpful functions for mapping: skater
+library(ClustGeo)
+library(rmapshaper)  # helpful functions for mapping
+library(ggsn)
+library(tmap)  # map viewer
+library(ggmap)  # map viewer, googlemap (need to register)
+library(leaflet)  # map viewer
+library(mapview)  # map viewer
+
+# Descriptive Statistics
+library(naniar)
+library(psych)
+library(gtsummary)
+```
+
+## Environment
+```{r Environment}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+
+fn.prefix <- "_"
+# icon.grob <- png_to_grob()
+
+# https://en.wikipedia.org/wiki/World_Geodetic_System#WGS84
+crs.base <- "+proj=longlat +datum=WGS84"
+loc.base <- c(lon = 139.73, lat = 35.70)
+
+col.bg <- "#262A33"
+col.fg <- "#393F4D"
+```
+
+# Load DataSets {.tabset .tabset-fade .tabset-pills}
+
+https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-L01-v3_1.html
+
+Land Price Open Dataset
+  
+L01_006/_100: Price (JPY/m$^{2}$)  
+L01_007: Price Change (%)  
+L01_022: District Code  
+L01_023: City  
+L01_024: Address  
+  
+  
+```{r Load DataSets}
+admin.sf <- sf::read_sf(
+    "input/Administrative_district_Tokyo_2021/N03-21_13_210101.shp"
+) %>% 
+    rmapshaper::ms_filter_islands(min_area = 1e8) %>% 
+    st_transform(crs = crs.base)  # JGD2011 => WGS84
+
+lp.sf <- sf::read_sf("input/Land-Price_Tokyo_2022/L01-22_13.shp") %>% 
+    st_transform(crs = crs.base)  # JGD2011 => WGS84
+
+
+admin.code <- readxl::read_excel(
+  "input/AdminiBoundary_CD.xlsx", skip = 1
+) %>% rename("District" = "行政区域コード")
+```
+
+
+# Preprocessing {.tabset .tabset-fade .tabset-pills}
+## Concat Polygons by District
+```{r}
+admin.sf <- admin.sf %>% 
+  rename(District = N03_007) %>% 
+  select(District) %>% 
+  group_by(District) %>% 
+  summarise(.groups = "drop") %>% 
+  left_join(admin.code %>% select(District, City), by = "District")
+```
+
+## Transform and Rename
+```{r}
+city.rm <- c(
+    "Ooshima", 
+    "Niijima", 
+    "Kouzushima", 
+    "Miyake", 
+    "Hachijyou", 
+    "Ogasawara"
+)
+
+lp.sf <- lp.sf %>% mutate(
+    Price = L01_006 / 1e6,
+    Price_Change = L01_007, 
+) %>% rename(
+    District = L01_022,
+    District.Fine = L01_023,
+    Address = L01_024
+) %>% 
+    left_join(admin.code %>% select(District, City), by = "District") %>% 
+    filter(!City %in% city.rm)
+```
+
+# Price Statistics by Dstrict
+```{r}
+lp.sf.stat <- lp.sf %>% select(District, City, Price, Price_Change) %>% 
+    filter(Price < 4) %>% 
+    group_by(District) %>% 
+    summarise(
+        Price.Mean = round(mean(Price, na.rm = TRUE), 3),
+        Price.Median = round(median(Price, na.rm = TRUE), 3),
+        Price.Std = round(sd(Price, na.rm = TRUE), 3),
+        Price_Change.Mean = round(mean(Price_Change, na.rm = TRUE), 3),
+        Price_Change.Median = round(median(Price_Change, na.rm = TRUE), 3),
+        Price_Change.Std = round(sd(Price_Change, na.rm = TRUE), 3),
+        .groups = "drop"
+    ) %>%
+    st_set_geometry(NULL) %>%
+    left_join(admin.sf %>% select(District), by = "District") %>%
+    st_set_geometry(value = "geometry")
+
+view.table(lp.sf.stat %>% st_set_geometry(NULL))
+tbl_summary(lp.sf.stat %>% st_set_geometry(NULL) %>% select(-District))
+```
+
+
+# Exploratory Data Analysis {.tabset .tabset-fade .tabset-pills}
+## Bad Map
+```{r}
+p1 <- ggplot(data = lp.sf %>% select(Price)) + 
+    geom_sf(inherit.aes = FALSE, 
+            mapping = aes(), 
+            data = admin.sf %>% 
+                filter(!City %in% c("Oku-Tama", "Hinohara")) %>% 
+                select(geometry), 
+            fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) + 
+    geom_sf(aes(color = Price), size = 0.5, alpha = 0.5) + 
+    scale_color_carto_c(palette = "Teal") +
+    labs(x = NULL, y = NULL, 
+         title = "Bad Land Price Map of Tokyo (JPY 1e6 / m^2)", 
+         subtitle = "The color bar is not scaled properly, and the points do not convey good information.") +
+    theme(
+        title = element_text(color = col.bmc.gray.p, size = 10), 
+        plot.subtitle = element_text(color = col.bmc.gray.p, size = 9), 
+        axis.text = element_blank(), 
+        legend.position = c(0.1, 0.20),
+        panel.grid.major = element_blank(), 
+        plot.background = element_rect(fill = col.bg, color = col.bg), 
+        panel.background = element_rect(fill = col.bg, color = col.bg)
+    ) +
+    guides(color = guide_colourbar(
+        title = "Price", 
+        title.theme = element_text(
+            color = col.bmc.gray.p, family = font.base, face = font.face, 
+            size = 6
+        ), title.hjust = -1, 
+        barwidth = 0.4, barheight = 3, 
+        label.theme = element_text(
+            color = col.bmc.gray.p, family = font.base, face = font.face, 
+            size = 7
+        ), 
+        label.position = "right", 
+        ticks.linewidth = 3, ticks.colour = col.bg
+    ))
+
+p2 <- ggplot(data = lp.sf.stat) + 
+    geom_sf(inherit.aes = FALSE, 
+            mapping = aes(), 
+            data = admin.sf %>% 
+                filter(!City %in% c("Oku-Tama", "Hinohara")) %>% 
+                select(geometry), 
+            fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) + 
+    geom_sf(aes(fill = Price.Mean), color = NA, size = 0.5, alpha = 0.5) + 
+    scale_fill_carto_c(palette = "Teal") + 
+    labs(x = NULL, y = NULL, 
+         title = NULL, 
+         subtitle = "In the above case, an aggregation by region can sometimes visualize to get a better idea of \nthe overall trend. If the number of data for a given region is small for aggregation, \nthere is a high uncertainty, and better stratification should be considered (e.g. spatial clustering).") +
+    theme(
+        title = element_text(color = col.bmc.gray.p, size = 11), 
+        plot.subtitle = element_text(color = col.bmc.gray.p, size = 9), 
+        axis.text = element_blank(), 
+        legend.position = c(0.1, 0.175),
+        panel.grid.major = element_blank(), 
+        plot.background = element_rect(fill = col.bg, color = col.bg), 
+        panel.background = element_rect(fill = col.bg, color = col.bg)
+    ) +
+    guides(fill = guide_colourbar(
+        title = "Mean price\n   by region", 
+        title.theme = element_text(
+            color = col.bmc.gray.p, family = font.base, face = font.face, 
+            size = 6
+        ), title.hjust = -10, 
+        barwidth = 0.4, barheight = 3, 
+        label.theme = element_text(
+            color = col.bmc.gray.p, family = font.base, face = font.face, 
+            size = 7
+        ), 
+        label.position = "right", 
+        ticks.linewidth = 3, ticks.colour = col.bg
+    ))
+
+p1 / p2
+ggsave("fig/Tokyo-land-price.1.jpg", width = 6, height = 7)
+```
+
+
+## Choropleth Map: Tokyo
+```{r, fig.height=15}
+p1 <- lp.sf.stat %>% 
+    ggplot() + 
+    geom_sf(mapping = aes(), data = admin.sf, 
+            fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) + 
+    geom_sf(mapping = aes(fill = Price.Mean)) + 
+    rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
+    geom_sf_text(aes(label = Price.Mean), color = "white", 
+                 cex = 2.5, family = "Candara") + 
+    labs(x = NULL, y = NULL, title = "Mean Price (1e6 JPY)") + 
+    theme(title = element_text(size = 15), 
+          legend.position = c(0.05, 0.35), 
+          plot.margin = unit(c(0, 0, 30, 0), units = "pt")) + 
+    guides(fill = guide_colourbar(
+        barwidth = 0.5, barheight = 10, label.position = "right", 
+        ticks.linewidth = 3
+    ))
+
+p2 <- lp.sf.stat %>% 
+    ggplot() + 
+    geom_sf(mapping = aes(), data = admin.sf, 
+            fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) + 
+    geom_sf(mapping = aes(fill = Price.Median)) + 
+    rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
+    geom_sf_text(aes(label = Price.Median), color = "white", 
+                 cex = 2.5, family = "Candara") + 
+    labs(x = NULL, y = NULL, title = "Median Price (1e6 JPY)") + 
+    theme(title = element_text(size = 15), 
+          legend.position = c(0.05, 0.35), 
+          plot.margin = unit(c(0, 0, 30, 0), units = "pt")) + 
+    guides(fill = guide_colourbar(
+        barwidth = 0.5, barheight = 10, label.position = "right", 
+        ticks.linewidth = 3
+    ))
+
+p3 <- lp.sf.stat %>% 
+    ggplot() + 
+    geom_sf(mapping = aes(), data = admin.sf, 
+            fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) + 
+    geom_sf(mapping = aes(fill = Price_Change.Mean)) + 
+    rcartocolor::scale_fill_carto_c(name = "", palette = "ArmyRose") + 
+    geom_sf_text(aes(label = Price_Change.Mean), color = "white", 
+                 cex = 2.5, family = "Candara") + 
+    labs(x = NULL, y = NULL, title = "Mean Price Change (%)") + 
+    theme(title = element_text(size = 15), 
+          legend.position = c(0.05, 0.35), 
+          plot.margin = unit(c(0, 0, 0, 0), units = "pt")) + 
+    guides(fill = guide_colourbar(
+        barwidth = 0.5, barheight = 10, label.position = "right", 
+        ticks.linewidth = 3
+    ))
+
+p1 / p2 / p3
+# ggsave("fig/Land-price_Tokyo.jpg", dpi = 300, width = 10, height = 15)
+```
+
+## Choropleth Map: Central Tokyo
+```{r, fig.height=24, fig.width=8}
+p1 <- lp.sf.stat %>% filter(District <= 13123) %>% 
+    ggplot() + 
+  geom_sf(mapping = aes(), data = admin.sf %>% filter(District <= 13123), 
+          fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) + 
+  geom_sf_text(aes(label = City), color = col.os, 
+               cex = 4, family = "Candara") + 
+  labs(x = NULL, y = NULL, title = "Central Tokyo Districts") + 
+  theme(title = element_text(size = 15), 
+        plot.margin = unit(c(0, 0, 40, 0), units = "pt"))
+
+p2 <- lp.sf.stat %>% filter(District <= 13123) %>% 
+  ggplot() + 
+  geom_sf(mapping = aes(), data = admin.sf %>% filter(District <= 13123), 
+          fill = NA, color = col.cb, alpha = 0.1, size = 0.1) + 
+  geom_sf(mapping = aes(fill = Price.Median), color = "white") + 
+  geom_sf_text(aes(label = Price.Median), color = col.os, 
+               cex = 4, family = "Candara") + 
+  rcartocolor::scale_fill_carto_c(name = "", palette = "Tropic") + 
+  labs(x = NULL, y = NULL, title = "Median Land Price (1e6 JPY)") + 
+  theme(title = element_text(size = 15), 
+        legend.position = c(0.05, 0.3), 
+        plot.margin = unit(c(0, 0, 40, 0), units = "pt")) + 
+  guides(fill = guide_colourbar(
+    barwidth = 0.5, barheight = 15, label.position = "right", 
+    ticks.linewidth = 3
+  ))
+
+p3 <- lp.sf.stat %>% filter(District <= 13123) %>% 
+  ggplot() + 
+  geom_sf(mapping = aes(), data = admin.sf %>% filter(District <= 13123), 
+          fill = NA, color = col.cb, alpha = 0.1, size = 0.1) + 
+  geom_sf(mapping = aes(fill = Price_Change.Mean), color = "white") + 
+  geom_sf_text(aes(label = Price_Change.Mean), color = col.os, 
+               cex = 4, family = "Candara") + 
+  rcartocolor::scale_fill_carto_c(name = "", palette = "ArmyRose") + 
+  labs(x = NULL, y = NULL, title = "Mean Land Price Change (%)") + 
+  theme(title = element_text(size = 15), 
+        legend.position = c(0.05, 0.3), 
+        plot.margin = unit(c(0, 0, 0, 0), units = "pt")) + 
+  guides(fill = guide_colourbar(
+    barwidth = 0.5, barheight = 15, label.position = "right", 
+    ticks.linewidth = 3
+  ))
+
+p1 / p2 / p3
+# ggsave("fig/Land-price_Central-Tokyo.jpg", dpi = 300, width = 10, height = 30)
+```
+
+
+# Spatial Clustering with ClustGeo
+## Standardize Node Features
+```{r}
+lp.stat.scale <- lp.sf.stat %>% 
+    as.data.frame() %>% 
+    select(-District, -City, -Price_Change.Median, -geometry) %>% 
+    scale() %>% as.data.frame()
+```
+
+## Compute Neighboorhod list with `spdep::poly2nb`
+Works fine with `MULTIPOLYGON`, but not with NA.
+```{r}
+lp.stat.nb <- spdep::poly2nb(lp.sf.stat %>% select(geometry))
+```
+
+## Compute dissimilarities
+```{r}
+A <- spdep::nb2mat(lp.stat.nb, style = "B")
+diag(A) <- 1
+colnames(A) <- rownames(A) <- rownames(lp.stat.scale)
+```
+
+## Optimize alpha
+```{r}
+D0 <- dist(lp.stat.scale)
+D1 <- as.dist(1 - A)
+alpha.seq <- seq(0, 1, 0.1)
+K <- 5
+cr <- choicealpha(D0, D1, alpha.seq, K, 
+                  wt = NULL, scale = TRUE, graph = FALSE)
+cr$Q  # proportion of explained inertia
+crQ.df <- data.frame(cr$Qnorm) %>% mutate(alpha = alpha.seq)
+rownames(crQ.df) <- NULL
+```
+
+```{r}
+crQ.df %>% ggplot() + 
+  geom_point(mapping = aes(x = alpha, y = Q0norm), 
+             color = col.plos.yellow, size = 2) + 
+  geom_line(mapping = aes(x = alpha, y = Q0norm), 
+            color = col.plos.yellow, size = 1) + 
+  geom_point(mapping = aes(x = alpha, y = Q1norm), 
+             color = col.plos.pink, size = 2) + 
+  geom_line(mapping = aes(x = alpha, y = Q1norm), 
+            color = col.plos.pink, size = 1) + 
+  lims(y = c(0, NA)) + 
+  labs(y = "Q: proportion of explained inertia", 
+       title = "ClustGeo::choicealpha") + 
+  theme(plot.title = element_text(size = 15))
+```
+
+## Regionalization {.tabset .tabset-fade .tabset-pills}
+```{r}
+tree <- 
+  ClustGeo::hclustgeo(D0 = D0, D1 = D1, alpha = 0.2, scale = TRUE, wt = NULL)
+```
+
+### ncluster = 3
+```{r}
+lp.sf.stat <- lp.sf.stat %>% 
+  mutate(partition.3 = factor(cutree(tree = tree, k = 3), 
+                              levels = 1:3, labels = 1:3))
+table(lp.sf.stat$partition.3)
+```
+
+```{r, fig.height=20}
+p1 <- lp.sf.stat %>% 
+    filter(!City %in% c("Oku-Tama", "Hinohara")) %>% 
+    ggplot() + 
+    geom_sf(mapping = aes(), 
+            data = admin.sf %>% filter(!City %in% c("Oku-Tama", "Hinohara")), 
+            fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) + 
+    geom_sf(mapping = aes(fill = Price.Median)) + 
+    rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
+    scalebar(
+        data = admin.sf %>% filter(!City %in% c("Oku-Tama", "Hinohara")), 
+        location = "bottomright",  # waved if anchor set.
+        anchor = setNames(c(139.3, 35.52), c("x", "y")), 
+        dist = 10, dist_unit = "km",
+        # Esri Japan: https://bit.ly/3LtcBaE
+        transform = TRUE, model = "WGS84",
+        height = 0.01, st.dist = 0.03, st.size = 4, st.color = col.os, 
+        box.fill = c(col.tw, col.plos.pink), 
+        box.color = "white", border.size = 0.05, 
+        family = font.base
+    ) + 
+    geom_sf_text(aes(label = Price.Median), color = "white",
+                 cex = 5, family = font.base) + 
+    labs(x = NULL, y = NULL, title = "Median Price (1e6 JPY)") + 
+    theme(title = element_text(size = 15), 
+          # legend.position = c(0.05, 0.35), 
+          legend.position = "none", 
+          plot.margin = unit(c(0, 0, 20, 0), units = "pt")) + 
+    guides(fill = guide_colourbar(
+        barwidth = 0.5, barheight = 12, label.position = "right", 
+        ticks.linewidth = 3
+    ))
+
+p2 <- lp.sf.stat %>% 
+    filter(!City %in% c("Oku-Tama", "Hinohara")) %>% 
+    ggplot() + 
+    geom_sf(mapping = aes(), 
+            data = admin.sf %>% filter(!City %in% c("Oku-Tama", "Hinohara")), 
+            fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) + 
+    geom_sf(mapping = aes(fill = Price_Change.Mean)) + 
+    rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
+    geom_sf_text(aes(label = Price_Change.Mean), color = "white",
+                 cex = 5, family = "Candara") + 
+    labs(x = NULL, y = NULL, title = "Mean Price Change (%)") + 
+    theme(title = element_text(size = 15), 
+          # legend.position = c(0.05, 0.35), 
+          legend.position = "none", 
+          plot.margin = unit(c(0, 0, 20, 0), units = "pt")) + 
+    guides(fill = guide_colourbar(
+        barwidth = 0.5, barheight = 12, label.position = "right", 
+        ticks.linewidth = 3
+    ))
+
+p3 <- lp.sf.stat %>% ggplot() + 
+    geom_sf(mapping = aes(fill = partition.3), size = 0.2, alpha = 0.5) + 
+    scale_fill_carto_d(name = "", palette = "Vivid") + 
+    geom_sf_text(aes(label = City), color = col.os, 
+                 cex = 4, family = font.base) + 
+    labs(x = NULL, y = NULL, title = "ncluster = 3") + 
+    theme(title = element_text(size = 15), 
+          legend.position = "none", 
+          plot.margin = unit(c(0, 0, 0, 0), units = "pt"))
+
+p1 / p2 / p3 + 
+    plot_annotation(
+    title = "Spatial Clustering on Price Stats", 
+    subtitle = "", 
+    theme = theme(title = element_text(size = 20, family = "Candara"))
+    )
+
+ggsave("fig/Spatial-Clustering-Tokyo_ClustGeo_n3.jpg", 
+       dpi = 300, width = 15, height = 10 * 3)
+```
+
+### ncluster = 5
+```{r}
+lp.sf.stat <- lp.sf.stat %>% 
+  mutate(partition.5 = factor(cutree(tree = tree, k = 5), 
+                              levels = 1:5, labels = 1:5))
+table(lp.sf.stat$partition.5)
+```
+
+```{r, fig.height=20}
+p1 <- lp.sf.stat %>% 
+    filter(!City %in% c("Oku-Tama", "Hinohara")) %>% 
+    ggplot() + 
+    geom_sf(mapping = aes(), 
+            data = admin.sf %>% filter(!City %in% c("Oku-Tama", "Hinohara")), 
+            fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) + 
+    geom_sf(mapping = aes(fill = Price.Median)) + 
+    rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
+    scalebar(
+        data = admin.sf %>% filter(!City %in% c("Oku-Tama", "Hinohara")), 
+        location = "bottomright",  # waved if anchor set.
+        anchor = setNames(c(139.3, 35.52), c("x", "y")), 
+        dist = 10, dist_unit = "km",
+        # Esri Japan https://bit.ly/3LtcBaE
+        transform = TRUE, model = "WGS84",
+        height = 0.01, st.dist = 0.03, st.size = 4, st.color = col.os, 
+        box.fill = c(col.tw, col.plos.pink), 
+        box.color = "white", border.size = 0.05, 
+        family = font.base
+    ) +   
+    geom_sf_text(aes(label = Price.Median), color = "white",
+                 cex = 5, family = "Candara") +
+    labs(x = NULL, y = NULL, title = "Median Price (1e6 JPY)") + 
+    theme(title = element_text(size = 15),
+          # legend.position = c(0.05, 0.35), 
+          legend.position = "none", 
+          plot.margin = unit(c(0, 0, 20, 0), units = "pt")) + 
+    guides(fill = guide_colourbar(
+        barwidth = 0.5, barheight = 12, label.position = "right", 
+        ticks.linewidth = 3
+    ))
+
+p2 <- lp.sf.stat %>% 
+    filter(!City %in% c("Oku-Tama", "Hinohara")) %>% 
+    ggplot() + 
+    geom_sf(mapping = aes(), 
+            data = admin.sf %>% filter(!City %in% c("Oku-Tama", "Hinohara")), 
+            fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) + 
+    geom_sf(mapping = aes(fill = Price_Change.Mean)) + 
+    rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
+    geom_sf_text(aes(label = Price_Change.Mean), color = "white",
+                 cex = 5, family = "Candara") +
+    labs(x = NULL, y = NULL, title = "Mean Price Change (%)") + 
+    theme(title = element_text(size = 15), 
+          legend.position = c(0.05, 0.35), 
+          plot.margin = unit(c(0, 0, 20, 0), units = "pt")) + 
+    guides(fill = guide_colourbar(
+        barwidth = 0.5, barheight = 12, label.position = "right", 
+        ticks.linewidth = 3
+    ))
+
+p3 <- lp.sf.stat %>% ggplot() + 
+    geom_sf(mapping = aes(fill = partition.5), size = 0.2, alpha = 0.5) + 
+    scale_fill_carto_d(name = "", palette = "Vivid") + 
+    geom_sf_text(aes(label = City), color = col.os, 
+                 cex = 4, family = "Candara") + 
+    labs(x = NULL, y = NULL, title = "ncluster = 5") + 
+    theme(title = element_text(size = 15), 
+          legend.position = "none", 
+          plot.margin = unit(c(0, 0, 0, 0), units = "pt"))
+
+p1 / p2 / p3 + 
+    plot_annotation(
+    title = "Spatial Clustering on Price Stats", 
+    subtitle = "", 
+    theme = theme(title = element_text(size = 20, family = "Candara"))
+    )
+
+ggsave("fig/Spatial-Clustering-Tokyo_ClustGeo_n5.jpg", 
+       dpi = 300, width = 15, height = 10 * 3)
+```
+
+### ncluster = 10
+```{r}
+lp.sf.stat <- lp.sf.stat %>% 
+  mutate(partition.10 = factor(cutree(tree = tree, k = 10), 
+                               levels = 1:10, labels = 1:10))
+table(lp.sf.stat$partition.10)
+```
+
+```{r, fig.height=20}
+p1 <- lp.sf.stat %>% ggplot() + 
+    geom_sf(mapping = aes(fill = partition.3), size = 0.2, alpha = 0.5) + 
+    scale_fill_carto_d(name = "", palette = "Vivid") + 
+    geom_sf_text(aes(label = City), color = col.os, 
+                 cex = 4, family = "Candara") + 
+    labs(x = NULL, y = NULL, title = "ncluster = 3") + 
+    theme(title = element_text(size = 15), 
+          legend.position = "none", 
+          plot.margin = unit(c(0, 0, 30, 0), units = "pt")) + 
+  annotation_custom(grob = t.grob, 
+                    xmin = 139.8, xmax = 139.8, 
+                    ymin = 35.83, ymax = 35.83) + 
+  annotate(geom = "text", x = 139.83, y = 35.83, 
+           label = "@Maxwell_110", size = 3, family = "Candara", color = "gray")
+
+p2 <- lp.sf.stat %>% ggplot() + 
+    geom_sf(mapping = aes(fill = partition.5), size = 0.2, alpha = 0.5) + 
+    scale_fill_carto_d(name = "", palette = "Vivid") + 
+    labs(x = NULL, y = NULL, title = "ncluster = 5") + 
+    theme(title = element_text(size = 15), 
+          legend.position = "none", 
+          plot.margin = unit(c(0, 0, 30, 0), units = "pt"))
+
+p3 <- lp.sf.stat %>% ggplot() + 
+    geom_sf(mapping = aes(fill = partition.10), size = 0.2, alpha = 0.5) + 
+    scale_fill_carto_d(name = "", palette = "Vivid") + 
+    labs(x = NULL, y = NULL, title = "ncluster = 10") + 
+    theme(title = element_text(size = 15), 
+          legend.position = "none", 
+          plot.margin = unit(c(0, 0, 0, 0), units = "pt"))
+
+p1 / p2 / p3 + 
+    plot_annotation(
+    title = "Spatial Clustering on Price Stats", 
+    subtitle = "(ClustGeo)", 
+    theme = theme(title = element_text(size = 20, family = "Candara"))
+    )
+
+ggsave("fig/Spatial-Clustering-Tokyo_ClustGeo_n3-10.jpg", 
+       dpi = 300, width = 15, height = 10 * 3)
+ggsave("fig/Spatial-Clustering-Tokyo_ClustGeo_n3-10_dpi150.jpg", 
+       dpi = 150, width = 15, height = 10 * 3)
+```
