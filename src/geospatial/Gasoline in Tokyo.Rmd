@@ -152,12 +152,6 @@ col.bg <- "gray95"
 col.fg <- "#393F4D"
 
 p <- ggmap(tokyo.s) + 
-    labs(
-        title = "Gasoline Stations in Central Tokyo", 
-        subtitle = NULL, 
-        x = NULL, y = NULL, 
-        caption = "#30DaysMapChallenge; @Maxwell_110"
-    ) + 
     # geom_sf(inherit.aes = FALSE,
     #         data = admin.df,
     #         color = col.sl,
@@ -166,6 +160,12 @@ p <- ggmap(tokyo.s) +
     geom_sf(inherit.aes = FALSE, 
             data = gas.sf, 
             color = col.sl, size = 1, alpha = 0.5) + 
+    labs(
+        title = "Gasoline Stations in Central Tokyo", 
+        subtitle = NULL, 
+        x = NULL, y = NULL, 
+        caption = "#30DaysMapChallenge; @Maxwell_110"
+    ) + 
     theme(
         title = element_text(
             face = "bold.italic", color = col.sl, size = 12
@@ -191,5 +191,6 @@ p <- ggmap(tokyo.s) +
         legend.key.size = unit(0.015, "npc")
     )
 p
-ggsave("fig/Gasoline-in-Tokyo.jpg", width = 5, height = 5)
+ggsave("fig/tmp.jpg", width = 5, height = 5)
+# ggsave("fig/Gasoline-in-Tokyo.jpg", width = 5, height = 5)
 ```
