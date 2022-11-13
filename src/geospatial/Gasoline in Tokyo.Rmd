@@ -1,5 +1,5 @@
 ---
-title: "Gasoline in Tokyo"
+title: "Hospitals in Tokyo"
 subtitle: ""
 author: "Maxwell"
 date: '`r Sys.Date()`'
@@ -137,44 +137,133 @@ admin.sf <- admin.sf %>%
 admin.df <- fortify(admin.sf)
 ```
 
-## Gasoline Station
+## Hospitals
+https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-P04-v3_0.html#prefecture13  
+https://nlftp.mlit.go.jp/ksj/gml/codelist/MedClassCd.html  
+1: Hospitals  
+2: Clinics  
+3: Dentists  
 ```{r}
-gas.sf <- sf::read_sf("input/Gasoline_Tokyo_2015/P07-15_13.shp") %>% 
-    rename(Gas.Type = P07_001)
+hos.sf <- sf::read_sf("input/Hospitals_Tokyo_2020/P04-20_13.shp") %>% 
+    rename(Hospital.Type = P04_001) %>% 
+    filter(Hospital.Type != 3)
 ```
 
 
 # Viz {.tabset .tabset-fade .tabset-pills}
-```{r}
-col.bg <- "gray95"
-# col.bg <- "#092532"
-# col.bg <- "#262A33"
-col.fg <- "#393F4D"
 
-p <- ggmap(tokyo.s) + 
-    # geom_sf(inherit.aes = FALSE,
-    #         data = admin.df,
-    #         color = col.sl,
-    #         linetype = "21",
-    #         size = 0.2, fill = NA, alpha = 0.1) + 
-    geom_sf(inherit.aes = FALSE, 
-            data = gas.sf, 
-            color = col.sl, size = 1, alpha = 0.5) + 
+```{r}
+# Creating north arrow and scale bar, motivation from GISTools package
+# https://andrewpwheeler.com/2019/08/07/making-a-hexbin-map-in-ggplot/
+arrow_data <- function(xb, yb, len) {
+    s <- len
+    arrow.x = c(0, 0.5, 1, 0.5, 0) - 0.5
+    arrow.y = c(0, 1.7  , 0, 0.5, 0)
+    adata <- data.frame(aX = xb + arrow.x * s, aY = yb + arrow.y * s)
+    return(adata)
+}
+
+scale_data <- function(llx, lly, len, height) {
+    box1 <- data.frame(
+        x = c(llx, llx + len, llx + len, llx, llx),
+        y = c(lly, lly, lly + height, lly + height, lly)
+    )
+    box2 <- data.frame(
+        x = c(llx - len, llx, llx, llx - len, llx - len),
+        y = c(lly, lly, lly + height, lly + height, lly)
+    )
+    return(list(box1, box2))
+}
+
+# Example
+
+# x_cent <- 830000
+# len_bar <- 3000
+# offset_scaleNum <- 64300
+# 
+# arrow <- arrow_data(xb = x_cent, yb = 67300, len = 2500)
+# 
+# scale_bxs <- scale_data(
+#     llx = x_cent,
+#     lly = 65000,
+#     len = len_bar,
+#     height = 750
+# )
+# 
+# label_data <- data.frame(
+#     x = c(x_cent, x_cent - len_bar, x_cent, x_cent + len_bar, x_cent), 
+#     y = c(72300, offset_scaleNum, offset_scaleNum, offset_scaleNum, 66500), 
+#     lab = c("N", "0", "3", "6", "Kilometers")
+# )
+# 
+# base_map <- ggplot() +
+#     geom_polygon(
+#         data = PhilBound,
+#         size = 1.5,
+#         color = 'black',
+#         fill = 'darkgrey',
+#         aes(x = long, y = lat)
+#     ) +
+#     geom_polygon(data = arrow, fill = 'black', aes(x = aX, y = aY)) +
+#     geom_polygon(data = scale_bxs[[1]],
+#                  fill = 'grey',
+#                  color = 'black',
+#                  aes(x = x,  y = y)) +
+#     geom_polygon(data = scale_bxs[[2]],
+#                  fill = 'white',
+#                  color = 'black',
+#                  aes(x = x, y = y)) +
+#     geom_text(data = lab_data, size = 4, aes(x = x, y = y, label = lab)) +
+#     coord_fixed() + theme_void()
+```
+
+## Draw
+```{r}
+# col.bg <- "gray95"
+# col.bg <- "#092532"
+col.bg <- "#262A33"
+col.fg <- "#393F4D"
+arrow <- arrow_data(xb = 139.58, yb = 35.55, len = 0.015)
+label.df <- data.frame(x = 139.58, y = 35.582, lab = "N")
+
+p <- ggplot() + 
+    geom_sf(data = admin.sf, 
+            fill = col.fg, alpha = 0.75, 
+            size = 0.3, color = col.bg) + 
+    geom_polygon(data = arrow, fill = col.c.b, aes(x = aX, y = aY)) + 
+    geom_text(aes(x = x, y = y, label = lab), 
+              data = label.df, color = col.c.b, size = 4, 
+              family = "Times New Roman") + 
+    geom_hex(mapping = aes(x, y), 
+             data = hos.sf %>%
+                 select(Hospital.Type) %>%
+                 sfheaders::sf_to_df(fill = TRUE) %>% 
+                 filter(x > 139.55 & y > 35.50), 
+             bins = 60, 
+             alpha = 0.5, 
+             color = col.bg, size = 0.1) + 
+    scale_fill_carto_c(direction = -1, palette = "Teal") + 
     labs(
-        title = "Gasoline Stations in Central Tokyo", 
-        subtitle = NULL, 
+        title = "Hospital Distribution in Central Tokyo", 
+        subtitle = " Hexagonal Map", 
         x = NULL, y = NULL, 
         caption = "#30DaysMapChallenge; @Maxwell_110"
     ) + 
     theme(
         title = element_text(
-            face = "bold.italic", color = col.sl, size = 12
+            family = "Times New Roman", face = "bold", 
+            color = col.c.b, size = 12
+        ), 
+        plot.title = element_text(
+            margin = margin(t = 15, r = -00, b = -15, l = 00, unit = "pt")
         ), 
         plot.subtitle = element_text(
-            face = "bold.italic", color = col.sl, size = 10
+            family = "Times New Roman", face = "bold", 
+            color = col.c.b, size = 10, 
+            margin = margin(t = 20, r = -00, b = -20, l = 00, unit = "pt")
         ), 
-        plot.caption = element_text(color = col.sl, size = 7), 
-        text = element_text(face = "bold", color = col.c.b), 
+        plot.caption = element_text(color = col.c.b, size = 6), 
+        text = element_text(family = "Times New Roman", color = col.fg), 
         # axis.text = element_text(family = font.base, face = "italic", 
         #                          color = col.c.b, size = 4), 
         axis.text = element_blank(), 
@@ -185,12 +274,32 @@ p <- ggmap(tokyo.s) +
         panel.grid.major = element_blank(), 
         strip.text = element_blank(), 
         # legend
-        legend.title = element_blank(),
-        legend.text = element_text(face = "bold.italic", color = col.c.b), 
-        legend.position = c(0.6, 1.075), 
+        # legend.title = element_blank(),
+        # legend.text = element_text(
+        #     family = "Times New Roman", face = "plain", 
+        #     color = col.c.b, 
+        #     size = 5
+        # ), 
+        legend.position = c(0.875, 0.175), 
         legend.key.size = unit(0.015, "npc")
-    )
+    ) + 
+    guides(fill = guide_colourbar(
+        title = "Number of Hospitals", 
+        title.theme = element_text(
+            family = "Times New Roman", face = "plain", 
+            color = col.c.b, size = 5
+            # angle = 90
+        ), 
+        title.position = "bottom", title.hjust = 0, title.vjust = -1, 
+        barwidth = 0.4, barheight = 4, 
+        label.theme = element_text(
+            family = "Times New Roman", face = "plain", 
+            color = col.c.b, size = 4
+        ), 
+        label.position = "right", 
+        ticks.linewidth = 3, ticks.colour = col.bg
+    ))
 p
-ggsave("fig/tmp.jpg", width = 5, height = 5)
-# ggsave("fig/Gasoline-in-Tokyo.jpg", width = 5, height = 5)
+
+ggsave("fig/Hospitals-in-Tokyo.jpg", width = 5, height = 5)
 ```
