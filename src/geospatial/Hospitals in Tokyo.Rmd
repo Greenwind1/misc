@@ -1,0 +1,305 @@
+---
+title: "Hospitals in Tokyo"
+subtitle: ""
+author: "Maxwell"
+date: '`r Sys.Date()`'
+bibliography: references.bib
+link-citations: true
+# zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: minty
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 15
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+***
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(ggalt)  # geom_encircle
+library(patchwork)
+library(pals)
+library(broman)  # plot_crayons()
+library(ggsci)  # Journal palette
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(extrafont)  # fonttable(); "Candara"
+
+# Interactivity
+library(plotly)
+library(crosstalk)
+
+# Descriptive Statistics
+library(mice)
+library(ggmice)  # see src/imputation/ggmice_XX.Rmd
+library(psych)
+library(gtsummary)
+
+# GeoSpatial Analysis
+library(sf)  # simple feature
+library(spdep)  # helpful functions for mapping
+library(rmapshaper)  # helpful functions for mapping
+library(tmap)  # map viewer
+library(leaflet)  # map viewer
+library(mapview)  # map viewer
+library(rnaturalearth)
+
+library(ggmap)
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+
+fn.prefix <- "_"
+# icon.grob <- png_to_grob()
+
+# https://en.wikipedia.org/wiki/World_Geodetic_System#WGS84
+crs.base <- "+proj=longlat +datum=WGS84"
+register_google(key = readRDS(file = "api/google-api.RDS"))
+loc.base <- c(lon = 139.73, lat = 35.70)
+```
+
+
+# Dataset
+
+maptyle:  
+- "terrain", "terrain-background", "terrain-labels", "terrain-lines"  
+- "satellite", "roadmap", "hybrid"  
+- "toner", "toner-2010", "toner-2011", "toner-background", "toner-hybrid", "toner-labels", "toner-lines", "toner-lite"  
+- "watercolor"
+
+## ggmap
+```{r}
+tokyo.s <- get_map(
+    location = loc.base, 
+    zoom = 12,  # 3 (continent) to 21 (building)
+    scale = 3, 
+    maptype = "terrain-lines", 
+    # source = "google",  # "google", "osm", "stamen", "cloudmademap"
+    source = "stamen",  # "google", "osm", "stamen", "cloudmademap"
+    color = "color", 
+    crop = TRUE
+)
+ggmap(tokyo.s)
+```
+
+## Central Tokyo
+```{r}
+admin.sf <- sf::read_sf(
+    "input/Administrative_district_Tokyo_2021/N03-21_13_210101.shp"
+) %>% rmapshaper::ms_filter_islands(min_area = 1e8) %>% 
+    st_transform(crs = crs.base)
+
+
+admin.code <- readxl::read_excel(
+    "input/AdminiBoundary_CD.xlsx", skip = 1
+) %>% rename("District" = "行政区域コード")
+
+admin.sf <- admin.sf %>% 
+    rename(District = N03_007) %>% 
+    select(District) %>%
+    group_by(District) %>%
+    summarise(.groups = "drop") %>%
+    left_join(admin.code %>% select(District, City), by = "District") %>% 
+    filter(District <= 13123)
+
+admin.df <- fortify(admin.sf)
+```
+
+## Hospitals
+https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-P04-v3_0.html#prefecture13  
+https://nlftp.mlit.go.jp/ksj/gml/codelist/MedClassCd.html  
+1: Hospitals  
+2: Clinics  
+3: Dentists  
+```{r}
+hos.sf <- sf::read_sf("input/Hospitals_Tokyo_2020/P04-20_13.shp") %>% 
+    rename(Hospital.Type = P04_001) %>% 
+    filter(Hospital.Type != 3)
+```
+
+
+# Viz {.tabset .tabset-fade .tabset-pills}
+
+```{r}
+# Creating north arrow and scale bar, motivation from GISTools package
+# https://andrewpwheeler.com/2019/08/07/making-a-hexbin-map-in-ggplot/
+arrow_data <- function(xb, yb, len) {
+    s <- len
+    arrow.x = c(0, 0.5, 1, 0.5, 0) - 0.5
+    arrow.y = c(0, 1.7  , 0, 0.5, 0)
+    adata <- data.frame(aX = xb + arrow.x * s, aY = yb + arrow.y * s)
+    return(adata)
+}
+
+scale_data <- function(llx, lly, len, height) {
+    box1 <- data.frame(
+        x = c(llx, llx + len, llx + len, llx, llx),
+        y = c(lly, lly, lly + height, lly + height, lly)
+    )
+    box2 <- data.frame(
+        x = c(llx - len, llx, llx, llx - len, llx - len),
+        y = c(lly, lly, lly + height, lly + height, lly)
+    )
+    return(list(box1, box2))
+}
+
+# Example
+
+# x_cent <- 830000
+# len_bar <- 3000
+# offset_scaleNum <- 64300
+# 
+# arrow <- arrow_data(xb = x_cent, yb = 67300, len = 2500)
+# 
+# scale_bxs <- scale_data(
+#     llx = x_cent,
+#     lly = 65000,
+#     len = len_bar,
+#     height = 750
+# )
+# 
+# label_data <- data.frame(
+#     x = c(x_cent, x_cent - len_bar, x_cent, x_cent + len_bar, x_cent), 
+#     y = c(72300, offset_scaleNum, offset_scaleNum, offset_scaleNum, 66500), 
+#     lab = c("N", "0", "3", "6", "Kilometers")
+# )
+# 
+# base_map <- ggplot() +
+#     geom_polygon(
+#         data = PhilBound,
+#         size = 1.5,
+#         color = 'black',
+#         fill = 'darkgrey',
+#         aes(x = long, y = lat)
+#     ) +
+#     geom_polygon(data = arrow, fill = 'black', aes(x = aX, y = aY)) +
+#     geom_polygon(data = scale_bxs[[1]],
+#                  fill = 'grey',
+#                  color = 'black',
+#                  aes(x = x,  y = y)) +
+#     geom_polygon(data = scale_bxs[[2]],
+#                  fill = 'white',
+#                  color = 'black',
+#                  aes(x = x, y = y)) +
+#     geom_text(data = lab_data, size = 4, aes(x = x, y = y, label = lab)) +
+#     coord_fixed() + theme_void()
+```
+
+## Draw
+```{r}
+# col.bg <- "gray95"
+# col.bg <- "#092532"
+col.bg <- "#262A33"
+col.fg <- "#393F4D"
+arrow <- arrow_data(xb = 139.58, yb = 35.55, len = 0.015)
+label.df <- data.frame(x = 139.58, y = 35.582, lab = "N")
+
+p <- ggplot() + 
+    geom_sf(data = admin.sf, 
+            fill = col.fg, alpha = 0.75, 
+            size = 0.3, color = col.bg) + 
+    geom_polygon(data = arrow, fill = col.c.b, aes(x = aX, y = aY)) + 
+    geom_text(aes(x = x, y = y, label = lab), 
+              data = label.df, color = col.c.b, size = 4, 
+              family = "Times New Roman") + 
+    geom_hex(mapping = aes(x, y), 
+             data = hos.sf %>%
+                 select(Hospital.Type) %>%
+                 sfheaders::sf_to_df(fill = TRUE) %>% 
+                 filter(x > 139.55 & y > 35.50), 
+             bins = 60, 
+             alpha = 0.5, 
+             color = col.bg, size = 0.1) + 
+    scale_fill_carto_c(direction = -1, palette = "Teal") + 
+    labs(
+        title = "Hospital Distribution in Central Tokyo", 
+        subtitle = " Hexagonal Map", 
+        x = NULL, y = NULL, 
+        caption = "#30DaysMapChallenge; @Maxwell_110"
+    ) + 
+    theme(
+        title = element_text(
+            family = "Times New Roman", face = "bold", 
+            color = col.c.b, size = 12
+        ), 
+        plot.title = element_text(
+            margin = margin(t = 15, r = -00, b = -15, l = 00, unit = "pt")
+        ), 
+        plot.subtitle = element_text(
+            family = "Times New Roman", face = "bold", 
+            color = col.c.b, size = 10, 
+            margin = margin(t = 20, r = -00, b = -20, l = 00, unit = "pt")
+        ), 
+        plot.caption = element_text(color = col.c.b, size = 6), 
+        text = element_text(family = "Times New Roman", color = col.fg), 
+        # axis.text = element_text(family = font.base, face = "italic", 
+        #                          color = col.c.b, size = 4), 
+        axis.text = element_blank(), 
+        plot.background = element_rect(fill = col.bg, color = col.bg), 
+        # plot includes panel
+        # panel.background = element_rect(fill = col.bg, color = col.bg),
+        panel.grid = element_blank(), 
+        panel.grid.major = element_blank(), 
+        strip.text = element_blank(), 
+        # legend
+        # legend.title = element_blank(),
+        # legend.text = element_text(
+        #     family = "Times New Roman", face = "plain", 
+        #     color = col.c.b, 
+        #     size = 5
+        # ), 
+        legend.position = c(0.875, 0.175), 
+        legend.key.size = unit(0.015, "npc")
+    ) + 
+    guides(fill = guide_colourbar(
+        title = "Number of Hospitals", 
+        title.theme = element_text(
+            family = "Times New Roman", face = "plain", 
+            color = col.c.b, size = 5
+            # angle = 90
+        ), 
+        title.position = "bottom", title.hjust = 0, title.vjust = -1, 
+        barwidth = 0.4, barheight = 4, 
+        label.theme = element_text(
+            family = "Times New Roman", face = "plain", 
+            color = col.c.b, size = 4
+        ), 
+        label.position = "right", 
+        ticks.linewidth = 3, ticks.colour = col.bg
+    ))
+p
+
+ggsave("fig/Hospitals-in-Tokyo.jpg", width = 5, height = 5)
+```
