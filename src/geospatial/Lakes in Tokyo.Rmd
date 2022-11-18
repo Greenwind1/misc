@@ -1,0 +1,215 @@
+---
+title: "Lakes in Tokyo"
+subtitle: ""
+author: "Maxwell"
+date: '`r Sys.Date()`'
+bibliography: references.bib
+link-citations: true
+# zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: minty
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 15
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+***
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(ggalt)  # geom_encircle
+library(patchwork)
+library(pals)
+library(broman)  # plot_crayons()
+library(ggsci)  # Journal palette
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(extrafont)  # fonttable(); "Candara"
+
+# Interactivity
+library(plotly)
+library(crosstalk)
+
+# Descriptive Statistics
+library(mice)
+library(ggmice)  # see src/imputation/ggmice_XX.Rmd
+library(psych)
+library(gtsummary)
+
+# GeoSpatial Analysis
+library(sf)  # simple feature
+library(spdep)  # helpful functions for mapping
+library(rmapshaper)  # helpful functions for mapping
+library(tmap)  # map viewer
+library(leaflet)  # map viewer
+library(mapview)  # map viewer
+library(rnaturalearth)
+
+library(ggmap)
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+source(file = "utility/geospatial.R")
+
+fn.prefix <- "_"
+# icon.grob <- png_to_grob()
+
+# https://en.wikipedia.org/wiki/World_Geodetic_System#WGS84
+crs.base <- "+proj=longlat +datum=WGS84"
+register_google(key = readRDS(file = "api/google-api.RDS"))
+loc.base <- c(lon = 139.73, lat = 35.70)
+```
+
+
+# Dataset
+```{r}
+ne.jpn.sf <-
+    rnaturalearth::ne_states(country = "Japan", returnclass = "sf") %>% 
+    rmapshaper::ms_filter_islands(min_area = 1e10)  # remove small islands
+```
+
+# Preprocessing
+```{r}
+ne.jpn.sf <- ne.jpn.sf %>% 
+    select(iso_3166_2, name, region, latitude, longitude) %>% 
+    tibble::new_tibble(nrow = nrow(.), class = "sf") %>% 
+    left_join(acc.df %>% select(Prefecture, Cases, `2015`) %>% 
+                  mutate(Cases_div_2015 = Cases / `2015`), 
+              by = c("name" = "Prefecture")) %>% 
+    arrange(iso_3166_2)
+glimpse(ne.jpn.sf)
+```
+
+## Lakes
+https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-W09-v2_2.html  
+```{r}
+lake.sf <- sf::read_sf("input/Lake_2005/W09-05-g_Lake.shp") %>% 
+    rename(Depth = W09_003) %>% 
+    mutate(Depth = as.numeric(Depth))
+    
+st_crs(lake.sf) <- crs.base
+```
+
+
+# Viz {.tabset .tabset-fade .tabset-pills}
+## Draw
+```{r}
+# col.bg <- "gray95"
+# col.bg <- "#092532"
+col.bg <- "#262A33"
+col.fg <- "#393F4D"
+arrow <- arrow.df(xb = 145, yb = 39, len = 0.75)
+label <- data.frame(x = 145, y = 40.75, lab = "N")
+
+p <- ggplot() + 
+    geom_sf(data = ne.jpn.sf %>% select(name), 
+            fill = col.fg, alpha = 0.75, 
+            color = col.bg, size = 0.2) + 
+    geom_polygon(aes(x = aX, y = aY), data = arrow, fill = col.bmc.sky) + 
+    geom_text(aes(x = x, y = y, label = lab), 
+              data = label, color = col.bmc.sky, size = 4, 
+              family = "Times New Roman") + 
+    geom_sf(data = lake.sf %>% select(Depth), 
+            aes(fill = Depth), 
+            alpha = 1, size = 0.2) + 
+    lims(x = c(129, 146), y = c(29, 46)) + 
+    annotate(geom = "text", 
+             x = 136.16, y = 35.8, label = "Lake Biwa", 
+             color = col.bmc.sky, family = "Times New Roman", size = 2) + 
+    annotate(geom = "text", 
+             x = 129, y = 42, 
+             label = "Lake Biwa is the largest lake in Japan\n\nArea: ~ 670 km^2\nMaximum depth: ~ 104 m\nThe circumference: ~ 200 km", 
+             color = col.bmc.sky, family = "Times New Roman", 
+             size = 3, hjust = 0) + 
+    scale_fill_carto_c(direction = 1, palette = "Teal") + 
+    labs(
+        title = "Lakes in Japan", 
+        subtitle = NULL, 
+        x = NULL, y = NULL, 
+        caption = "#30DaysMapChallenge; @Maxwell_110"
+    ) + 
+    theme(
+        title = element_text(
+            family = "Times New Roman", face = "bold", 
+            color = col.bmc.sky, size = 14
+        ), 
+        plot.title = element_text(
+            margin = margin(t = 15, r = -00, b = -15, l = 00, unit = "pt")
+        ), 
+        plot.subtitle = element_text(
+            family = "Times New Roman", face = "bold", 
+            color = col.bmc.sky, size = 10, 
+            margin = margin(t = 20, r = -00, b = -20, l = 00, unit = "pt")
+        ), 
+        plot.caption = element_text(color = col.bmc.sky, size = 6), 
+        text = element_text(family = "Times New Roman", color = col.bmc.sky), 
+        # axis.text = element_text(family = font.base, face = "italic", 
+        #                          color = col.c.b, size = 4), 
+        axis.text = element_blank(), 
+        plot.background = element_rect(fill = col.bg, color = col.bg), 
+        # plot includes panel
+        # panel.background = element_rect(fill = col.bg, color = col.bg),
+        panel.grid = element_blank(), 
+        panel.grid.major = element_blank(), 
+        strip.text = element_blank(), 
+        # legend
+        # legend.title = element_blank(),
+        # legend.text = element_text(
+        #     family = "Times New Roman", face = "plain", 
+        #     color = col.c.b, 
+        #     size = 5
+        # ), 
+        legend.position = c(0.875, 0.175), 
+        legend.key.size = unit(0.015, "npc")
+    ) + 
+    guides(fill = guide_colourbar(
+        title = "Maximum Depth \nof Lakes (m)", 
+        title.theme = element_text(
+            family = "Times New Roman", face = "plain", 
+            color = col.c.b, size = 5
+            # angle = 90
+        ), 
+        title.position = "top", title.hjust = 0, title.vjust = 2, 
+        barwidth = 0.4, barheight = 4, 
+        label.theme = element_text(
+            family = "Times New Roman", face = "plain", 
+            color = col.c.b, size = 4
+        ), 
+        label.position = "right", 
+        ticks.linewidth = 2, ticks.colour = col.bg
+    ))
+p
+
+ggsave("fig/Lakes-in-Tokyo.jpg", width = 4, height = 5)
+```
