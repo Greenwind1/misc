@@ -1,5 +1,5 @@
 ---
-title: "Lakes in Tokyo"
+title: "Globe"
 subtitle: ""
 author: "Maxwell"
 date: '`r Sys.Date()`'
@@ -96,7 +96,11 @@ loc.base <- c(lon = 139.73, lat = 35.70)
 ```{r}
 ne.jpn.sf <-
     rnaturalearth::ne_states(country = "Japan", returnclass = "sf") %>% 
-    rmapshaper::ms_filter_islands(min_area = 1e10)  # remove small islands
+    rmapshaper::ms_filter_islands(min_area = 1e10) %>% 
+    st_transform(crs = "+proj=moll")
+
+ne.sf <- rnaturalearth::ne_countries(scale = 10, returnclass = "sf") %>% 
+    st_transform(crs = "+proj=moll")
 ```
 
 # Preprocessing
@@ -108,16 +112,6 @@ ne.jpn.sf <- ne.jpn.sf %>%
 glimpse(ne.jpn.sf)
 ```
 
-## Lakes
-https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-W09-v2_2.html  
-```{r}
-lake.sf <- sf::read_sf("input/Lake_2005/W09-05-g_Lake.shp") %>% 
-    rename(Depth = W09_003) %>% 
-    mutate(Depth = as.numeric(Depth))
-    
-st_crs(lake.sf) <- crs.base
-```
-
 
 # Viz {.tabset .tabset-fade .tabset-pills}
 ## Draw
@@ -126,32 +120,25 @@ st_crs(lake.sf) <- crs.base
 # col.bg <- "#092532"
 col.bg <- "#262A33"
 col.fg <- "#393F4D"
-arrow <- arrow.df(xb = 145, yb = 39, len = 0.75)
-label <- data.frame(x = 145, y = 40.75, lab = "N")
+# arrow <- arrow.df(xb = 145, yb = 39, len = 0.75)
+# label <- data.frame(x = 145, y = 40.75, lab = "N")
 
 p <- ggplot() + 
-    geom_sf(data = ne.jpn.sf %>% select(name), 
-            fill = col.fg, alpha = 0.75, 
+    geom_sf(data = ne.sf %>% select(name), 
+            fill = col.fg, alpha = 1, 
             color = col.bg, size = 0.2) + 
-    geom_polygon(aes(x = aX, y = aY), data = arrow, fill = col.bmc.sky) + 
-    geom_text(aes(x = x, y = y, label = lab), 
-              data = label, color = col.bmc.sky, size = 4, 
-              family = "Times New Roman") + 
-    geom_sf(data = lake.sf %>% select(Depth), 
-            aes(fill = Depth), 
-            alpha = 1, size = 0.2) + 
-    lims(x = c(129, 146), y = c(29, 46)) + 
-    annotate(geom = "text", 
-             x = 136.16, y = 35.8, label = "Lake Biwa", 
-             color = col.bmc.sky, family = "Times New Roman", size = 2) + 
-    annotate(geom = "text", 
-             x = 129, y = 42, 
-             label = "Lake Biwa is the largest lake in Japan\n\nArea: ~ 670 km^2\nMaximum depth: ~ 104 m\nThe circumference: ~ 200 km", 
-             color = col.bmc.sky, family = "Times New Roman", 
-             size = 3, hjust = 0) + 
-    scale_fill_carto_c(direction = 1, palette = "Teal") + 
+    # geom_polygon(aes(x = aX, y = aY), data = arrow, fill = col.bmc.sky) + 
+    # geom_text(aes(x = x, y = y, label = lab), 
+    #           data = label, color = col.bmc.sky, size = 4, 
+    #           family = "Times New Roman") + 
+    geom_sf(data = ne.jpn.sf %>% select(name) %>% summarise(), 
+            fill = col.bmc.pink, 
+            color = col.bg, 
+            alpha = 1, size = 0.1) + 
+    # lims(x = c(129, 146), y = c(29, 46)) + 
+    # scale_fill_carto_c(direction = 1, palette = "Teal") + 
     labs(
-        title = "Lakes in Japan", 
+        title = NULL, 
         subtitle = NULL, 
         x = NULL, y = NULL, 
         caption = "#30DaysMapChallenge; @Maxwell_110"
@@ -161,24 +148,24 @@ p <- ggplot() +
             family = "Times New Roman", face = "bold", 
             color = col.bmc.sky, size = 14
         ), 
-        plot.title = element_text(
-            margin = margin(t = 15, r = -00, b = -15, l = 00, unit = "pt")
-        ), 
+        # plot.title = element_text(
+        #     margin = margin(t = 15, r = -00, b = -15, l = 00, unit = "pt")
+        # ), 
         plot.subtitle = element_text(
             family = "Times New Roman", face = "bold", 
             color = col.bmc.sky, size = 10, 
             margin = margin(t = 20, r = -00, b = -20, l = 00, unit = "pt")
         ), 
-        plot.caption = element_text(color = col.bmc.sky, size = 6), 
+        plot.caption = element_text(color = col.sage.gray, size = 6), 
         text = element_text(family = "Times New Roman", color = col.bmc.sky), 
         # axis.text = element_text(family = font.base, face = "italic", 
         #                          color = col.c.b, size = 4), 
         axis.text = element_blank(), 
-        plot.background = element_rect(fill = col.bg, color = col.bg), 
+        plot.background = element_rect(fill = col.bg, color = col.bg),
         # plot includes panel
         # panel.background = element_rect(fill = col.bg, color = col.bg),
         panel.grid = element_blank(), 
-        panel.grid.major = element_blank(), 
+        panel.grid.major = element_line(color = col.pr.black, size = 0.05),
         strip.text = element_blank(), 
         # legend
         # legend.title = element_blank(),
@@ -208,5 +195,5 @@ p <- ggplot() +
     ))
 p
 
-ggsave("fig/Lakes-in-Tokyo.jpg", width = 4, height = 5)
+ggsave("fig/Globe.jpg", width = 6, height = 3.5)
 ```
