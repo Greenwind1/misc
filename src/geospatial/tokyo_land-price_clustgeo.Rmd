@@ -29,8 +29,7 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
 # Preparations {.tabset .tabset-fade .tabset-pills}
-
-## Load libraries
+## Packages
 ```{r, echo=FALSE, message=FALSE}
 # Data manipulation
 library(tidyverse)
