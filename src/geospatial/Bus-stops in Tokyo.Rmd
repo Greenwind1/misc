@@ -67,6 +67,7 @@ library(gtsummary)
 library(sf)  # simple feature
 library(spdep)  # helpful functions for mapping
 library(rmapshaper)  # helpful functions for mapping
+library(sfheaders)  # sf_to_df, sf_remove_holes
 library(tmap)  # map viewer
 library(leaflet)  # map viewer
 library(mapview)  # map viewer
@@ -79,9 +80,6 @@ source(file = "utility/environments.R")
 source(file = "utility/helper_functions.R")
 source(file = "utility/geospatial.R")
 
-col.bg <- "#262A33"
-col.fg <- "#393F4D"
-
 fn.prefix <- "_"
 # icon.grob <- png_to_grob()
 ```
@@ -90,7 +88,6 @@ fn.prefix <- "_"
 # Dataset {.tabset .tabset-fade .tabset-pills}
 
 https://nlftp.mlit.go.jp/ksj/index.html#koutsuu  
-
 Bus Class Codes: https://nlftp.mlit.go.jp/ksj/gml/codelist/BusClassCd.html  
 
 ```{r Dataset}
@@ -115,7 +112,7 @@ stop.sf <- sf::read_sf(
 
 root.sf <- sf::read_sf(
     "input/Bus_Root_Tokyo/N07-11_13.shp"
-) %>% st_set_crs(crs.base)
+) %>% st_set_crs(crs.base) %>% st_zm()
 # View(root.sf %>% select(P11_003_1) %>% sfheaders::sf_to_df(fill = TRUE))
 ```
 
@@ -124,75 +121,71 @@ root.sf <- sf::read_sf(
 ```{r}
 admin.sf <- admin.sf %>% 
     rename(District = N03_007) %>% 
-    select(District) %>%
-    group_by(District) %>%
-    summarise(.groups = "drop") %>%
+    select(District) %>% 
+    filter(District <= 13123) %>% 
+    group_by(District) %>% 
+    summarise(.groups = "drop") %>% 
     left_join(admin.code %>% select(District, City), by = "District")
+
+admin.agg.sf <- admin.sf %>% 
+    select(District) %>% 
+    summarise(.groups = "drop") %>% 
+    sf_remove_holes()
+
+# plot(admin.agg.sf)
 ```
 
+## Filter with Polygons for Central Tokyo
 ```{r}
-# Select features of getting in and out of stations.
-stat.sf <- stat.sf %>% select(S05c_027, S05c_042, S05c_057) %>% 
-    mutate(
-        IN = as.integer(S05c_042), 
-        OUT = as.integer(S05c_057), 
-        INOUT = IN + OUT, 
-        INOUT_CAT = cut(INOUT, breaks = quantile(INOUT))
-    ) %>% 
-    filter(!is.na(INOUT_CAT)) %>% 
-    mutate(
-        INOUT_CAT = factor(INOUT_CAT, 
-            levels = c(
-                "(0,4.71e+03]",
-                "(4.71e+03,1.68e+04]",
-                "(1.68e+04,3.71e+04]",
-                "(3.71e+04,9.4e+05]"
-            ),
-            labels = c(
-                "Min - Q1", "Q1 - Q2", 
-                "Q2 - Q3", "Q3 - Max"
-            )
-        ))
-```
+stop.sf <- stop.sf %>% mutate(
+    is.Central = as.numeric(st_within(stop.sf$geometry, admin.agg.sf$geometry))
+) %>% 
+    filter(!is.na(is.Central)) %>% 
+    select(-is.Central)
 
+# root.sf <- root.sf %>% mutate(
+#     is.Central = as.numeric(st_within(root.sf$geometry, admin.agg.sf$geometry))
+# ) %>% 
+#     filter(!is.na(is.Central)) %>% 
+#     select(-is.Central)
+```
 
 
 # Viz
-
 ```{r}
 col.bg <- "#262A33"
 col.fg <- "#393F4D"
 
-p1 <- ggplot(data = stat.sf) + 
+p1 <- ggplot() + 
     geom_sf(data = admin.sf %>% filter(District <= 13123), 
-            size = 0.05, fill = col.fg, color = "gray50") + 
-    lims(x = c(139.55, 139.95), y = c(35.5, 35.85)) + 
-    geom_sf(data = rail.way.sf %>% select(geometry), 
-            color = col.bmc.pink, size = 0.2) + 
-    geom_sf(color = col.mt, size = 3, alpha = 1.0) + 
-    facet_wrap(vars(INOUT_CAT), nrow = 2) + 
-    labs(title = "Railway Networks in Central Tokyo by Number of Users", 
-         subtitle = "Quartiles were calculated based on the users of all stations in Japan.\nData Source: https://nlftp.mlit.go.jp/ksj/index.html", 
+            size = 0.1, fill = col.fg, color = col.bg) + 
+    geom_sf(data = stop.sf %>% select(P11_001), 
+            color = col.pr.pink, size = 0.15, alpha = 0.5) + 
+    geom_sf(data = root.sf %>% select(N07_001), 
+            color = col.bmc.pink, size = 0.4, alpha = 0.3) + 
+    lims(x = c(139.54, 139.94), y = c(35.5, 35.84)) + 
+    # facet_wrap(vars(INOUT_CAT), nrow = 2) + 
+    labs(title = "Bus Stops and Roots in Central Tokyo", 
+         subtitle = NULL, 
          caption = "#30DaysMapChallenge; @Maxwell_110", 
          x = NULL, y = NULL) + 
     theme(
         title = element_text(
             # family = "Times New Roman", 
-            face = "bold.italic",
-            color = col.bmc.pink, size = 15
+            color = col.bmc.pink, size = 13
         ), 
-        # plot.title = element_text(
-        #     margin = margin(t = 10, r = -00, b = -10, l = 00, unit = "pt")
-        # ), 
+        plot.title = element_text(hjust = 0, vjust = -2), 
         plot.subtitle = element_text(
             # family = "Times New Roman", face = "plain", 
-            face = "bold.italic", 
-            color = col.bmc.pink, size = 13, 
+            color = col.bmc.pink, size = 10, 
             # margin = margin(t = 35, r = -00, b = -35, l = 00, unit = "pt")
         ), 
+        plot.caption = element_text(
+            # family = "Times New Roman", 
+            color = col.bmc.pink, size = 7
+        ), 
         text = element_text(face = font.face), 
-        axis.text = element_text(family = font.base, face = font.face, 
-                                 color = "gray50", size = 4), 
+        axis.text = element_blank(), 
         strip.text = element_text(
             face = "bold.italic", color = col.bmc.pink, size = 15
         ), 
@@ -201,10 +194,6 @@ p1 <- ggplot(data = stat.sf) +
         legend.title = element_text(size = 10), 
         legend.text = element_text(color = col.tw), 
         # plot.margin = unit(c(0, 0, 0, 0), "pt"), 
-        plot.caption = element_text(
-            # family = "Times New Roman", 
-            color = col.bmc.pink, size = 8
-        ), 
         plot.background = element_rect(fill = col.bg, color = col.bg), 
         # plot includes panel
         panel.background = element_rect(fill = col.bg, color = col.bg), 
@@ -212,6 +201,6 @@ p1 <- ggplot(data = stat.sf) +
     )
 
 p1
-ggsave("fig/30DaysMapChallenge_2022/Railways.jpg", 
-       width = 4.5 * 1.2 * 2, height = 4.5 * 1.4 * 2)
+
+ggsave("fig/30DaysMapChallenge_2022/Bus.jpg", width = 4, height = 5)
 ```

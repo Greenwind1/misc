@@ -67,6 +67,7 @@ library(gtsummary)
 library(sf)  # simple feature
 library(spdep)  # helpful functions for mapping
 library(rmapshaper)  # helpful functions for mapping
+library(sfheaders)  # sf_to_df, sf_remove_holes
 library(tmap)  # map viewer
 library(ggmap)  # map viewer, googlemap (need to register)
 # register_google(key = "...")
