@@ -47,6 +47,7 @@ library(lubridate)
 # Visualisation
 library(ggplot2)  # RColorBrewer::display.brewer.all()
 library(ggalt)  # geom_encircle
+library(ggimage)  # geom_subview
 library(patchwork)
 library(broman)  # plot_crayons()
 library(ggsci)  # Journal palette
