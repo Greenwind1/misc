@@ -48,30 +48,24 @@ library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(RColorBrewer)  # display.brewer.all()
 library(extrafont)  # "Candara"
 
-# GeoSpatial Analysis
-library(sf)  # simple feature
-library(spdep)  # helpful functions for mapping: skater
-library(ClustGeo)
-library(rmapshaper)  # helpful functions for mapping
-library(ggsn)
-library(tmap)  # map viewer
-library(leaflet)  # map viewer
-library(mapview)  # map viewer
-
 # Descriptive Statistics
 library(naniar)
 library(psych)
 library(gtsummary)
+
+# GeoSpatial Analysis
+source("utility/geospatial.R")
+library(ClustGeo)
+library(rayshader)
 ```
 
 ## Environment
 ```{r Environment}
 source("utility/helper_functions.R")
 source("utility/environments.R")
-source("utility/geospatial.R")
 
-col.rp <- "#7851a9"  # Royal Purple
-col.cb <- "#b0b7c6"  # Cadet Blue
+col.rp <- col.r.p
+col.cb <- col.c.b
 col.bg <- "#262A33"
 col.fg <- "#393F4D"
 
@@ -213,18 +207,35 @@ p1 <- lp.sf.stat %>%
 p2 <- lp.sf.stat %>% 
     ggplot() + 
     geom_sf(mapping = aes(), data = admin.sf, 
-            fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) + 
+            fill = col.fg, color = col.bg, alpha = 0.1, size = 0.1) + 
     geom_sf(mapping = aes(fill = Price.Median)) + 
-    rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
-    geom_sf_text(aes(label = Price.Median), color = "white", 
-                 cex = 2.5, family = "Candara") + 
-    labs(x = NULL, y = NULL, title = "Median Price (1e6 JPY)") + 
-    theme(title = element_text(size = 15), 
-          legend.position = c(0.05, 0.35), 
-          plot.margin = unit(c(0, 0, 30, 0), units = "pt")) + 
+    coord_sf(crs = crs.base) + 
+    rcartocolor::scale_fill_carto_c(name = "", palette = "Purp") + 
+    labs(x = NULL, y = NULL, 
+         title = "Median Land Price in Tokyo (1e6 JPY/m^2)", 
+         caption = "#30DaysMapChallenge; @Maxwell_110") + 
+    theme(
+        title = element_text(size = 15, family = "Times New Roman", 
+                             face = "bold", color = "#ECC5FB"), 
+        plot.title = element_text(hjust = 0.1, vjust = 0.1), 
+        plot.caption = element_text(color = "#ECC5FB", size = 10, 
+                                    hjust = 0.9), 
+        axis.text = element_blank(), 
+        legend.position = c(0.1, 0.35), 
+        legend.text = element_text(
+            family = "Times New Roman", face = "bold", 
+            size = 7, color = "#ECC5FB"
+        ), 
+        plot.margin = unit(c(0, 0, 30, 0), units = "pt"), 
+        panel.grid = element_blank(), 
+        panel.grid.major = element_blank(), 
+        plot.background = element_rect(fill = col.bg, color = col.bg)
+        
+    ) + 
     guides(fill = guide_colourbar(
-        barwidth = 0.5, barheight = 10, label.position = "right", 
-        ticks.linewidth = 3
+        barwidth = 1, barheight = 7.5, 
+        label.position = "right", 
+        ticks.linewidth = 3, ticks.colour = col.bg
     ))
 
 p3 <- lp.sf.stat %>% 
@@ -244,9 +255,31 @@ p3 <- lp.sf.stat %>%
         ticks.linewidth = 3
     ))
 
-p1 / p2 / p3
-# ggsave("fig/Land-price_Tokyo.jpg", dpi = 300, width = 10, height = 15)
+# p1 / p2 / p3
+# ggsave("fig/30DaysMapChallenge 2002/Land-price_Tokyo.jpg", 
+#        dpi = 300, width = 10, height = 15)
+
+p2
 ```
+
+<!-- ## 3D Map: Tokyo -->
+<!-- ```{r, fig.height=15} -->
+<!-- rayshader::plot_gg( -->
+<!--     ggobj = p2,  -->
+<!--     # width = 7, height = 5,  -->
+<!--     # scale = 150,  -->
+<!--     shadow_intensity = .75,  -->
+<!--     sunangle = 360, -->
+<!--     offset_edges = T, -->
+<!--     windowsize = c(1400, 866), -->
+<!--     zoom = .4, -->
+<!--     phi = 30, -->
+<!--     theta = -30 -->
+<!-- ) -->
+<!-- rayshader::render_snapshot( -->
+<!--     filename = "Land-price-3D_Tokyo.png", clear = T -->
+<!-- ) -->
+<!-- ``` -->
 
 ## Choropleth Map: Central Tokyo
 ```{r, fig.height=24, fig.width=8}
@@ -488,136 +521,137 @@ ggsave("fig/Spatial-Clustering-Tokyo_ClustGeo_n3.jpg",
        dpi = 300, width = 12.5, height = 10 * 2)
 ```
 
-### ncluster = 5
-```{r}
-lp.sf.stat <- lp.sf.stat %>% 
-  mutate(partition.5 = factor(cutree(tree = tree, k = 5), 
-                              levels = 1:5, labels = 1:5))
-table(lp.sf.stat$partition.5)
-```
 
-```{r, fig.height=20}
-p1 <- lp.sf.stat %>% 
-    filter(!City %in% c("Oku-Tama", "Hinohara")) %>% 
-    ggplot() + 
-    geom_sf(mapping = aes(), 
-            data = admin.sf %>% filter(!City %in% c("Oku-Tama", "Hinohara")), 
-            fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) + 
-    geom_sf(mapping = aes(fill = Price.Median)) + 
-    rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
-    scalebar(
-        data = admin.sf %>% filter(!City %in% c("Oku-Tama", "Hinohara")), 
-        location = "bottomright",  # waved if anchor set.
-        anchor = setNames(c(139.3, 35.52), c("x", "y")), 
-        dist = 10, dist_unit = "km",
-        # Esri Japan https://bit.ly/3LtcBaE
-        transform = TRUE, model = "WGS84",
-        height = 0.01, st.dist = 0.03, st.size = 4, st.color = col.os, 
-        box.fill = c(col.tw, col.plos.pink), 
-        box.color = "white", border.size = 0.05, 
-        family = font.base
-    ) +   
-    geom_sf_text(aes(label = Price.Median), color = "white",
-                 cex = 5, family = "Candara") +
-    labs(x = NULL, y = NULL, title = "Median Price (1e6 JPY)") + 
-    theme(title = element_text(size = 15),
-          # legend.position = c(0.05, 0.35), 
-          legend.position = "none", 
-          plot.margin = unit(c(0, 0, 20, 0), units = "pt")) + 
-    guides(fill = guide_colourbar(
-        barwidth = 0.5, barheight = 12, label.position = "right", 
-        ticks.linewidth = 3
-    ))
+<!-- ### ncluster = 5 -->
+<!-- ```{r} -->
+<!-- lp.sf.stat <- lp.sf.stat %>%  -->
+<!--   mutate(partition.5 = factor(cutree(tree = tree, k = 5),  -->
+<!--                               levels = 1:5, labels = 1:5)) -->
+<!-- table(lp.sf.stat$partition.5) -->
+<!-- ``` -->
 
-p2 <- lp.sf.stat %>% 
-    filter(!City %in% c("Oku-Tama", "Hinohara")) %>% 
-    ggplot() + 
-    geom_sf(mapping = aes(), 
-            data = admin.sf %>% filter(!City %in% c("Oku-Tama", "Hinohara")), 
-            fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) + 
-    geom_sf(mapping = aes(fill = Price_Change.Mean)) + 
-    rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") + 
-    geom_sf_text(aes(label = Price_Change.Mean), color = "white",
-                 cex = 5, family = "Candara") +
-    labs(x = NULL, y = NULL, title = "Mean Price Change (%)") + 
-    theme(title = element_text(size = 15), 
-          legend.position = c(0.05, 0.35), 
-          plot.margin = unit(c(0, 0, 20, 0), units = "pt")) + 
-    guides(fill = guide_colourbar(
-        barwidth = 0.5, barheight = 12, label.position = "right", 
-        ticks.linewidth = 3
-    ))
+<!-- ```{r, fig.height=20} -->
+<!-- p1 <- lp.sf.stat %>%  -->
+<!--     filter(!City %in% c("Oku-Tama", "Hinohara")) %>%  -->
+<!--     ggplot() +  -->
+<!--     geom_sf(mapping = aes(),  -->
+<!--             data = admin.sf %>% filter(!City %in% c("Oku-Tama", "Hinohara")),  -->
+<!--             fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) +  -->
+<!--     geom_sf(mapping = aes(fill = Price.Median)) +  -->
+<!--     rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") +  -->
+<!--     scalebar( -->
+<!--         data = admin.sf %>% filter(!City %in% c("Oku-Tama", "Hinohara")),  -->
+<!--         location = "bottomright",  # waved if anchor set. -->
+<!--         anchor = setNames(c(139.3, 35.52), c("x", "y")),  -->
+<!--         dist = 10, dist_unit = "km", -->
+<!--         # Esri Japan https://bit.ly/3LtcBaE -->
+<!--         transform = TRUE, model = "WGS84", -->
+<!--         height = 0.01, st.dist = 0.03, st.size = 4, st.color = col.os,  -->
+<!--         box.fill = c(col.tw, col.plos.pink),  -->
+<!--         box.color = "white", border.size = 0.05,  -->
+<!--         family = font.base -->
+<!--     ) +    -->
+<!--     geom_sf_text(aes(label = Price.Median), color = "white", -->
+<!--                  cex = 5, family = "Candara") + -->
+<!--     labs(x = NULL, y = NULL, title = "Median Price (1e6 JPY)") +  -->
+<!--     theme(title = element_text(size = 15), -->
+<!--           # legend.position = c(0.05, 0.35),  -->
+<!--           legend.position = "none",  -->
+<!--           plot.margin = unit(c(0, 0, 20, 0), units = "pt")) +  -->
+<!--     guides(fill = guide_colourbar( -->
+<!--         barwidth = 0.5, barheight = 12, label.position = "right",  -->
+<!--         ticks.linewidth = 3 -->
+<!--     )) -->
 
-p3 <- lp.sf.stat %>% ggplot() + 
-    geom_sf(mapping = aes(fill = partition.5), size = 0.2, alpha = 0.5) + 
-    scale_fill_carto_d(name = "", palette = "Vivid") + 
-    geom_sf_text(aes(label = City), color = col.os, 
-                 cex = 4, family = "Candara") + 
-    labs(x = NULL, y = NULL, title = "ncluster = 5") + 
-    theme(title = element_text(size = 15), 
-          legend.position = "none", 
-          plot.margin = unit(c(0, 0, 0, 0), units = "pt"))
+<!-- p2 <- lp.sf.stat %>%  -->
+<!--     filter(!City %in% c("Oku-Tama", "Hinohara")) %>%  -->
+<!--     ggplot() +  -->
+<!--     geom_sf(mapping = aes(),  -->
+<!--             data = admin.sf %>% filter(!City %in% c("Oku-Tama", "Hinohara")),  -->
+<!--             fill = col.cb, color = col.cb, alpha = 0.1, size = 0.1) +  -->
+<!--     geom_sf(mapping = aes(fill = Price_Change.Mean)) +  -->
+<!--     rcartocolor::scale_fill_carto_c(name = "", palette = "Magenta") +  -->
+<!--     geom_sf_text(aes(label = Price_Change.Mean), color = "white", -->
+<!--                  cex = 5, family = "Candara") + -->
+<!--     labs(x = NULL, y = NULL, title = "Mean Price Change (%)") +  -->
+<!--     theme(title = element_text(size = 15),  -->
+<!--           legend.position = c(0.05, 0.35),  -->
+<!--           plot.margin = unit(c(0, 0, 20, 0), units = "pt")) +  -->
+<!--     guides(fill = guide_colourbar( -->
+<!--         barwidth = 0.5, barheight = 12, label.position = "right",  -->
+<!--         ticks.linewidth = 3 -->
+<!--     )) -->
 
-p1 / p2 / p3 + 
-    plot_annotation(
-    title = "Spatial Clustering on Price Stats", 
-    subtitle = "", 
-    theme = theme(title = element_text(size = 20, family = "Candara"))
-    )
+<!-- p3 <- lp.sf.stat %>% ggplot() +  -->
+<!--     geom_sf(mapping = aes(fill = partition.5), size = 0.2, alpha = 0.5) +  -->
+<!--     scale_fill_carto_d(name = "", palette = "Vivid") +  -->
+<!--     geom_sf_text(aes(label = City), color = col.os,  -->
+<!--                  cex = 4, family = "Candara") +  -->
+<!--     labs(x = NULL, y = NULL, title = "ncluster = 5") +  -->
+<!--     theme(title = element_text(size = 15),  -->
+<!--           legend.position = "none",  -->
+<!--           plot.margin = unit(c(0, 0, 0, 0), units = "pt")) -->
 
-ggsave("fig/Spatial-Clustering-Tokyo_ClustGeo_n5.jpg", 
-       dpi = 300, width = 15, height = 10 * 3)
-```
+<!-- p1 / p2 / p3 +  -->
+<!--     plot_annotation( -->
+<!--     title = "Spatial Clustering on Price Stats",  -->
+<!--     subtitle = "",  -->
+<!--     theme = theme(title = element_text(size = 20, family = "Candara")) -->
+<!--     ) -->
 
-### ncluster = 10
-```{r}
-lp.sf.stat <- lp.sf.stat %>% 
-  mutate(partition.10 = factor(cutree(tree = tree, k = 10), 
-                               levels = 1:10, labels = 1:10))
-table(lp.sf.stat$partition.10)
-```
+<!-- ggsave("fig/Spatial-Clustering-Tokyo_ClustGeo_n5.jpg",  -->
+<!--        dpi = 300, width = 15, height = 10 * 3) -->
+<!-- ``` -->
 
-```{r, fig.height=20}
-p1 <- lp.sf.stat %>% ggplot() + 
-    geom_sf(mapping = aes(fill = partition.3), size = 0.2, alpha = 0.5) + 
-    scale_fill_carto_d(name = "", palette = "Vivid") + 
-    geom_sf_text(aes(label = City), color = col.os, 
-                 cex = 4, family = "Candara") + 
-    labs(x = NULL, y = NULL, title = "ncluster = 3") + 
-    theme(title = element_text(size = 15), 
-          legend.position = "none", 
-          plot.margin = unit(c(0, 0, 30, 0), units = "pt")) + 
-  annotation_custom(grob = t.grob, 
-                    xmin = 139.8, xmax = 139.8, 
-                    ymin = 35.83, ymax = 35.83) + 
-  annotate(geom = "text", x = 139.83, y = 35.83, 
-           label = "@Maxwell_110", size = 3, family = "Candara", color = "gray")
+<!-- ### ncluster = 10 -->
+<!-- ```{r} -->
+<!-- lp.sf.stat <- lp.sf.stat %>%  -->
+<!--   mutate(partition.10 = factor(cutree(tree = tree, k = 10),  -->
+<!--                                levels = 1:10, labels = 1:10)) -->
+<!-- table(lp.sf.stat$partition.10) -->
+<!-- ``` -->
 
-p2 <- lp.sf.stat %>% ggplot() + 
-    geom_sf(mapping = aes(fill = partition.5), size = 0.2, alpha = 0.5) + 
-    scale_fill_carto_d(name = "", palette = "Vivid") + 
-    labs(x = NULL, y = NULL, title = "ncluster = 5") + 
-    theme(title = element_text(size = 15), 
-          legend.position = "none", 
-          plot.margin = unit(c(0, 0, 30, 0), units = "pt"))
+<!-- ```{r, fig.height=20} -->
+<!-- p1 <- lp.sf.stat %>% ggplot() +  -->
+<!--     geom_sf(mapping = aes(fill = partition.3), size = 0.2, alpha = 0.5) +  -->
+<!--     scale_fill_carto_d(name = "", palette = "Vivid") +  -->
+<!--     geom_sf_text(aes(label = City), color = col.os,  -->
+<!--                  cex = 4, family = "Candara") +  -->
+<!--     labs(x = NULL, y = NULL, title = "ncluster = 3") +  -->
+<!--     theme(title = element_text(size = 15),  -->
+<!--           legend.position = "none",  -->
+<!--           plot.margin = unit(c(0, 0, 30, 0), units = "pt")) +  -->
+<!--   annotation_custom(grob = t.grob,  -->
+<!--                     xmin = 139.8, xmax = 139.8,  -->
+<!--                     ymin = 35.83, ymax = 35.83) +  -->
+<!--   annotate(geom = "text", x = 139.83, y = 35.83,  -->
+<!--            label = "@Maxwell_110", size = 3, family = "Candara", color = "gray") -->
 
-p3 <- lp.sf.stat %>% ggplot() + 
-    geom_sf(mapping = aes(fill = partition.10), size = 0.2, alpha = 0.5) + 
-    scale_fill_carto_d(name = "", palette = "Vivid") + 
-    labs(x = NULL, y = NULL, title = "ncluster = 10") + 
-    theme(title = element_text(size = 15), 
-          legend.position = "none", 
-          plot.margin = unit(c(0, 0, 0, 0), units = "pt"))
+<!-- p2 <- lp.sf.stat %>% ggplot() +  -->
+<!--     geom_sf(mapping = aes(fill = partition.5), size = 0.2, alpha = 0.5) +  -->
+<!--     scale_fill_carto_d(name = "", palette = "Vivid") +  -->
+<!--     labs(x = NULL, y = NULL, title = "ncluster = 5") +  -->
+<!--     theme(title = element_text(size = 15),  -->
+<!--           legend.position = "none",  -->
+<!--           plot.margin = unit(c(0, 0, 30, 0), units = "pt")) -->
 
-p1 / p2 / p3 + 
-    plot_annotation(
-    title = "Spatial Clustering on Price Stats", 
-    subtitle = "(ClustGeo)", 
-    theme = theme(title = element_text(size = 20, family = "Candara"))
-    )
+<!-- p3 <- lp.sf.stat %>% ggplot() +  -->
+<!--     geom_sf(mapping = aes(fill = partition.10), size = 0.2, alpha = 0.5) +  -->
+<!--     scale_fill_carto_d(name = "", palette = "Vivid") +  -->
+<!--     labs(x = NULL, y = NULL, title = "ncluster = 10") +  -->
+<!--     theme(title = element_text(size = 15),  -->
+<!--           legend.position = "none",  -->
+<!--           plot.margin = unit(c(0, 0, 0, 0), units = "pt")) -->
 
-ggsave("fig/Spatial-Clustering-Tokyo_ClustGeo_n3-10.jpg", 
-       dpi = 300, width = 15, height = 10 * 3)
-ggsave("fig/Spatial-Clustering-Tokyo_ClustGeo_n3-10_dpi150.jpg", 
-       dpi = 150, width = 15, height = 10 * 3)
-```
+<!-- p1 / p2 / p3 +  -->
+<!--     plot_annotation( -->
+<!--     title = "Spatial Clustering on Price Stats",  -->
+<!--     subtitle = "(ClustGeo)",  -->
+<!--     theme = theme(title = element_text(size = 20, family = "Candara")) -->
+<!--     ) -->
+
+<!-- ggsave("fig/Spatial-Clustering-Tokyo_ClustGeo_n3-10.jpg",  -->
+<!--        dpi = 300, width = 15, height = 10 * 3) -->
+<!-- ggsave("fig/Spatial-Clustering-Tokyo_ClustGeo_n3-10_dpi150.jpg",  -->
+<!--        dpi = 150, width = 15, height = 10 * 3) -->
+<!-- ``` -->

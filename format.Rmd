@@ -65,15 +65,7 @@ library(psych)
 library(gtsummary)
 
 # GeoSpatial Analysis
-library(sf)  # simple feature
-library(spdep)  # helpful functions for mapping
-library(rmapshaper)  # helpful functions for mapping
-library(sfheaders)  # sf_to_df, sf_remove_holes
-library(tmap)  # map viewer
-library(ggmap)  # map viewer, googlemap (need to register)
-# register_google(key = "...")
-library(leaflet)  # map viewer, leaflet::providers
-library(mapview)  # map viewer
+source(file = "utility/geospatial.R")
 
 # Networks
 library(ggraph)
@@ -109,7 +101,6 @@ source(file = "utility/environments.R")
 source(file = "utility/helper_functions.R")
 
 fn.prefix <- "_"
-# icon.grob <- png_to_grob()
 ```
 
 
@@ -120,5 +111,3 @@ data("penguins", package = "modeldata")  # modeldata from tidymodels
 
 
 # References
-
-
