@@ -1,5 +1,5 @@
 ---
-title: "Photo-realistic 3D maps for Tokyo"
+title: "Photo-realistic 3D maps"
 subtitle: ""
 author: ""
 date: '`r Sys.Date()`'
@@ -74,97 +74,135 @@ invisible(lapply(libs, library, character.only = T))
 source(file = "utility/environments.R")
 source(file = "utility/helper_functions.R")
 
-crsLONGLAT <- "+proj=longlat +datum=WGS84 +no_defs"
+col.bg <- "#262A33"
+col.fg <- "#393F4D"
 ```
 
 
-# Fetch tge shapefile of Tokyo
+# Fetch the shapefile of target area
 ```{r}
-austria_transformed <- get.country.sf()
-plot(austria_transformed %>% select(geometry))
+admin.sf <- sf::read_sf(
+    "input/Administrative_district_Tokyo_2021/N03-21_13_210101.shp"
+) %>% 
+    # filter(N03_007 <= 13123) %>% 
+    rmapshaper::ms_filter_islands(min_area = 1e8) %>% 
+    st_transform(crs.base)
 ```
+```{r}
+admin.agg.sf <- admin.sf %>% 
+    select(geometry) %>% 
+    summarise() %>% 
+    sfheaders::sf_remove_holes()
+
+plot(admin.agg.sf)
+```
+
 
 # Get elevation data
 ```{r}
-get_elevation_data <- function(country_elevation, country_elevation_df) {
-
-	country_elevation <- get_elev_raster(
-		locations = austria_transformed, 
-		z = 7, 
-		clip = "locations"
-	)
-
-	elevation_mat <- raster_to_matrix(country_elevation)
-
-	return(elevation_mat)
-}
-
-austria_dem <- get_elevation_data()
-```
-
-```{r}
-h <- 4658
-w <- 4381
+elev.raster <- get_elev_raster(
+    locations = admin.agg.sf,
+    z = 9,
+    clip = "locations"
+)
+japan.dem <- raster_to_matrix(elev.raster)
+w <- dim(japan.dem)[1]
+h <- dim(japan.dem)[2]
 ```
 
 # Retrieve overlay satellite imagery
+## Request to ArcGIS REST Services
 ```{r}
-bb <- st_bbox(austria_transformed)
+bb <- st_bbox(admin.agg.sf)
 type <- "World_Imagery"
 file <- NULL
 height <- h * 6
 width <- w * 6
 crs_bb <- 4326
 
-get_satellite_img <- function(url, params, res) {
-
-    url <- parse_url(
-      "https://utility.arcgisonline.com/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task/execute"
-    )
+url <- parse_url(
+    "https://utility.arcgisonline.com/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task/execute"
+)
   
-    params <- list(baseMap = list(baseMapLayers = list(
-        list(url = unbox(
+params <- list(
+    baseMap = list(baseMapLayers = list(list(
+        url = unbox(
             "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer"
-        ))
-    )), 
-    exportOptions = list(outputSize = c(width, height)), 
+        )
+    ))),
+    exportOptions = list(outputSize = c(width, height)),
     
     mapOptions = list(
         extent = list(
-            spatialReference = list(wkid = unbox(crs_bb)), 
+            spatialReference = list(wkid = unbox(crs_bb)),
             xmax = unbox(bb["xmax"]),
             xmin = unbox(bb["xmin"]),
             ymax = unbox(bb["ymax"]),
             ymin = unbox(bb["ymin"])
         )
-    ))
+    )
+)
   
-  res <- GET(
-      url, 
-      query = list(
-          f = "json", 
-          Format = "PNG32", 
-          Layout_Template = "MAP_ONLY", 
-          Web_Map_as_JSON = toJSON(params)
-      )
-  )
-
-  return(res)
-
-}
-
-res <- get_satellite_img()
+res <- GET(
+    url = url,
+    query = list(
+        f = "json",
+        Format = "PNG32",
+        Layout_Template = "MAP_ONLY",
+        Web_Map_as_JSON = toJSON(params)
+    )
+)
 ```
 
+## Save PNG file
 ```{r}
-write_map_png <- function(res_body, img_res, img_bin, file) {
+res_body <- content(res, type = "application/json")
+img_res <- GET(res_body$results[[1]]$value$url)
+img_bin <- content(img_res, "raw")
+file <- paste0(getwd(), "/fig/30DaysMapChallenge_2022/tokyo_image.png")
+writeBin(img_bin, file)
 
-	res_body <- content(res, type = "application/json")
-	img_res <- GET(res_body$results[[1]]$value$url)
-	img_bin <- content(img_res, "raw")
-	file <- paste0(getwd(), "/japan_image.png")
-	writeBin(img_bin, file)
-}
+tokyo_img <- readPNG(file)
+```
 
-write_map_png()
+# 3D Map
+## plot_3d
+```{r}
+japan.dem %>%
+    sphere_shade(texture = "desert") %>% 
+    add_overlay(tokyo_img, alphalayer = .99) %>% 
+    plot_3d(
+        japan.dem,
+        zscale = 15,
+        fov = 0,
+        theta = 0,
+        zoom = .55,
+        phi = 75,
+        windowsize = c(w, h) * 3,
+        background = "black"
+    )
+```
+
+## render_highquality
+```{r}
+rayshader::render_snapshot(
+    filename = "3D-tokyo", 
+    clear = FALSE, 
+    title_text = "3D Elevation Map of Tokyo in Japan\n @Maxwell_110", 
+    title_offset = c(100, 20), 
+    title_color = col.tw, 
+    title_size = 40, 
+    title_font = "Times New Roman", 
+    title_bar_color = NULL, 
+    title_bar_alpha = 0.5, 
+    title_position = "southeast", 
+    image_overlay = NULL, 
+    vignette = FALSE, 
+    instant_capture = interactive(), 
+    bring_to_front = FALSE, 
+    keep_user_par = FALSE, 
+    webshot = FALSE, 
+    width = NULL, 
+    height = NULL, 
+)
 ```

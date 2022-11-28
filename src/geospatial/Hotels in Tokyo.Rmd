@@ -109,7 +109,7 @@ admin.sf <- admin.sf %>%
 
 ## Remove polygons outside Tokyo districts
 ```{r}
-admin.all.sf <- admin.sf %>% 
+admin.agg.sf <- admin.sf %>% 
     select(City) %>% 
     summarise() %>% 
     sfheaders::sf_remove_holes()
@@ -118,7 +118,7 @@ admin.all.sf <- admin.sf %>%
 stay.sf <- stay.sf %>% 
     mutate(
         is.Tokyo = as.numeric(
-            st_within(stay.sf$geometry, admin.all.sf$geometry)
+            st_within(stay.sf$geometry, admin.agg.sf$geometry)
         )
     ) %>% filter(!is.na(is.Tokyo)) %>% 
     select(-is.Tokyo)
