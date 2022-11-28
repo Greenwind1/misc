@@ -31,3 +31,22 @@ arrow.df <- function(xb, yb, len) {
     adata <- data.frame(aX = xb + arrow.x * s, aY = yb + arrow.y * s)
     return(adata)
 }
+
+get.country.sf <- function(year = "2016",
+                           epsg = "4326",
+                           resolution = "10",
+                           country = "Japan", 
+                           crs = crs.base, ...) {
+    
+    country_sf <- giscoR::gisco_get_countries(
+        year = year,
+        epsg = epsg,
+        resolution = resolution,
+        country = country, 
+        ...
+    )
+    
+    country_transformed <- st_transform(country_sf, crs = crs)
+    
+    return(country_transformed)
+}

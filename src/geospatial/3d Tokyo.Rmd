@@ -1,0 +1,170 @@
+---
+title: "Photo-realistic 3D maps for Tokyo"
+subtitle: ""
+author: ""
+date: '`r Sys.Date()`'
+# bibliography: references.bib
+# link-citations: true
+# zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: minty
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 15
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+***
+
+Based on the following tutiral:  
+https://milospopovic.net/making-3d-topographic-maps-in-r/
+
+***
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)  # RColorBrewer::display.brewer.all()
+library(ggalt)  # geom_encircle
+library(ggimage)  # geom_subview
+library(patchwork)
+library(broman)  # plot_crayons()
+library(ggsci)  # Journal palette
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(extrafont)  # fonttable(); "Candara"
+
+# Interactivity
+library(plotly)
+library(crosstalk)
+
+# GeoSpatial Analysis
+source(file = "utility/geospatial.R")
+libs <- c("elevatr", "rayshader", "giscoR", "jsonlite", "httr", "png")
+invisible(lapply(libs, library, character.only = T))
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+
+crsLONGLAT <- "+proj=longlat +datum=WGS84 +no_defs"
+```
+
+
+# Fetch tge shapefile of Tokyo
+```{r}
+austria_transformed <- get.country.sf()
+plot(austria_transformed %>% select(geometry))
+```
+
+# Get elevation data
+```{r}
+get_elevation_data <- function(country_elevation, country_elevation_df) {
+
+	country_elevation <- get_elev_raster(
+		locations = austria_transformed, 
+		z = 7, 
+		clip = "locations"
+	)
+
+	elevation_mat <- raster_to_matrix(country_elevation)
+
+	return(elevation_mat)
+}
+
+austria_dem <- get_elevation_data()
+```
+
+```{r}
+h <- 4658
+w <- 4381
+```
+
+# Retrieve overlay satellite imagery
+```{r}
+bb <- st_bbox(austria_transformed)
+type <- "World_Imagery"
+file <- NULL
+height <- h * 6
+width <- w * 6
+crs_bb <- 4326
+
+get_satellite_img <- function(url, params, res) {
+
+    url <- parse_url(
+      "https://utility.arcgisonline.com/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task/execute"
+    )
+  
+    params <- list(baseMap = list(baseMapLayers = list(
+        list(url = unbox(
+            "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer"
+        ))
+    )), 
+    exportOptions = list(outputSize = c(width, height)), 
+    
+    mapOptions = list(
+        extent = list(
+            spatialReference = list(wkid = unbox(crs_bb)), 
+            xmax = unbox(bb["xmax"]),
+            xmin = unbox(bb["xmin"]),
+            ymax = unbox(bb["ymax"]),
+            ymin = unbox(bb["ymin"])
+        )
+    ))
+  
+  res <- GET(
+      url, 
+      query = list(
+          f = "json", 
+          Format = "PNG32", 
+          Layout_Template = "MAP_ONLY", 
+          Web_Map_as_JSON = toJSON(params)
+      )
+  )
+
+  return(res)
+
+}
+
+res <- get_satellite_img()
+```
+
+```{r}
+write_map_png <- function(res_body, img_res, img_bin, file) {
+
+	res_body <- content(res, type = "application/json")
+	img_res <- GET(res_body$results[[1]]$value$url)
+	img_bin <- content(img_res, "raw")
+	file <- paste0(getwd(), "/japan_image.png")
+	writeBin(img_bin, file)
+}
+
+write_map_png()
+```
