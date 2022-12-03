@@ -102,7 +102,7 @@ tm <- forest_theme(base_size = 10,
                    # Footnote font size/face/color
                    footnote_cex = 1.0,
                    footnote_fontface = "bold",
-                   footnote_col = col.cb)
+                   footnote_col = col.c.b)
 
 
 pt <- forest(dt_tmp[, c(1:3, 8:9)], 
@@ -205,7 +205,7 @@ tm <- forest_theme(base_size = 10,
                    # Footnote font size/face/color
                    footnote_cex = 1.0,
                    footnote_fontface = "bold",
-                   footnote_col = col.cb)
+                   footnote_col = col.c.b)
 
 p <- forest(dt.all[,c(1, 19, 21, 20, 22)],
             est = list(dt.all$est_gp1,

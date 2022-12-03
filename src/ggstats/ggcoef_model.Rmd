@@ -1,7 +1,7 @@
 ---
-title: ""
+title: "Plot model coefficients with ggcoef_model()"
 subtitle: ""
-author: ""
+author: "Maxwell"
 date: '`r Sys.Date()`'
 bibliography: references.bib
 link-citations: true
@@ -54,46 +54,7 @@ library(ggsci)  # Journal palette
 library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(extrafont)  # fonttable(); "Candara"
 
-# Interactivity
-library(plotly)
-library(crosstalk)
-
-# Descriptive Statistics
-library(mice)
-library(ggmice)  # see src/imputation/ggmice_XX.Rmd
-library(psych)
-library(gtsummary)
-
-# GeoSpatial Analysis
-source(file = "utility/geospatial.R")
-
-# Networks
-library(ggraph)
-library(tidygraph)
-library(BCDAG)  # Bayesian Causal Networks
-
-# ML
-library(tidymodels)
-tidymodels::tidymodels_prefer()
-
-# Multi Level Model
-library(lme4)
-library(lmerTest)
-library(coefplot)
-library(performance)  # Generic R^2, ICC, Over-dispersion, Heteroschedasticity
-# library(multilevelmod)
-library(ggstats)  # ggcoef_model() for forest plot
-
-# Stan
-library(rstan)
-library(bayesplot)
-library(broom)
-library(broom.mixed)
-
-# Parallel
-library(purrr)
-library(foreach)
-library(doParallel)
+library(ggstats)
 ```
 
 ## Environment
@@ -101,14 +62,60 @@ library(doParallel)
 source(file = "utility/environments.R")
 source(file = "utility/helper_functions.R")
 
-fn.prefix <- "_"
+fn.prefix <- "ggcoef-model_"
 ```
 
 
 # Dataset {.tabset .tabset-fade .tabset-pills}
 ```{r Dataset}
 data("penguins", package = "modeldata")  # modeldata from tidymodels
+data(tips, package = "reshape")
 ```
 
+# Quick coefficients plot
+```{r}
+mod_simple <- lm(
+    formula = body_mass_g ~ ., 
+    data = penguins
+)
+```
+
+```{r}
+p <- ggcoef_model(mod_simple) + 
+    labs(title = "Forest Plot using ggstat package", 
+         x = NULL, 
+         subtitle = "Penguins Dataset: lm(body_mass_g ~ .)") + 
+    theme(
+        title = element_text(
+            family = font.base, face = "bold.italic", color = col.os, size = 9
+        ), 
+        plot.subtitle = element_text(
+            face = font.face, color = col.os, size = 7
+        ), 
+        text = element_text(face = font.face, color = col.os, size = 10), 
+        plot.caption = element_text(color = "gray77", size = 5), 
+        axis.title = element_text(
+            family = font.base, face = font.face, color = col.os
+        ), 
+        axis.text = element_text(
+            family = font.base, face = font.face, color = col.os
+        ), 
+        panel.grid.major = element_line(size = 0.25),
+        panel.grid.minor = element_blank(),
+        legend.position = "bottom",
+        legend.text = element_text(size = 6),
+        legend.key.size = unit(0.04, "npc"), 
+        # strip.text = element_text(
+        #     family = font.base, face = font.face, color = col.os
+        # ), 
+        strip.text.y.left = ggplot2::element_text(
+            family = font.base, face = font.face, color = col.os, 
+            angle = 0, hjust = 0, vjust = 1
+        )
+    )
+p
+ggsave(filename = paste0("fig/", fn.prefix, "1.jpg"), 
+       width = 5, height = 5)
+```
 
 # References
