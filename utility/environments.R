@@ -49,6 +49,7 @@ col.pr.blue <- rgb(0, 114, 151, maxColorValue = 255)        # Blue (theme)
 # fonts ----
 # extrafont::fonttable()
 font.base <- "Candara"
+# font.base <- "Georgia"
 # font.base <- "Times New Roman"
 ggplot2::theme_set(theme_minimal(base_family = font.base))
 
