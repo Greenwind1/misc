@@ -45,7 +45,6 @@ col.pr.pink <- rgb(249, 175, 168, maxColorValue = 255)      # Pink (theme)
 col.pr.orange <- rgb(255, 138, 68, maxColorValue = 255)     # Orange (theme)
 col.pr.blue <- rgb(0, 114, 151, maxColorValue = 255)        # Blue (theme)
 
-
 # fonts ----
 # extrafont::fonttable()
 font.base <- "Candara"

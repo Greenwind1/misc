@@ -21,6 +21,9 @@ invisible(lapply(libs, library, character.only = T))
 crs.base <- "+proj=longlat +datum=WGS84"
 register_google(key = readRDS(file = "api/google-api.RDS"))
 
+col.bg <- "#262A33"
+col.fg <- "#393F4D"
+
 
 # Helper Functions ----
 # For drawing scale bar, use ggsn::scalebar().
