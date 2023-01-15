@@ -1,11 +1,11 @@
 ---
-title: ""
-subtitle: ""
-author: ""
+title: "tidyDisasters"
+subtitle: "Vignette"
+author: "Maxwell_110"
 date: '`r Sys.Date()`'
-bibliography: references.bib
-link-citations: true
-zotero: "My Library"
+# bibliography: references.bib
+# link-citations: true
+# zotero: "My Library"
 # abstract: \singlespacing Abstract which has to be long enough to 
 #   take multiple lines otherwise one does not see the effect of single-spacing.
 output: 
@@ -54,46 +54,7 @@ library(ggsci)  # Journal palette
 library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(extrafont)  # fonttable(); "Candara"
 
-# Interactivity
-library(plotly)
-library(crosstalk)
-
-# Descriptive Statistics
-library(mice)
-library(ggmice)  # see src/imputation/ggmice_XX.Rmd
-library(psych)
-library(gtsummary)
-
-# GeoSpatial Analysis
-source(file = "utility/geospatial.R")
-
-# Networks
-library(ggraph)
-library(tidygraph)
-library(BCDAG)  # Bayesian Causal Networks
-
-# ML
-library(tidymodels)
-tidymodels::tidymodels_prefer()
-
-# Multi Level Model
-library(lme4)
-library(lmerTest)
-library(coefplot)
-library(performance)  # Generic R^2, ICC, Over-dispersion, Heteroschedasticity
-# library(multilevelmod)
-library(ggstats)  # ggcoef_model() for forest plot
-
-# Stan
-library(rstan)
-library(bayesplot)
-library(broom)
-library(broom.mixed)
-
-# Parallel
-library(purrr)
-library(foreach)
-library(doParallel)
+library(tidyDisasters)
 ```
 
 ## Environment
@@ -101,14 +62,75 @@ library(doParallel)
 source(file = "utility/environments.R")
 source(file = "utility/helper_functions.R")
 
-fn.prefix <- "_"
+font.base <- "Georgia"
+fn.prefix <- "tidyDisasters_vignette"
 ```
 
 
 # Dataset {.tabset .tabset-fade .tabset-pills}
 ```{r Dataset}
-data("penguins", package = "modeldata")  # modeldata from tidymodels
+data("disastDates_df")
+data("disastTypes_df")
+data("disastLocations_df")
+data("disastCasualties_df")
 ```
 
+```{r}
+glimpse(disastDates_df)
+glimpse(disastTypes_df)
+glimpse(disastLocations_df)
+glimpse(disastCasualties_df)
+```
+
+```{r}
+disastAll.df <- disastTypes_df %>%
+    left_join(disastDates_df, by = "eventKey") %>%
+    left_join(disastCasualties_df, by = "eventKey") %>%
+    left_join(disastLocations_df, by = "eventKey") %>%
+    mutate(Year = year(eventStart))
+```
+
+
+# Summary
+```{r}
+glimpse(disastAll.df)
+
+p <- ggmice::plot_pattern(data = disastAll.df, vrb = "all", square = TRUE, 
+                          rotate = FALSE, cluster = NULL)
+p + theme_minimal(base_family = font.base) + 
+    theme(axis.text.x.top = element_text(size = 5))
+ggsave(filename = paste0("fig/", fn.prefix, "_1.jpg"), 
+       width = 10, height = 3, dpi = 300)
+```
+
+```{r}
+gtsummary::tbl_summary(disastAll.df %>% select(
+    -eventKey, -starts_with("event")
+))
+```
+
+
+# Earthquakes
+```{r}
+quakes.df <- disastAll.df %>% 
+    filter(hazard_cluster == "Seismogenic (earthquakes)") %>%
+    group_by(state, county, Year) %>%
+    summarise(Quakes = n() >= 1L, .groups = "keep") %>%
+    group_by(Year) %>%
+    summarise(Count = sum(Quakes))
+
+ggplot(quakes.df) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(size = 10, angle = 90)) +
+    aes(x = Year, y = Count) +
+    labs(title = "Number of Counties Affected by Fires Since the 90s",
+         caption = "Data from the tidyDisasters R Package",
+         y = "No. Countries affected by fires") +
+    scale_x_continuous(breaks = 1990:2020) +
+    # scale_y_continuous(breaks = seq(0, 1000, by = 100)) +
+    geom_vline(xintercept = 2000) +
+    geom_vline(xintercept = 2001) +
+    geom_point(size = 2, color = "#DA3330")
+```
 
 # References
