@@ -1,0 +1,232 @@
+---
+title: "oddnet"
+subtitle: ""
+author: "Maxwell"
+date: '`r Sys.Date()`'
+# bibliography: references.bib
+# link-citations: true
+# zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: minty
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 15
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+***
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)  # RColorBrewer::display.brewer.all()
+library(ggalt)  # geom_encircle
+library(ggimage)  # geom_subview
+library(patchwork)
+library(broman)  # plot_crayons()
+library(ggsci)  # Journal palette
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(PrettyCols)  # view_all_palettes(colourblind_friendly = TRUE)
+library(extrafont)  # fonttable(); "Candara"
+
+# Networks
+library(ggraph)
+# library(tidygraph)
+library(oddnet)
+library(igraph)
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+
+fn.prefix <- "oddnet_vignettes"
+
+font.base <- "Georgia"
+col.bg <- "#524A4E"  # Background
+col.edge <- "#FDEFF4"  # Pale Pink
+col.node <- "#4ECCA3"  # Teal
+ggplot2::theme_set(theme_minimal(base_family = font.base))
+```
+
+
+# Dataset {.tabset .tabset-fade .tabset-pills}
+Erdos-Renyi's random graph model:  
+https://en.wikipedia.org/wiki/Erd%C5%91s%E2%80%93R%C3%A9nyi_model
+```{r Dataset}
+set.seed(2023)
+
+networks <- list()
+p.or.m.seq <- seq(from = 0.01, to = 0.1, length.out = 100)
+p.or.m.seq[50] <- p.or.m.seq[50] + 0.2  # anomalous network
+
+for(i in 1:100) {
+    gr <- igraph::erdos.renyi.game(100, p.or.m = p.or.m.seq[i])
+    networks[[i]] <- igraph::as_adjacency_matrix(gr)
+}
+```
+
+# Plotting
+## Networks 1
+```{r}
+network.1 <- networks[[1]]
+gr.1 <- igraph::graph_from_adjacency_matrix(network.1)
+
+p.1 <- ggraph(graph = gr.1, 
+              layout = "igraph", algorithm = "nicely") + 
+    geom_edge_link(
+        # arrow = arrow(angle = 15, length = unit(3, "pt")), 
+        start_cap = circle(3, "pt"), 
+        end_cap = circle(3, "pt"), 
+        color = col.edge, 
+        edge_width = 0.25, edge_alpha = 0.75
+    ) + 
+    geom_node_point(color = col.node, size = 2, alpha = 0.9) + 
+    theme_minimal(base_family = font.base) + 
+    labs(title = "Erdos-Renyi Random Graph Network", 
+         subtitle = "t = 1", 
+         x = NULL, y = NULL) + 
+    theme(
+        title = element_text(color = col.tw, size = 10), 
+        plot.subtitle = element_text(hjust = 0.1, size = 15), 
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        plot.background = element_rect(fill = col.bg), 
+    )
+p.1
+```
+
+## Networks 30
+```{r}
+network.30 <- networks[[30]]
+gr.30 <- igraph::graph_from_adjacency_matrix(network.30)
+
+p.30 <- ggraph(graph = gr.30, 
+               layout = "igraph", algorithm = "nicely") + 
+    geom_edge_link(
+        # arrow = arrow(angle = 15, length = unit(3, "pt")), 
+        start_cap = circle(3, "pt"), 
+        end_cap = circle(3, "pt"), 
+        color = col.edge, 
+        edge_width = 0.25, edge_alpha = 0.75
+    ) + 
+    geom_node_point(color = col.node, size = 2, alpha = 0.9) + 
+    theme_minimal(base_family = font.base) + 
+    labs(title = "", 
+         subtitle = "t = 30", 
+         x = NULL, y = NULL) + 
+    theme(
+        title = element_text(color = col.tw, size = 15), 
+        plot.subtitle = element_text(hjust = 0.1, size = 15), 
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        plot.background = element_rect(fill = col.bg), 
+    )
+p.30
+```
+
+
+## Networks 60
+The networks have increased in connectivity because the edge probability increases over time. Let’s look at the anomalous network at t = 50.
+```{r}
+network.60 <- networks[[60]]
+gr.60 <- igraph::graph_from_adjacency_matrix(network.60)
+
+p.60 <- ggraph(graph = gr.60, 
+               layout = "igraph", algorithm = "nicely") + 
+    geom_edge_link(
+        # arrow = arrow(angle = 15, length = unit(3, "pt")), 
+        start_cap = circle(3, "pt"), 
+        end_cap = circle(3, "pt"), 
+        color = col.edge, 
+        edge_width = 0.25, edge_alpha = 0.75
+    ) + 
+    geom_node_point(color = col.node, size = 2, alpha = 0.9) + 
+    theme_minimal(base_family = font.base) + 
+    labs(title = "", 
+         subtitle = "t = 60 (> 50)", 
+         x = NULL, y = NULL) + 
+    theme(
+        title = element_text(color = col.tw, size = 15), 
+        plot.subtitle = element_text(hjust = 0.1, size = 15), 
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        plot.background = element_rect(fill = col.bg), 
+    )
+p.60
+```
+
+
+# Features
+```{r}
+avg_deg <- rep(0, 100)
+max_deg <- rep(0, 100)
+for(i in 1:100){
+    network <- networks[[i]]
+    gr <- igraph::graph_from_adjacency_matrix(network)
+    avg_deg[i] <- mean(degree(gr))
+    max_deg[i] <- max(degree(gr))
+}
+```
+
+```{r}
+p.f <- ggplot(data = tibble(t = seq(100), avg.deg = avg_deg)) + 
+    geom_point(aes(x = t, y = avg_deg), col = col.node) + 
+    geom_line(aes(x = t, y = avg_deg), col = col.node) + 
+    labs(
+        title = "A feature of Erdos-Renyi Random Graph", 
+        y = "Average degree \nof the nodes"
+    ) + 
+    theme(plot.title = element_text(hjust = 0.05, vjust = -10))
+p.f
+```
+
+
+# Find Anomalies
+```{r}
+# anomalous_networks(networks)
+```
+
+
+# Save Figure
+```{r}
+p.f + {p.1 + p.30 + p.60} + plot_layout(ncol = 1, heights = c(1, 2))
+
+ggsave(paste0("fig/", fn.prefix, ".jpg"), 
+       dpi = 200, width = 10, height = 6)
+```
+
+
+# References
+- https://cran.r-project.org/web/packages/oddnet/vignettes/oddnet.html
+
