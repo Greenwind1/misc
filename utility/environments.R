@@ -1,6 +1,9 @@
 invisible(library(ggplot2))
 invisible(library(extrafont))  # "Candara"
 
+# Package management ----
+# renv::snapshot()
+
 # colors ----
 crgb <- col2rgb(cc <- colors())
 colnames(crgb) <- cc
