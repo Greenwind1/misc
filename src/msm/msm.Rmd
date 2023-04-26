@@ -1,0 +1,247 @@
+---
+title: "Multistate Models for Medical Applications"
+subtitle: ""
+author: ""
+date: '`r Sys.Date()`'
+# bibliography: references.bib
+# link-citations: true
+# zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: minty
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 15
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+<https://rviews.rstudio.com/2023/04/19/multistate-models-for-medical-applications/>
+
+------------------------------------------------------------------------
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+
+## Packages
+
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+
+# Visualisation
+library(ggplot2)  # RColorBrewer::display.brewer.all()
+library(ggsci)  # Journal palette
+
+# Descriptive Statistics
+library(mice)
+library(ggmice)  # see src/imputation/ggmice_XX.Rmd
+library(gtsummary)
+
+# ML
+library(tidymodels)
+tidymodels::tidymodels_prefer()
+
+library(msm)
+```
+
+## Environment
+
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+
+fn.prefix <- "_"
+
+set.seed(2023)
+```
+
+# Dataset {.tabset .tabset-fade .tabset-pills}
+
+The data set explored by both Jackson and van den Hout is the Cardiac Allograft Vasculopathy (CAV) data set which contains the individual histories of angiographic examinations of 622 heart transplant recipients collected at the Papworth Hospital in the United Kingdom. This data is included in the msm package and is a good candidate to be the iris dataset for progressive disease models. It is a rich data set with 2846 rows and multiple covariates, including patient age and time time since transplant, both of which can be use for time scales, multiple state transitions among four states and no missing values. Observations of intermediate states are interval censored and have been recorded varying time intervals. Deaths are "exact" or right censored.
+
+The following code creates a new variable that preserves the original state data for each observation and displays the data in tibble format.
+
+```{r Dataset}
+# ?cav
+df <- tibble(cav) %>% mutate(o_state = state)
+df
+```
+
+The state table which presents the number of times each pair of states were observed in successive observation times shows that 46 transitions from state 2 (Mild CAV) to state 1 (No CAV), 4 transitions from state 3 (Severe CAV) to Healthy and 13 transitions from Severe CAV to Mild CAV.
+
+```{r}
+statetable.msm(state = state, subject = PTNUM, data = df)
+```
+
+Following van den Hout and assume these backward transitions are misclassified and alter the state variable so there is no back sliding. The following code does this in a tidy way and also creates a new variable b_age which records the baseline age at which patients entered the study.\
+This transformation will make the state transition table conform to the diagram above, but with state 1 representing No CAV rather than Health.
+
+```{r}
+df <- df %>% group_by(PTNUM) %>% mutate(b_age = min(age))
+
+statetable.msm(state = statemax, subject = PTNUM, data = df)
+```
+
+# Setting Up and Running the Model
+
+The next step is to set up the model using the function msm() whose great flexibility means that some care must be taken to set parameter values.
+
+## Transition matrix
+
+First, we set up the initial guess for the intensity matrix, Q, which determines the transition rates among states for a continuous time Markov chain. For the msm function, positive values indicate possible transitions.
+
+```{r}
+# Intensity matrix Q:
+q <- 0.01
+Q <- rbind(c(0, q, 0, q), c(0, 0, q, q), c(0, 0, 0, q), c(0, 0, 0, 0))
+qnames <- c("q12", "q14", "q23", "q24", "q34")
+```
+
+## Covariates
+
+For this model, transitions from state 1 to state 2 and from state 1 to state 4 depend on time, years, the age of the patient at transplant time b_age, and dage, the age of the donor. The other transitions depend only on dage. So, we see that msm() can deal with time varying covariates as well as permitting individual state transitions to be driven by different covariates.
+
+```{r}
+covariates = list(
+    "1-2" = ~ years + b_age + dage ,
+    "1-4" = ~ years + b_age + dage ,
+    "2-3" = ~ dage,
+    "2-4" = ~ dage,
+    "3-4" = ~ dage
+)
+```
+
+## Other parameters
+
+-   `obstype = 1` indicates that observations have been taken at arbitrary time points. They are snapshots of the process that are common for panel data.
+
+-   `center = FALSE` means that covariates will not be centered at their means during the maximum likelihood estimation process. The default for this parameter is TRUE.
+
+-   `deathexact = TRUE` indicates that the final absorbing state is exactly observed. This is the defining assumption survival data. In msm this is equivalent to setting obstupe = 3 for state 4, our absorbing state.
+
+-   `method = BFGS` signals optim() to use the optimization method published simultaneously in 1970 by Broyden, Fletcher, Goldfarb and Shanno. (look here). This is a quasi-Newton method that uses function values and gradients to build up a picture of the surface to be optimized.
+
+-   `control = list(trace = 0, REPORT = 1)` indicates more parameters that will be passed to optim(). REPORT sets the the frequency of reports for the "BFGS", "L-BFGS-B" and "SANN" methods if control\$trace is positive. Defaults to every 10 iterations for "BFGS" and "L-BFGS-B", or every 100 temperatures for "SANN". (Note: SANN is a variant of the simulated annealing method presented by C. J. P. Belisle (1992) Convergence theorems for a class of simulated annealing algorithms on Rd Journal of Applied Probability.) **trace** is also passed tooptim(). trace must be a non-negative integer. If positive, tracing information on the progress of the optimization is produced. Higher values may produce more tracing information.
+
+```{r}
+obstype <- 1
+center <- FALSE
+deathexact <- TRUE
+method <- "BFGS"
+control <- list(trace = 0, REPORT = 1)
+```
+
+## Run model
+
+```{r}
+model_1 <- msm(
+    statemax ~ years, 
+    subject = PTNUM, 
+    data = df, 
+    center = center,
+    qmatrix = Q, 
+    obstype = obstype, 
+    deathexact = deathexact, 
+    method = method,
+    covariates = covariates, 
+    control = control
+)
+```
+
+```{r}
+names(model_1)
+# summary(model_1)
+conv <- model_1$opt$convergence
+cat("Convergence code =", conv, "\n")
+```
+
+# Check the Result
+##
+A measure of how well the model fits the data proposed by using a visual test proposed by [Gentleman et al. (1994)](https://onlinelibrary.wiley.com/doi/10.1002/sim.4780130803) which `plots the observed numbers of individuals occupying a state at a series of times against forecasts from the fitted model, for each state`. The msm function `plot.prevalence.msm()` produces a perfectly adequate base R plot. However, to emphasize that msm users are not limited to base R plots, I'll do a little extra work to use ggplot(). When a package author is kind enough to provide an extractor function you can do anything you want with the data.  
+The `prevalence.msm()` function extracts both the observed and forecast prevalence matrices.
+```{r}
+prev <- prevalence.msm(model_1)
+```
+```{r}
+# reshape observed prevalence
+do1 <- as_tibble(row.names(prev$Observed)) %>% 
+    rename(time = value) %>% 
+    mutate(time = as.numeric(time))
+do2 <- as_tibble(prev$Observed) %>% mutate(type = "observed")
+do <- cbind(do1, do2) %>% select(-Total)
+do_l <- do %>% gather(state, number, -time, -type)
+# reshape expected prevalence
+de1 <- as_tibble(row.names(prev$Expected)) %>% 
+    rename(time = value) %>% 
+    mutate(time = as.numeric(time))
+de2 <- as_tibble(prev$Expected) %>% mutate(type = "expected")
+de <- cbind(de1, de2) %>% select(-Total) 
+de_l <- de %>% gather(state, number, -time, -type) 
+
+# bind into a single data frame
+prev_l <- rbind(do_l,de_l) %>% 
+    mutate(type = factor(type),
+           state = factor(state), 
+           time = round(time, 3))
+
+# plot for comparison
+pp <- prev_l %>% ggplot() + 
+    geom_line(aes(time, number, color = type)) + 
+    scale_color_manual(values = c(col.bmc.pink, col.bmc.navy)) + 
+    labs(x = "Time", y = "The Number of Individuals", title = "")
+pp + facet_wrap(~ state)
+```
+
+## Survival Curves and Calculations
+```{r}
+# plot.msm(model_1)
+inherits(model_1, "msm")
+from <- transient.msm(model_1)  # state_from
+to <- max(absorbing.msm(model_1))  # state_to
+rg <- range(model.extract(model_1$data$mf, "time"))
+timediff <- (rg[2] - rg[1]) / 50
+times <- seq(rg[1], rg[2], timediff)
+pr.1 <- numeric()
+pr.2 <- numeric()
+pr.3 <- numeric()
+for (t in times) pr.1 <- c(pr.1, 
+                           pmatrix.msm(model_1, t, times[1], covariates = "mean")[from[1], to])
+for (t in times) pr.2 <- c(pr.2, 
+                           pmatrix.msm(model_1, t, times[1], covariates = "mean")[from[2], to])
+for (t in times) pr.3 <- c(pr.3, 
+                           pmatrix.msm(model_1, t, times[1], covariates = "mean")[from[3], to])
+
+time <- times
+Health <- pr.1
+Mild_CAV <- pr.2
+Severe_CAV <- pr.3
+df_w <- tibble(time, Health, Mild_CAV, Severe_CAV)
+df_l <- df_w %>% gather("state", "survival", -time)
+df_l %>% ggplot(aes(time, 1 - survival, group = state)) +
+    geom_line(aes(color = state)) + 
+    scale_color_manual(values = c(col.bmc.sky, col.plos.pink, col.sage.red)) + 
+    labs(x = "Years", y = "Probability", title = "Fitted Survival Probabilities")
+ggsave("fig/msm1.jpg", width = 6, height = 4, dpi = 300)
+```
+
+
+# References
+-   David F. Anderson - Chapter 6: Continuous Time Markov Chains from Lecture Notes on Stochastic Processes with Applications in Biology. <https://u.math.biu.ac.il/~amirgi/CTMCnotes.pdf>
+-   Miranda Holmes-Cerfon - Lecture 4: Continuous-time Markov Chains. <https://cims.nyu.edu/~holmes/teaching/asa19/handout_Lecture4_2019.pdf>
+-   Søren Feodor Nielsen - Continuous-time homogeneous Markov chains. <http://web.math.ku.dk/~susanne/kursusstokproc/ContinuousTime.pdf>
+-   Karl Sigman - Continuous-Time Markov Chains. <http://www.columbia.edu/~ks20/stochastic-I/stochastic-I-CTMC.pdf>

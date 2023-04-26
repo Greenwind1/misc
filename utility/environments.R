@@ -1,5 +1,7 @@
 invisible(library(ggplot2))
-invisible(library(extrafont))  # "Candara"
+invisible(library(extrafont))
+# extrafont::font_import()
+# extrafont::loadfonts()
 
 # Package management ----
 # renv::snapshot()
@@ -50,14 +52,15 @@ col.pr.blue <- rgb(0, 114, 151, maxColorValue = 255)        # Blue (theme)
 
 # fonts ----
 # extrafont::fonttable()
-font.base <- "Candara"
+# font.base <- "Candara"
 # font.base <- "Georgia"
-# font.base <- "Times New Roman"
+font.base <- "Times New Roman"
 ggplot2::theme_set(theme_minimal(base_family = font.base))
 
 
 # theme ----
-font.face <- "italic"
+# font.face <- "italic"
+font.face <- "plain"
 ggplot2::theme_update(
     title = element_text(face = font.face, color = col.os, size = 9), 
     plot.subtitle = element_text(face = font.face, color = col.os, size = 7), 

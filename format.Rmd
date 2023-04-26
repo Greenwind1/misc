@@ -3,9 +3,9 @@ title: ""
 subtitle: ""
 author: ""
 date: '`r Sys.Date()`'
-bibliography: references.bib
-link-citations: true
-zotero: "My Library"
+# bibliography: references.bib
+# link-citations: true
+# zotero: "My Library"
 # abstract: \singlespacing Abstract which has to be long enough to 
 #   take multiple lines otherwise one does not see the effect of single-spacing.
 output: 
