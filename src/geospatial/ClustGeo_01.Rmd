@@ -65,6 +65,10 @@ library(naniar)
 library(psych)
 library(gtsummary)
 
+# Citation
+library(grateful)
+cite_packages(out.dir = ".")
+
 source("utility/helper_functions.R")
 ```
 
