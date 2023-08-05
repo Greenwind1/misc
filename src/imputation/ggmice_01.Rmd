@@ -79,8 +79,8 @@ col.rm <- "#e3256b"  # Razzmatazz
 col.plos.yellow <- "#D6E13D"  # PLOS ONE
 col.plos.pink <- "#CF00A3"  # PLOS ONE
 
-font.base <- "Candara"
-# font.base <- "Times New Roman"
+# font.base <- "Candara"
+font.base <- "Times New Roman"
 theme_set(theme_minimal(base_family = font.base))
 options(dplyr.summarise.inform = TRUE)
 # Twitter Logo and Acc
@@ -113,9 +113,10 @@ glimpse(dat)
 #                            set_size.show = TRUE,
 #                            set_size.numbers_size = 5)
 
-p <- ggmice::plot_pattern(data = dat, vrb = "all", square = TRUE, 
-                          rotate = FALSE, cluster = NULL)
-p + theme_minimal(base_family = font.base)
+p <- ggmice::plot_pattern(data = dat, vrb = "all", square = FALSE, 
+                          rotate = TRUE, cluster = NULL)
+p + theme_minimal(base_family = font.base) + 
+    theme(axis.text.x.top = element_text(size = 7, angle = 0))
 ggsave(filename = "fig/ggmice_01-1.jpg", width = 5, height = 5, dpi = 200)
 ```
 
