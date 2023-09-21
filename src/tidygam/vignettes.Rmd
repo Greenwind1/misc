@@ -1,0 +1,123 @@
+---
+title: "tidygam"
+subtitle: ""
+author: ""
+date: '`r Sys.Date()`'
+# bibliography: references.bib
+# link-citations: true
+# zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: minty
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 15
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+***
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)  # in tidyverse
+library(lubridate)  # in tidyverse
+
+# Visualisation
+library(ggplot2)  # RColorBrewer::display.brewer.all()
+library(ggalt)  # geom_encircle
+library(ggimage)  # geom_subview
+library(patchwork)
+library(broman)  # plot_crayons()
+library(ggsci)  # Journal palette
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(PrettyCols)  # view_all_palettes(colourblind_friendly = TRUE)
+library(extrafont)  # fonttable(); "Candara"
+
+
+library(tidygam)
+library(mgcv)
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+
+fn.prefix <- "tidygam_"
+```
+
+
+# Dataset {.tabset .tabset-fade .tabset-pills}
+- dyad: Unique parent/infant dyad ID (60 uniques).
+- background: Cultural background of dyad.
+- months: Time point in infant months.
+- gesture: Type of gesture.
+- count: Number of gestures.
+```{r Dataset}
+data("gest", package = "tidygam")  # modeldata from tidymodels
+glimpse(gest)
+summary(gest)
+```
+
+# GAM stratified by a "background" variable
+```{r}
+gs_by <- gam(count ~ s(months, by = background, k = 3),
+             data = gest,
+             family = poisson)
+
+summary(gs_by)
+```
+
+```{r fig.height=7.5}
+p <- gs_by %>%
+    predict_gam(length_out = 20,
+                series = "months",
+                tran_fun = exp) %>% 
+    plot(comparison = "background") + 
+    labs(title = "Generalized Additive Model using tidygam::gest dataset", 
+         subtitle = "Visualized with a tidygam package", 
+         caption = "@Maxwell_110", 
+         x = "Time point in infant months", 
+         y = "Number of gestures") + 
+    scale_color_npg() + 
+    scale_fill_npg(alpha = 0.1) + 
+    theme(
+        title = element_text(size = 17), 
+        plot.subtitle = element_text(size = 15), 
+        plot.caption = element_text(size = 9), 
+        axis.title = element_text(size = 15), 
+        axis.text = element_text(size = 12), 
+        legend.position = c(0.15, 0.8), 
+        legend.title = element_blank(), 
+        legend.text = element_text(size = 10), 
+        legend.key.size = unit(0.08, "npc")
+    )
+p
+ggsave(paste0("fig/", fn.prefix, "1.jpg"), dpi = 300, width = 12, height = 7)
+```
+
+
+# References
+- https://cran.r-project.org/web/packages/tidygam/vignettes/get-started.html
