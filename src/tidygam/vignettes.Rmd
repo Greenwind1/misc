@@ -90,6 +90,14 @@ gs_by <- gam(count ~ s(months, by = background, k = 3),
 summary(gs_by)
 ```
 
+```{r}
+get_difference(model = gs_by, 
+               series = "months", 
+               compare = list(background = c("Bengali", "Chinese"))) %>% 
+    plot()
+```
+
+
 ```{r fig.height=7.5}
 p <- gs_by %>%
     predict_gam(length_out = 20,
