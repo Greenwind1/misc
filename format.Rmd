@@ -95,6 +95,8 @@ library(broom.mixed)
 library(purrr)
 library(foreach)
 library(doParallel)
+
+# pacman::p_load()
 ```
 
 ## Environment

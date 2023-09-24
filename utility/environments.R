@@ -1,5 +1,4 @@
-invisible(library(ggplot2))
-invisible(library(extrafont))
+invisible(pacman::p_load(ggplot2, extrafont, ggtext, showtext, stringr))
 # extrafont::font_import()
 # extrafont::loadfonts()
 
@@ -104,3 +103,28 @@ png_to_grob <-function(png.file.name = "fig/twitter.png",
 
 # plot(1:25, rep(1, 25), pch = c(1:25), cex = 2,)
 # text(1:25, rep(1, 25), pos = 1, labels = c(1:25))
+
+
+X  <- str_glue("<span style='font-family:fa6-brands'>&#xe61b;</span>")  # Twitter
+gh <- str_glue("<span style='font-family:fa6-brands'>&#xf09b;</span>")  # GitHub
+
+
+caption_text  <- str_glue(
+    "{X} @Maxwell_110 &bull; Code: {gh} Greenwind1 &bull; Tools: #ggplot"
+)
+
+sysfonts::font_add("fa6-brands", "fonts/Font Awesome 6 Brands-Regular-400.otf") 
+showtext_auto(enable = TRUE)  # necessary to show awesome icons
+
+ggplot() + labs(caption = caption_text) + 
+    theme(
+        plot.caption = element_markdown(
+            lineheight = 0.6, 
+            size = 12, 
+            hjust = 0.5, 
+            halign = 0.5, 
+            margin = margin(t = 10, b = 10)
+        )
+    )
+    
+# sessioninfo::session_info(include_base = TRUE)
