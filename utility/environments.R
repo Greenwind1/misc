@@ -13,29 +13,29 @@ colnames(crgb) <- cc
 # RColorBrewer::display.brewer.all()
 # ggsci::scale_color_npg()
 
-col.tw <- rgb(219, 215, 210, maxColorValue = 255)   # TimberWolf
-col.os <- rgb(65, 74, 76, maxColorValue = 255)      # Outer Space
-col.r.p <- rgb(120, 81, 169, maxColorValue = 255)   # Royal Purple
-col.m.b <- rgb(26, 72, 118, maxColorValue = 255)    # Midnight Blue
-col.p.b <- rgb(28, 169, 201, maxColorValue = 255)   # Pacific Blue
-col.c.b <- rgb(176, 183, 198, maxColorValue = 255)  # Cadet Blue
-col.el <- rgb(206, 255, 29, maxColorValue = 255)    # Electric Lime
-col.c.g <- rgb(0, 204, 153, maxColorValue = 255)    # Caribbean Green
-col.mt <- rgb(255, 130, 67, maxColorValue = 255)    # Mango Tango
-col.rm <- rgb(227, 37, 107, maxColorValue = 255)    # RazzMatazz
-col.sl <- rgb(252, 40, 71, maxColorValue = 255)     # ScarLet
+col.tw <- "#DBD7D2"     # TimberWolf
+col.c.b <- "#B0B7C6"    # Cadet Blue
+col.os <- "#414A4C"     # Outer Space
+col.r.p <- "#7851A9"    # Royal Purple
+col.m.b <- "#1A4876"    # Midnight Blue
+col.p.b <- "#1CA9C9"    # Pacific Blue
+col.c.g <- "#00CC99"    # Caribbean Green
+col.el <- "#CEFF1D"     # Electric Lime
+col.mt <- "#FF8243"     # Mango Tango
+col.rm <- "#E3256B"     # RazzMatazz
+col.sl <- "#FC2847"     # ScarLet
 
-col.plos.yellow <- rgb(214, 225, 61, maxColorValue = 255)   # PLOS Yellow
-col.plos.pink <- rgb(207, 0, 163, maxColorValue = 255)      # PLOS Pink
+col.plos.yellow <- "#D6E13D"    # PLOS Yellow
+col.plos.pink <- "#CF00A3"      # PLOS Pink
 
-col.bmc.gray.p <- rgb(255, 253, 246, maxColorValue = 255)   # BMC Pale Gray
-col.bmc.purple <- rgb(191, 18, 248, maxColorValue = 255)    # BMC Purple
-col.bmc.navy <- rgb(26, 46, 79, maxColorValue = 255)        # BMC Navy Blue
-col.bmc.blue <- rgb(1, 74, 129, maxColorValue = 255)        # BMC Blue
-col.bmc.sky <- rgb(15, 153, 190, maxColorValue = 255)       # BMC Sky Blue
-col.bmc.green.d <- rgb(0, 73, 64, maxColorValue = 255)      # BMC Deep Green
-col.bmc.green.l <- rgb(0, 203, 170, maxColorValue = 255)    # BMC Light Green
-col.bmc.pink <- rgb(239, 37, 95, maxColorValue = 255)       # BMC Pink
+col.bmc.gray.p <- "#FFFDF6"     # BMC Pale Gray
+col.bmc.purple <- "#BF12F8"     # BMC Purple
+col.bmc.navy <- "#1A2E4F"       # BMC Navy Blue
+col.bmc.blue <- "#014A81"       # BMC Blue
+col.bmc.sky <- "#0F99BE"        # BMC Sky Blue
+col.bmc.green.d <- "#004940"    # BMC Deep Green
+col.bmc.green.l <- "#00CBAA"    # BMC Light Green
+col.bmc.pink <- "#EF255F"       # BMC Pink
 
 col.sage.purple <- rgb(122, 107, 130, maxColorValue = 255)  # SAGE Purple
 col.sage.red <- rgb(175, 33, 38, maxColorValue = 255)       # SAGE Red
@@ -55,6 +55,12 @@ col.pr.blue <- rgb(0, 114, 151, maxColorValue = 255)        # Blue (theme)
 # font.base <- "Georgia"
 font.base <- "Times New Roman"
 ggplot2::theme_set(theme_minimal(base_family = font.base))
+
+# fonts for showtext ----
+sysfonts::font_add("fa6-brands", "fonts/Font Awesome 6 Brands-Regular-400.otf")
+sysfonts::font_add_google(name = "lusitana")
+sysfonts::font_add_google(name = "cinzel")
+font.base.showtext <- "cinzel"
 
 
 # theme ----
@@ -79,7 +85,7 @@ ggplot2::theme_update(
 options(dplyr.summarise.inform = TRUE)
 
 
-# ggplot2
+# Twitter image ----
 png_to_grob <-function(png.file.name = "fig/twitter.png",
                        width = unit(1.20 * 3, "cm"),
                        height = unit(0.99 * 3, "cm"),
@@ -105,11 +111,9 @@ png_to_grob <-function(png.file.name = "fig/twitter.png",
 # text(1:25, rep(1, 25), pos = 1, labels = c(1:25))
 
 
+# Twitter and GitHub fonts ----
 x.glue  <- str_glue("<span style='font-family:fa6-brands'>&#xe61b;</span>")  # Twitter
 gh.glue <- str_glue("<span style='font-family:fa6-brands'>&#xf09b;</span>")  # GitHub
-
-sysfonts::font_add("fa6-brands", "fonts/Font Awesome 6 Brands-Regular-400.otf")
-sysfonts::font_add("font.base", family = "Times New Roman")
 
 # caption_text  <- str_glue("{x.glue} @Maxwell_110 &bull; {gh.glue} Greenwind1")
 # showtext_auto(enable = TRUE)  # necessary to show awesome icons
