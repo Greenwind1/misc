@@ -5,4 +5,5 @@
 *.lnk
 api
 input
-fonts
+fonts/*
+!fonts/Osaka*
