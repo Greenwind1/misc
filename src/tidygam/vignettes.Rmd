@@ -99,6 +99,10 @@ get_difference(model = gs_by,
 
 
 ```{r fig.height=7.5}
+caption_text  <- str_glue("{x.glue} @Maxwell_110")
+sysfonts::font_add("fa6-brands", "fonts/Font Awesome 6 Brands-Regular-400.otf") 
+# showtext_auto(enable = TRUE)  # necessary to show awesome icons
+
 p <- gs_by %>%
     predict_gam(length_out = 20,
                 series = "months",
@@ -106,23 +110,25 @@ p <- gs_by %>%
     plot(comparison = "background") + 
     labs(title = "Generalized Additive Model using tidygam::gest dataset", 
          subtitle = "Visualized with a tidygam package", 
-         caption = "@Maxwell_110", 
+         caption = caption_text, 
          x = "Time point in infant months", 
          y = "Number of gestures") + 
     scale_color_npg() + 
     scale_fill_npg(alpha = 0.1) + 
     theme(
-        title = element_text(size = 17), 
-        plot.subtitle = element_text(size = 15), 
-        plot.caption = element_text(size = 9), 
-        axis.title = element_text(size = 15), 
-        axis.text = element_text(size = 12), 
+        title = element_text(family = font.base, size = 17), 
+        plot.subtitle = element_text(family = font.base, size = 15), 
+        plot.caption = element_markdown(), 
+        axis.title = element_text(family = font.base, size = 15), 
+        axis.text = element_text(family = font.base, size = 12), 
         legend.position = c(0.15, 0.8), 
         legend.title = element_blank(), 
         legend.text = element_text(size = 10), 
         legend.key.size = unit(0.08, "npc")
     )
+
 p
+# showtext_auto(enable = FALSE)  # necessary to show awesome icons
 ggsave(paste0("fig/", fn.prefix, "1.jpg"), dpi = 300, width = 12, height = 7)
 ```
 

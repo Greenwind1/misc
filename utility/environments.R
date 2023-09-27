@@ -64,7 +64,7 @@ ggplot2::theme_update(
     title = element_text(face = font.face, color = col.os, size = 9), 
     plot.subtitle = element_text(face = font.face, color = col.os, size = 7), 
     text = element_text(face = font.face, color = col.os, size = 10), 
-    plot.caption = element_text(color = "gray44", size = 15),
+    plot.caption = element_text(color = "gray30", size = 12),
     axis.title = element_text(face = font.face, color = col.os), 
     axis.text = element_text(face = font.face, color = col.os), 
     panel.grid.major = element_line(size = 0.25), 
@@ -108,12 +108,12 @@ png_to_grob <-function(png.file.name = "fig/twitter.png",
 x.glue  <- str_glue("<span style='font-family:fa6-brands'>&#xe61b;</span>")  # Twitter
 gh.glue <- str_glue("<span style='font-family:fa6-brands'>&#xf09b;</span>")  # GitHub
 
-sysfonts::font_add("fa6-brands", "fonts/Font Awesome 6 Brands-Regular-400.otf") 
-showtext_auto(enable = TRUE)  # necessary to show awesome icons
+sysfonts::font_add("fa6-brands", "fonts/Font Awesome 6 Brands-Regular-400.otf")
+sysfonts::font_add("font.base", family = "Times New Roman")
 
-
-caption_text  <- str_glue("{x.glue} @Maxwell_110 &bull; {gh.glue} Greenwind1")
-
+# caption_text  <- str_glue("{x.glue} @Maxwell_110 &bull; {gh.glue} Greenwind1")
+# showtext_auto(enable = TRUE)  # necessary to show awesome icons
+# 
 # ggplot() + labs(caption = caption_text) +
 #     theme(
 #         plot.caption = element_markdown(
