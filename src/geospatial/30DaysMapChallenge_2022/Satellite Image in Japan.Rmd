@@ -1,0 +1,225 @@
+---
+title: "Satellite Imagery in Japan"
+subtitle: ""
+author: "Maxwell"
+date: '`r Sys.Date()`'
+bibliography: references.bib
+link-citations: true
+# zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: minty
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 15
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+***
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)
+library(lubridate)
+
+# Visualisation
+library(ggplot2)
+library(ggalt)  # geom_encircle
+library(patchwork)
+library(pals)
+library(broman)  # plot_crayons()
+library(ggsci)  # Journal palette
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(extrafont)  # fonttable(); "Candara"
+
+# Interactivity
+library(plotly)
+library(crosstalk)
+
+# Descriptive Statistics
+library(mice)
+library(ggmice)  # see src/imputation/ggmice_XX.Rmd
+library(psych)
+library(gtsummary)
+
+# GeoSpatial Analysis
+library(sf)  # simple feature
+library(spdep)  # helpful functions for mapping
+library(rmapshaper)  # helpful functions for mapping
+library(tmap)  # map viewer
+library(leaflet)  # map viewer
+library(mapview)  # map viewer
+library(rnaturalearth)
+
+library(ggmap)
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+
+fn.prefix <- "_"
+# icon.grob <- png_to_grob()
+
+# https://en.wikipedia.org/wiki/World_Geodetic_System#WGS84
+crs.base <- "+proj=longlat +datum=WGS84"
+register_google(key = readRDS(file = "api/google-api.RDS"))
+loc.base <- c(lon = 139.73, lat = 35.70)
+```
+
+
+# Dataset
+
+maptyle:  
+- "terrain", "terrain-background", "terrain-labels", "terrain-lines"  
+- "satellite", "roadmap", "hybrid"  
+- "toner", "toner-2010", "toner-2011", "toner-background", "toner-hybrid", "toner-labels", "toner-lines", "toner-lite"  
+- "watercolor"
+
+## satellite
+```{r}
+tokyo.s <- get_map(
+    location = loc.base, 
+    zoom = 13,  # 3 (continent) to 21 (building)
+    maptype = "satellite", 
+    source = "google",  # "google", "osm", "stamen", "cloudmademap"
+    crop = TRUE
+)
+ggmap(tokyo.s)
+```
+
+
+## Central Tokyo
+```{r}
+admin.sf <- sf::read_sf(
+    "input/Administrative_district_Tokyo_2021/N03-21_13_210101.shp"
+) %>% rmapshaper::ms_filter_islands(min_area = 1e8) %>% 
+    st_transform(crs = crs.base)
+
+
+admin.code <- readxl::read_excel(
+    "input/AdminiBoundary_CD.xlsx", skip = 1
+) %>% rename("District" = "行政区域コード")
+
+admin.sf <- admin.sf %>% 
+    rename(District = N03_007) %>% 
+    select(District) %>%
+    group_by(District) %>%
+    summarise(.groups = "drop") %>%
+    left_join(admin.code %>% select(District, City), by = "District") %>% 
+    filter(District <= 13123) %>% 
+    filter(City %in% c("Bunkyo", "Shinjuku"))
+
+admin.df <- fortify(admin.sf)
+```
+
+## Routing
+```{r}
+LonLat.1 <- geocode("東京都文京区本郷７丁目３－１", source = "google")
+LonLat.2 <- geocode("東京都新宿区新宿３丁目３８−１", source = "google")
+
+route.df <-
+  ggmap::route(
+    from = "東京都文京区本郷７丁目３－１",
+    to = "東京都新宿区新宿３丁目３８−１",
+    mode = "walking",
+    structure = "legs", 
+    alternatives = TRUE, 
+    units = "metric"
+  )
+```
+
+
+# Viz {.tabset .tabset-fade .tabset-pills}
+```{r}
+col.bg <- "#092532"
+# col.bg <- "#262A33"
+col.fg <- "#393F4D"
+
+p <- ggmap(tokyo.s) + 
+    labs(
+        title = "Routes from the University of Tokyo to Shinjuku Station", 
+        subtitle = "Using Google Maps Static API", 
+        x = NULL, y = NULL, 
+        caption = "#30DaysMapChallenge; @Maxwell_110"
+    ) + 
+    geom_path(data = route.df, 
+              mapping = aes(x = start_lon, y = start_lat, color = route), 
+              size = 1, alpha = 3 / 4, 
+              lineend = "round") + 
+    geom_sf(inherit.aes = FALSE, 
+            data = admin.df, 
+            color = "#FFCACA", 
+            linetype = "21", 
+            size = 0.4, fill = NA, alpha = 0.2) + 
+    facet_wrap( ~ route, ncol = 3) + 
+    scale_color_manual(
+        values = c(col.bmc.sky, col.bmc.green.l, col.bmc.pink)
+    ) + 
+    annotate(
+        geom = "text",
+        x = LonLat.1$lon - 0.0135, y = LonLat.1$lat + 0.002,
+        label = "The University \n    of Tokyo", 
+        hjust = -0.01, vjust = 0, 
+        family = "Impact", 
+        color = "#D3CEDF", size = 3
+    ) + 
+    annotate(
+        geom = "text",
+        x = LonLat.2$lon - 0.005, y = LonLat.2$lat + 0.002,
+        label = "Shinjuku \nStation", 
+        hjust = 0, vjust = 0, 
+        family = "Impact",
+        color = "#D3CEDF", size = 3
+    ) + 
+    theme(
+        title = element_text(
+            face = "bold.italic", color = col.c.b, size = 12
+        ), 
+        plot.subtitle = element_text(
+            face = "bold.italic", color = col.c.b, size = 10
+        ), 
+        text = element_text(face = "bold", color = col.c.b), 
+        # axis.text = element_text(family = font.base, face = "italic", 
+        #                          color = col.c.b, size = 4), 
+        axis.text = element_blank(), 
+        plot.caption = element_text(
+            color = col.c.b, size = 7
+        ), 
+        plot.background = element_rect(fill = col.bg, color = col.bg), 
+        # plot includes panel
+        # panel.background = element_rect(fill = col.bg, color = col.bg),
+        panel.grid = element_blank(), 
+        strip.text = element_blank(), 
+        # legend
+        legend.title = element_blank(),
+        legend.text = element_text(face = "bold.italic", color = col.c.b), 
+        legend.position = c(0.6, 1.075), 
+        legend.key.size = unit(0.015, "npc")
+    )
+p
+ggsave("fig/Routes.jpg", width = 12, height = 4.5)
+```
