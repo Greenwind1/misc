@@ -63,7 +63,7 @@ library(crosstalk)
 library(mice)
 library(ggmice)  # see src/imputation/ggmice_XX.Rmd
 library(psych)
-library(gtsummary)
+library(gtsummary)  # tbl_summary; tbl_regression; https://cran.r-project.org/web/packages/gtsummary/vignettes/tbl_regression.html
 
 # GeoSpatial Analysis
 source(file = "utility/geospatial.R")
