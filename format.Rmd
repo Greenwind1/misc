@@ -65,6 +65,15 @@ library(ggmice)  # see src/imputation/ggmice_XX.Rmd
 library(psych)
 library(gtsummary)  # tbl_summary; tbl_regression; https://cran.r-project.org/web/packages/gtsummary/vignettes/tbl_regression.html
 
+# ML
+library(tidymodels)
+tidymodels::tidymodels_prefer()
+
+# Time Series
+library(timetk)
+library(tsibble)  # https://otexts.com/fpp3/index.html
+library(fable)  # https://otexts.com/fpp3/index.html
+
 # GeoSpatial Analysis
 source(file = "utility/geospatial.R")
 
@@ -72,10 +81,6 @@ source(file = "utility/geospatial.R")
 library(ggraph)
 library(tidygraph)
 library(BCDAG)  # Bayesian Causal Networks
-
-# ML
-library(tidymodels)
-tidymodels::tidymodels_prefer()
 
 # Multi Level Model
 library(lme4)
