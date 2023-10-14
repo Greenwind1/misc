@@ -73,6 +73,8 @@ library(fable)  # https://otexts.com/fpp3/index.html
 
 ## Environment
 ```{r Environment, echo=FALSE, message=FALSE}
+set.seed(2023)
+
 source(file = "utility/environments.R")
 source(file = "utility/helper_functions.R")
 
@@ -82,7 +84,72 @@ fn.prefix <- "timetk_"
 
 # Dataset {.tabset .tabset-fade .tabset-pills}
 ```{r Dataset}
-data("penguins", package = "modeldata")  # modeldata from tidymodels
+walmart_sales_weekly
+```
+
+
+# Time Series features
+```{r}
+# Custom Function
+mean.na <- function(x, na.rm = TRUE) {
+    mean(x, na.rm = na.rm)
+}
+
+tsfeature_tbl <- walmart_sales_weekly %>%
+    group_by(id) %>%
+    tk_tsfeatures(
+        .date_var = Date, 
+        .value    = Weekly_Sales, 
+        .period   = 52, 
+        .features = c(
+            "frequency", 
+            "stl_features", 
+            "entropy", 
+            "acf_features", 
+            "mean.na"
+        ),
+        .scale    = TRUE, 
+        .trim = FALSE, 
+        .parallel = FALSE, 
+        .na_action = na.pass, 
+        .prefix   = "ts_"
+    ) %>%
+    ungroup()
+
+tsfeature_tbl
+```
+
+
+# Clustering w/ K-Means
+```{r}
+cluster_tbl <- tibble(
+    cluster = tsfeature_tbl %>%
+        select(-id) %>%
+        as.matrix() %>%
+        kmeans(centers = 3, nstart = 100) %>%
+        pluck("cluster")
+) %>% bind_cols(tsfeature_tbl)
+
+cluster_tbl
+```
+
+
+# Viz
+```{r}
+cluster_tbl %>% 
+    select(cluster, id) %>%
+    right_join(walmart_sales_weekly, by = "id", multiple = "all") %>%
+    group_by(id) %>%
+    plot_time_series(
+        Date,
+        Weekly_Sales,
+        .color_var   = cluster,
+        .facet_ncol  = 2,
+        .interactive = FALSE
+    ) + theme_minimal(base_family = font.base) + 
+    theme(
+        title = element_text(size = 20)
+    )
 ```
 
 
