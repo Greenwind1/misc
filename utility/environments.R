@@ -73,7 +73,7 @@ ggplot2::theme_update(
     plot.caption = element_text(color = "gray30", size = 12),
     axis.title = element_text(face = font.face, color = col.os), 
     axis.text = element_text(face = font.face, color = col.os), 
-    panel.grid.major = element_line(size = 0.25), 
+    panel.grid.major = element_line(linewidth = 0.25), 
     panel.grid.minor = element_blank(), 
     legend.position = c(0.9, 0.9), 
     legend.text = element_text(size = 6), 
