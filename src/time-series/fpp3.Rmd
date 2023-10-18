@@ -1,0 +1,408 @@
+---
+title: "ARIMA models using fpp3 package by Hyndmann"
+subtitle: "From Forecasting: Principles and Practice by Hyndmann"
+author: ""
+date: '`r Sys.Date()`'
+# bibliography: references.bib
+# link-citations: true
+# zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: minty
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 15
+        fig_height: 9
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+***
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)  # in tidyverse
+library(lubridate)  # in tidyverse
+
+# Visualisation
+library(ggplot2)  # RColorBrewer::display.brewer.all()
+library(ggalt)  # geom_encircle
+library(ggimage)  # geom_subview
+library(patchwork)
+library(broman)  # plot_crayons()
+library(ggsci)  # Journal palette
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(PrettyCols)  # view_all_palettes(colourblind_friendly = TRUE)
+library(extrafont)  # fonttable(); "Candara"
+
+# Interactivity
+library(plotly)
+library(crosstalk)
+
+# Time Series
+library(fpp3)
+library(timetk)
+library(tsibble)  # https://otexts.com/fpp3/index.html
+library(fable)  # https://otexts.com/fpp3/index.html
+library(tsibbledata)
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+set.seed(2023)
+
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+
+fn.prefix <- "ARIMA_"
+```
+
+
+# Dataset {.tabset .tabset-fade .tabset-pills}
+```{r Dataset}
+gafa_stock
+
+google <- gafa_stock %>% filter(Symbol == "GOOG")
+
+# When multiple expressions are used, they are combined using &
+google_2015 <- gafa_stock %>% 
+    filter(Symbol == "GOOG", year(Date) == 2015)
+```
+
+## Transformation
+```{r}
+lambda <- aus_production |>
+    features(Gas, features = guerrero) |>
+    pull(lambda_guerrero)  # pull() is similar to $
+
+aus_production |>
+    autoplot(box_cox(Gas, lambda)) +
+    labs(y = "",
+         title = latex2exp::TeX(paste0(
+             "Transformed gas production with $\\lambda$ = ",
+             round(lambda, 2)
+         )))
+```
+
+
+# Viz
+## Seasonal plots
+```{r}
+google %>% 
+    gg_season(Close, period = "year", labels = "left", 
+              labels_repel = TRUE, size = 1) + 
+    labs(y = "$ (millions)",
+         title = "Seasonal plot: Antidiabetic drug sales")
+```
+
+
+# Seasonal and Trend decomposition using Loess: Time Series Decomposition
+
+https://otexts.com/fpp3/stl.html#stl  
+
+```{r}
+us_retail_employment <- us_employment |> 
+    filter(year(Month) >= 1990, Title == "Retail Trade") |> 
+    select(-Series_ID)
+
+autoplot(us_retail_employment, Employed) + 
+    labs(y = "Persons (thousands)", title = "Total employment in US retail")
+```
+
+- The two main parameters to be chosen when using STL are the trend-cycle window trend(window = ...) and the seasonal window season(window = ...). These control how rapidly the trend-cycle and seasonal components can change. Smaller values allow for more rapid changes. Both trend and seasonal windows should be odd numbers.  
+- By default, the STL() function provides a convenient automated STL decomposition using a seasonal window of season (window = 13), and the trend window chosen automatically from the seasonal period.  
+- The default setting for monthly data is trend (window = 21). This usually gives a good balance between overfitting the seasonality and allowing it to slowly change over time. But, as with any automated procedure, the default settings will need adjusting for some time series. 
+```{r}
+dcmp <- us_retail_employment |> 
+    model(
+        STL(Employed ~ trend(window = 7) + season(window = "periodic"), 
+            robust = TRUE)
+    )
+
+components(dcmp)
+```
+
+```{r}
+components(dcmp) |> 
+    as_tsibble() |> 
+    autoplot(Employed, colour = "gray50") + 
+    geom_line(aes(y = trend), colour = "#D55E00") + 
+    labs(y = "Persons (1,000)", title = "Total employment in US retail")
+```
+
+- If the seasonal component is removed from the original data, the resulting values are the seasonally adjusted data.
+```{r}
+components(dcmp) |>
+    as_tsibble() |>
+    autoplot(Employed, colour = "gray") +
+    geom_line(aes(y = season_adjust), colour = "#0072B2") +
+    labs(y = "Persons (thousands)",
+         title = "Total employment in US retail")
+```
+
+- The grey bars to the left of each panel show the relative scales of the components. Each grey bar represents the same length but because the plots are on different scales, the bars vary in size.
+```{r}
+components(dcmp) |> autoplot()
+```
+
+
+# ACFs
+```{r}
+google_2015 |> ACF(Close) |>
+    autoplot() + labs(subtitle = "Google closing stock price")
+
+google_2015 |> ACF(difference(Close)) |>
+    autoplot() + labs(subtitle = "Changes in Google closing stock price")
+```
+
+
+# Ljung-Box Statistics
+https://otexts.com/fpp3/diagnostics.html#portmanteau-tests-for-autocorrelation
+```{r}
+google_2015 |>
+    mutate(diff_close = difference(Close)) |>
+    features(diff_close, ljung_box, lag = 10)
+```
+
+
+# Unit Root Tests (KPSS)
+The null hypothesis: The data are stationary.  
+We look for evidence that the null hypothesis is false.  
+```{r}
+google_2015 |>
+    features(Close, unitroot_kpss)
+```
+
+```{r}
+google_2015 |>
+    mutate(diff_close = difference(Close)) |> 
+    features(diff_close, unitroot_kpss)
+```
+
+
+# Determine the min_num of differences (lag) necessary to obtain a stationary time series
+```{r}
+google_2015 %>% features(Close, unitroot_ndiffs)
+```
+
+
+# Time Series CV
+https://otexts.com/fpp3/tscv.html#tscv
+```{r}
+google_2015_tr <- google_2015 |>
+    stretch_tsibble(.init = 3, .step = 1) |>
+    relocate(Date, Symbol, .id)
+google_2015_tr
+```
+
+
+# Non-seasonal ARIMA Modelling
+## ACF and PACF
+```{r}
+global_economy |>
+    filter(Code == "EGY") |> 
+    gg_tsdisplay(Exports, plot_type = 'partial', lag = 36)
+```
+
+## Single (non-differenced) Modelling
+```{r}
+global_economy |>
+    filter(Code == "EGY") |>
+    autoplot(Exports) +
+    labs(y = "% of GDP", title = "Egyptian exports")
+```
+
+```{r}
+fit <- global_economy |> 
+    filter(Code == "EGY") |> 
+    model(ARIMA(Exports, stepwise = TRUE))
+
+report(fit)  # convert coefficients w/ Backshift operators to canonical coefficients
+```
+
+### Residuals
+```{r}
+fit %>% augment() %>% autoplot(.innov)
+```
+```{r}
+fit %>% gg_tsresiduals()
+```
+
+### Forecast
+```{r}
+fit |> forecast(h = 10) |> 
+    autoplot(global_economy) + 
+    labs(y = "% of GDP", title = "Egyptian exports")
+```
+```{r}
+fit |> forecast(h = 10) |> hilo()
+```
+
+## Multiple Modelling: model selection with AICc
+```{r}
+global_economy |> 
+    filter(Code == "CAF") |> 
+    autoplot(Exports) + 
+    labs(title = "Central African Republic exports", y = "% of GDP")
+
+global_economy |> 
+    filter(Code == "CAF") |> 
+    gg_tsdisplay(difference(Exports), plot_type = 'partial')
+```
+
+### Fitting
+```{r}
+caf_fit <- global_economy |> 
+    filter(Code == "CAF") |> 
+    model(arima210 = ARIMA(Exports ~ pdq(2, 1, 0)), 
+          arima013 = ARIMA(Exports ~ pdq(0, 1, 3)),
+          stepwise = ARIMA(Exports),
+          search = ARIMA(Exports, stepwise = FALSE))
+
+# show model specifications
+caf_fit |> pivot_longer(!Country, names_to = "Model name", 
+                        values_to = "Orders")
+
+glance(caf_fit) |> arrange(AICc) |> select(.model:BIC)
+
+caf_fit |> select(search) |> gg_tsresiduals()
+```
+
+### Portmanteau tests (Ljung-Box tests w/ dof for ARIMA) of residuals for ARIMA models
+With ARIMA models, more accurate `portmanteau tests` are obtained if the degrees of freedom of the test statistic are adjusted to take account of the number of parameters in the model. Specifically, we use l-K degrees of freedom in the test, where K is the number of AR and MA parameters in the model. So for the non-seasonal models that we have considered so far, K = p + q. *The value of K is passed to the ljung_box function via the argument dof*, as shown in the example below.
+```{r}
+augment(caf_fit) |> 
+    filter(.model == 'search') |> 
+    features(.innov, ljung_box, lag = 10, dof = 3)
+```
+
+### Forecast
+https://otexts.com/fpp3/a-tidy-forecasting-workflow.html  
+- Exports: the forecast distribution  
+- .mean: the point forecast  
+```{r}
+caf_fit |> 
+    forecast(h = 5) |> 
+    filter(.model == 'search') |> 
+    hilo(95)
+```
+
+```{r}
+caf_fit |> 
+    forecast(h = 20) |> 
+    # filter(.model == 'search') |> 
+    # filter(.model == 'stepwise') |> 
+    autoplot(global_economy, 95, fill = col.bmc.pink) + 
+    theme(legend.position = c(0.1, 0.2))
+```
+
+
+### Plotting the characteristic roots
+`The ARIMA() function will never return a model with inverse roots outside the unit circle.` Models automatically selected by the ARIMA() function will not contain roots close to the unit circle either. Consequently, it is sometimes possible to find a model with better AICc value than ARIMA() will return, but such models will be potentially problematic.
+```{r}
+gg_arma(caf_fit |> select(Country, search))
+```
+
+
+# SARIMA: Seasonal ARIMA Modelling
+https://otexts.com/fpp3/seasonal-arima.html
+
+## Leisure dataset
+```{r}
+leisure <- us_employment |> 
+    filter(Title == "Leisure and Hospitality", 
+           year(Month) > 2000) |> 
+    mutate(Employed = Employed / 1000) |> 
+    select(Month, Employed)
+
+autoplot(leisure, Employed) +
+    labs(title = "US employment: leisure and hospitality",
+         y = "Number of people (millions)")
+```
+
+## Check ACF and PACF for seasonally differenced time series
+```{r}
+leisure |> 
+    gg_tsdisplay(difference(Employed, 12), 
+                 plot_type = 'partial', lag = 36) + 
+    labs(title = "Seasonally differenced", y = "")
+```
+
+## Check ACF and PACF for seasonally-further differenced time series
+```{r}
+leisure |> 
+    gg_tsdisplay(difference(Employed, 12) |> difference(), 
+                 plot_type = 'partial', lag = 36) + 
+    labs(title = "Double differenced", y = "")
+```
+
+## Ljung-Box Statistics and KPSS
+```{r}
+leisure %>% 
+    mutate(diff_Employed = difference(Employed, 12) %>% difference()) %>% 
+    features(diff_Employed, ljung_box, lag = 10)
+
+leisure %>% 
+    mutate(diff_Employed = difference(Employed, 12) %>% difference()) %>%
+    features(diff_Employed, unitroot_kpss)
+```
+
+## Fitting
+```{r}
+fit <- leisure |> 
+    model(
+        arima012011 = ARIMA(Employed ~ pdq(0, 1, 2) + PDQ(0, 1, 1)),
+        arima210011 = ARIMA(Employed ~ pdq(2, 1, 0) + PDQ(0, 1, 1)), 
+        auto = ARIMA(Employed, stepwise = FALSE, approx = FALSE)
+    )
+
+fit |> pivot_longer(everything(), names_to = "Model name", 
+                    values_to = "Orders")
+
+glance(fit) |> arrange(AICc) |> select(.model:BIC)
+```
+
+```{r}
+fit |> select(auto) |> gg_tsresiduals(lag = 36)
+```
+
+## Ljung-Box test on residuals
+```{r}
+augment(fit) |> 
+    filter(.model == "auto") |> 
+    features(.innov, ljung_box, lag = 24, dof = 4)
+```
+
+## Forecast
+```{r}
+forecast(fit, h = 36) |> 
+    filter(.model == 'auto') |>
+    autoplot(leisure, 95) + 
+    labs(title = "US employment: leisure and hospitality", 
+         y = "Number of people (millions)")
+```
+
+
+# References
+- https://otexts.com/fpp3/stationarity.html
