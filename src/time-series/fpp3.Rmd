@@ -91,6 +91,7 @@ google_2015 <- gafa_stock %>%
 ```
 
 ## Transformation
+### Box-Cox Transformation
 ```{r}
 lambda <- aus_production |>
     features(Gas, features = guerrero) |>
@@ -106,7 +107,7 @@ aus_production |>
 ```
 
 
-# Viz
+# EDA and Statistics
 ## Seasonal plots
 ```{r}
 google %>% 
@@ -117,7 +118,7 @@ google %>%
 ```
 
 
-# Seasonal and Trend decomposition using Loess: Time Series Decomposition
+## Seasonal and Trend decomposition using Loess: Time Series Decomposition
 
 https://otexts.com/fpp3/stl.html#stl  
 
@@ -131,8 +132,7 @@ autoplot(us_retail_employment, Employed) +
 ```
 
 - The two main parameters to be chosen when using STL are the trend-cycle window trend(window = ...) and the seasonal window season(window = ...). These control how rapidly the trend-cycle and seasonal components can change. Smaller values allow for more rapid changes. Both trend and seasonal windows should be odd numbers.  
-- By default, the STL() function provides a convenient automated STL decomposition using a seasonal window of season (window = 13), and the trend window chosen automatically from the seasonal period.  
-- The default setting for monthly data is trend (window = 21). This usually gives a good balance between overfitting the seasonality and allowing it to slowly change over time. But, as with any automated procedure, the default settings will need adjusting for some time series. 
+- By default, the STL() function provides a convenient automated STL decomposition using `a seasonal window of season (window = 13)`, and the trend window chosen automatically from the seasonal period. The default setting for monthly data is `trend (window = 21)`. This usually gives a good balance between overfitting the seasonality and allowing it to slowly change over time. But, as with any automated procedure, the default settings will need adjusting for some time series. 
 ```{r}
 dcmp <- us_retail_employment |> 
     model(
@@ -167,7 +167,7 @@ components(dcmp) |> autoplot()
 ```
 
 
-# ACFs
+## ACFs and PACF
 ```{r}
 google_2015 |> ACF(Close) |>
     autoplot() + labs(subtitle = "Google closing stock price")
@@ -176,8 +176,14 @@ google_2015 |> ACF(difference(Close)) |>
     autoplot() + labs(subtitle = "Changes in Google closing stock price")
 ```
 
+```{r}
+global_economy |>
+    filter(Code == "EGY") |> 
+    gg_tsdisplay(Exports, plot_type = 'partial', lag = 36)
+```
 
-# Ljung-Box Statistics
+
+## Ljung-Box Statistics
 https://otexts.com/fpp3/diagnostics.html#portmanteau-tests-for-autocorrelation
 ```{r}
 google_2015 |>
@@ -186,22 +192,20 @@ google_2015 |>
 ```
 
 
-# Unit Root Tests (KPSS)
+## Unit Root Tests (KPSS)
 The null hypothesis: The data are stationary.  
 We look for evidence that the null hypothesis is false.  
 ```{r}
 google_2015 |>
     features(Close, unitroot_kpss)
 ```
-
 ```{r}
 google_2015 |>
     mutate(diff_close = difference(Close)) |> 
     features(diff_close, unitroot_kpss)
 ```
 
-
-# Determine the min_num of differences (lag) necessary to obtain a stationary time series
+- Determine the min_num of differences (lag) necessary to obtain a stationary time series
 ```{r}
 google_2015 %>% features(Close, unitroot_ndiffs)
 ```
@@ -211,20 +215,29 @@ google_2015 %>% features(Close, unitroot_ndiffs)
 https://otexts.com/fpp3/tscv.html#tscv
 ```{r}
 google_2015_tr <- google_2015 |>
-    stretch_tsibble(.init = 3, .step = 1) |>
+    stretch_tsibble(.init = 5, .step = 1) |>
     relocate(Date, Symbol, .id)
+
 google_2015_tr
 ```
+```{r}
+# TSCV accuracy
+google_2015_tr %>% 
+    update_tsibble(regular = TRUE) %>% fill_gaps() %>% 
+    model(RW(Close ~ drift())) |> 
+    forecast(h = 1) |>
+    accuracy(google_2015)
+
+# Training set accuracy
+google_2015  %>% 
+    update_tsibble(regular = TRUE) %>% fill_gaps() %>% 
+    model(RW(Close ~ drift())) %>%
+    accuracy()
+```
+
 
 
 # Non-seasonal ARIMA Modelling
-## ACF and PACF
-```{r}
-global_economy |>
-    filter(Code == "EGY") |> 
-    gg_tsdisplay(Exports, plot_type = 'partial', lag = 36)
-```
-
 ## Single (non-differenced) Modelling
 ```{r}
 global_economy |>
@@ -344,6 +357,12 @@ autoplot(leisure, Employed) +
 ## Check ACF and PACF for seasonally differenced time series
 ```{r}
 leisure |> 
+    gg_tsdisplay(difference(Employed, 1), 
+                 plot_type = 'partial', lag = 36) + 
+    labs(title = "Seasonally differenced", y = "")
+```
+```{r}
+leisure |> 
     gg_tsdisplay(difference(Employed, 12), 
                  plot_type = 'partial', lag = 36) + 
     labs(title = "Seasonally differenced", y = "")
@@ -352,7 +371,7 @@ leisure |>
 ## Check ACF and PACF for seasonally-further differenced time series
 ```{r}
 leisure |> 
-    gg_tsdisplay(difference(Employed, 12) |> difference(), 
+    gg_tsdisplay(difference(Employed, 12) %>% difference(), 
                  plot_type = 'partial', lag = 36) + 
     labs(title = "Double differenced", y = "")
 ```
@@ -398,9 +417,10 @@ augment(fit) |>
 ```{r}
 forecast(fit, h = 36) |> 
     filter(.model == 'auto') |>
-    autoplot(leisure, 95) + 
+    autoplot(leisure, 95, fill = col.bmc.pink) + 
     labs(title = "US employment: leisure and hospitality", 
-         y = "Number of people (millions)")
+         y = "Number of people (millions)") + 
+    theme(legend.position = "none")
 ```
 
 
