@@ -62,7 +62,7 @@ library(rmapshaper)  # helpful functions for mapping
 library(tmap)  # map viewer
 library(leaflet)  # map viewer
 library(mapview)  # map viewer
-library(rnaturalearth)
+library(rnaturalearth)  # ne_states
 
 # Parallel
 library(purrr)
@@ -105,7 +105,8 @@ col.plos.pink <- "#CF00A3"  # PLOS ONE Pink
 col.bg <- "#262A33"
 col.fg <- "#393F4D"
 
-font.base <- "Candara"
+# font.base <- "Candara"
+font.base <- "Times New Roman"
 theme_set(theme_minimal(base_family = font.base))
 options(dplyr.summarise.inform = TRUE)
 # Twitter Logo and Acc

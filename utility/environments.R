@@ -60,7 +60,13 @@ ggplot2::theme_set(theme_minimal(base_family = font.base))
 sysfonts::font_add("fa6-brands", "fonts/Font Awesome 6 Brands-Regular-400.otf")
 sysfonts::font_add_google(name = "lusitana")
 sysfonts::font_add_google(name = "cinzel")
-font.base.showtext <- "cinzel"
+sysfonts::font_add_google(name = "Tinos")  # compatible with Times New Roman
+font.base.showtext <- "Tinos"
+
+# Twitter and GitHub fonts ----
+x.glue  <- str_glue("<span style='font-family:fa6-brands'>&#xe61b;</span>")  # Twitter
+gh.glue <- str_glue("<span style='font-family:fa6-brands'>&#xf09b;</span>")  # GitHub
+
 
 
 # theme ----
@@ -110,10 +116,6 @@ png_to_grob <-function(png.file.name = "fig/twitter.png",
 # plot(1:25, rep(1, 25), pch = c(1:25), cex = 2,)
 # text(1:25, rep(1, 25), pos = 1, labels = c(1:25))
 
-
-# Twitter and GitHub fonts ----
-x.glue  <- str_glue("<span style='font-family:fa6-brands'>&#xe61b;</span>")  # Twitter
-gh.glue <- str_glue("<span style='font-family:fa6-brands'>&#xf09b;</span>")  # GitHub
 
 # caption_text  <- str_glue("{x.glue} @Maxwell_110 &bull; {gh.glue} Greenwind1")
 # showtext_auto(enable = TRUE)  # necessary to show awesome icons
