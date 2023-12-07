@@ -63,7 +63,7 @@ library(psych)
 library(gtsummary)  # tbl_summary; tbl_regression; https://cran.r-project.org/web/packages/gtsummary/vignettes/tbl_regression.html
 
 
-pacman::p_load(meta, metafor)
+pacman::p_load(meta, metafor, esc, dmetar)
 ```
 
 ## Environment
@@ -75,14 +75,91 @@ fn.prefix <- "doing-meta-analysis_"
 ```
 
 
-# Standardized Mean Difference {.tabset .tabset-fade .tabset-pills}
-```{r Dataset}
-library(esc)
+# Effect Sizes {.tabset .tabset-fade .tabset-pills}
+## (Standardized) Mean Difference
+### Between-Group Mean Difference
+$$
+MD_{between} = \bar{x}_1 - \bar{x}_2 \\
+SE_{MD_{between}} = s_{pooled} \; \sqrt{\frac{1}{n_1} + \frac{1}{n_2}} \\
+s_{pooled} = \sqrt{\frac{S^2_{x_1} + S^2_{x_2}}{n_1 + n_2 - 2}} \\
+$$
 
-?esc_mean_sd
+### Between-Group Standardized Mean Difference (Cohen's d)
+$$
+SMD_{between} = \frac{\bar{x}_1 - \bar{x}_2}{s_{pooled}} \\
+SE_{SMD_{between}} = \sqrt{\frac{n_1 + n_2}{n_1 \; n_2} + \frac{SMD^2_{between}}{2 \; (n_1 + n_2)}}
+$$
+
+- Not necessary to do these calculations manually like we did here. For a meta-analysis of mean differences, we only have to prepare the following columns in our data set:
+`n.e.` The number of observations in the intervention/experimental group.  
+`mean.e.` The mean of the intervention/experimental group.  
+`sd.e.` The standard deviation in the intervention/experimental group.  
+`n.c.` The number of observations in the control group.  
+`mean.c.` The mean of the control group.  
+`sd.c.` The standard deviation in the control group.  
+
+```{r}
+# Define the data we need to calculate SMD/d
+# This is just some example data that we made up
+grp1m <- 50   # mean of group 1
+grp2m <- 60   # mean of group 2
+grp1sd <- 10  # sd of group 1
+grp2sd <- 10  # sd of group 2
+grp1n <- 100  # n of group1
+grp2n <- 100  # n of group2
+
+# Calculate effect size
+esc_mean_sd(
+    grp1m = grp1m,
+    grp2m = grp2m,
+    grp1sd = grp1sd,
+    grp2sd = grp2sd,
+    grp1n = grp1n,
+    grp2n = grp2n
+)
 ```
 
 
+# Pooling Effect Sizes {.tabset .tabset-fade .tabset-pills}
+## The Fixed-Effect Model
+
+- The only reason why a study $k$'s observed effect size $\hat{\theta}_{k}$ deviates from $\theta$ is because of its sampling error $\epsilon_k$. $\hat{\theta}_{k} = \theta + \epsilon_k$
+- All studies are estimators of the same true effect size. Yet, because every study can only draw somewhat bigger or smaller samples of the infinitely large study population, results are burdened by sampling error.
+  
+  
+**Inverse-variance weighting**
+$$
+w_k = \frac{1}{s_k^2} \\
+\hat{\theta} = \frac{\Sigma^K_{k=1} \; \hat{\theta}_k \; w_k}{\Sigma^K_{k=1} \; w_k}
+$$
+```{r}
+data(SuicidePrevention)
+
+# Calculate Hedges' g and the Standard Error
+# - We save the study names in "study".
+# - We use the pmap_dfr function to calculate the effect size for each row.
+SP_calc <- pmap_dfr(SuicidePrevention, 
+                    function(mean.e, sd.e, n.e, mean.c,
+                             sd.c, n.c, author, ...){
+                        esc_mean_sd(
+                            grp1m = mean.e, grp1sd = sd.e, grp1n = n.e, 
+                            grp2m = mean.c, grp2sd = sd.c, grp2n = n.c, 
+                            study = author, 
+                            es.type = "g"  # Hedges' g
+                        ) %>% as.data.frame()
+                    }) 
+
+# The data set contains Hedges' g ("es") and standard error ("se")
+glimpse(SP_calc)
+```
+```{r}
+# Calculate the inverse variance-weights for each study
+SP_calc$w <- 1 / SP_calc$se ^ 2
+
+# Then, we use the weights to calculate the pooled effect
+pooled_effect <- sum(SP_calc$w * SP_calc$es) / sum(SP_calc$w)
+pooled_effect
+```
 
 
 # References
