@@ -49,6 +49,9 @@ col.pr.pink <- rgb(249, 175, 168, maxColorValue = 255)      # Pink (theme)
 col.pr.orange <- rgb(255, 138, 68, maxColorValue = 255)     # Orange (theme)
 col.pr.blue <- rgb(0, 114, 151, maxColorValue = 255)        # Blue (theme)
 
+col.bg <- "#262A33"
+
+
 # fonts ----
 # extrafont::fonttable()
 # font.base <- "Candara"
@@ -64,9 +67,10 @@ sysfonts::font_add_google(name = "Tinos")  # compatible with Times New Roman
 font.base.showtext <- "Tinos"
 
 # Twitter and GitHub fonts ----
+# 1. showtext_auto(enable = TRUE) to show awesome icons before plotting
+# 2. use "font.base.showtext" in element_markdown() function
 x.glue  <- str_glue("<span style='font-family:fa6-brands'>&#xe61b;</span>")  # Twitter
 gh.glue <- str_glue("<span style='font-family:fa6-brands'>&#xf09b;</span>")  # GitHub
-
 
 
 # theme ----
@@ -79,9 +83,10 @@ ggplot2::theme_update(
     plot.caption = element_text(color = "gray30", size = 12),
     axis.title = element_text(face = font.face, color = col.os), 
     axis.text = element_text(face = font.face, color = col.os), 
+    # plot.background = element_rect(fill = col.bg), 
     panel.grid.major = element_line(linewidth = 0.25), 
     panel.grid.minor = element_blank(), 
-    legend.position = c(0.9, 0.9), 
+    legend.position = c(0.95, 0.95), 
     legend.text = element_text(size = 6), 
     legend.key.size = unit(0.04, "npc")
 )

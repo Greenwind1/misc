@@ -63,7 +63,7 @@ library(gtsummary)
 # ML
 library(tidymodels)
 library(bonsai)
-tidymodels::tidymodels_prefer()
+tidymodels::tidymodels_prefer()  # override conflicting methods of other pkgs
 ```
 
 ## Environment

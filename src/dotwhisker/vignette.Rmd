@@ -1,6 +1,6 @@
 ---
-title: ""
-subtitle: ""
+title: "dotwhisker"
+subtitle: "Dot-and-Whisker Plots of Regression Results"
 author: ""
 date: '`r Sys.Date()`'
 # bibliography: references.bib
@@ -55,6 +55,7 @@ library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(PrettyCols)  # view_all_palettes(colourblind_friendly = TRUE)
 library(extrafont)  # fonttable(); "Candara"
 library(latex2exp)  # example: latex2exp::TeX("Equation: $\\lambda$")
+library(showtext)
 
 # Interactivity
 library(plotly)
@@ -64,25 +65,11 @@ library(crosstalk)
 library(mice)
 library(ggmice)  # see src/imputation/ggmice_XX.Rmd
 library(psych)
-library(skimr)  # skim: an alternative to glimpse
 library(gtsummary)  # tbl_summary; tbl_regression; https://cran.r-project.org/web/packages/gtsummary/vignettes/tbl_regression.html
 
 # ML
 library(tidymodels)  # check src/tidymodels files
 tidymodels::tidymodels_prefer()  # override conflicting methods of other pkgs
-
-# Time Series
-library(timetk)
-library(tsibble)  # https://otexts.com/fpp3/index.html
-library(fable)  # https://otexts.com/fpp3/index.html
-
-# GeoSpatial Analysis
-source(file = "utility/geospatial.R")
-
-# Networks
-library(ggraph)
-library(tidygraph)
-library(BCDAG)  # Bayesian Causal Networks
 
 # Multi Level Model
 library(lme4)
@@ -93,17 +80,6 @@ library(performance)  # Generic R^2, ICC, Over-dispersion, Heteroschedasticity
 # library(multilevelmod)
 library(ggstats)  # ggcoef_model() for forest plot
 
-# Stan
-library(rstan)
-library(bayesplot)
-library(broom)
-library(broom.mixed)
-
-# Parallel
-library(purrr)
-library(foreach)
-library(doParallel)
-
 # pacman::p_load()
 ```
 
@@ -112,13 +88,14 @@ library(doParallel)
 source(file = "utility/environments.R")
 source(file = "utility/helper_functions.R")
 
-fn.prefix <- "_"
+fn.prefix <- "dotwhisker_vignette"
 ```
 
 
 # Dataset {.tabset .tabset-fade .tabset-pills}
 ```{r Dataset}
 data("penguins", package = "modeldata")  # modeldata from tidymodels
+glimpse(penguins)
 ```
 ```{r}
 p <- ggmice::plot_pattern(data = penguins, 
@@ -128,5 +105,45 @@ p + theme_minimal(base_family = font.base) +
     theme(panel.grid = element_blank())
 ```
 
+
+# Basic Usage
+## Model fitting
+```{r}
+m1 <- lm(body_mass_g ~ species + island + sex, 
+         data = penguins %>% filter(!is.na(body_mass_g)))
+```
+
+## draw a dot-and-whisker plot
+```{r}
+caption_text  <- str_glue("{x.glue}: @Maxwell_110")
+showtext_auto(enable = TRUE)
+
+dwplot(
+    x = m1, 
+    vline = geom_vline(xintercept = 0, colour = "grey77", linetype = 2, linewidth = 0.2), 
+    dot_args = list(size = 2, color = col.pr.orange), 
+    whisker_args = list(color = col.pr.orange)
+) + 
+    labs(
+        title = "Dotwhisker plot", 
+        subtitle = "Using a penguin dataset with a simple linear model", 
+        caption = caption_text
+    ) + 
+    theme(
+        text = element_text(family = font.base.showtext), 
+        plot.title = element_text(family = "cinzel", 
+                                  color = col.mt, size = 60), 
+        plot.subtitle = element_text(family = "cinzel", 
+                                     color = col.mt, size = 40), 
+        plot.caption = element_markdown(family = font.base.showtext, 
+                                        color = col.mt, size = 20), 
+        axis.text = element_text(family = font.base.showtext, 
+                                 color = col.mt, size = 20),
+        plot.background = element_rect(fill = col.bg), 
+        panel.grid.major = element_line(color = col.os, size = 0.1), 
+        panel.grid.minor = element_blank()
+    )
+ggsave(str_glue("fig/{fn.prefix}_1.jpg"), width = 8, height = 4.5, dpi = 300)
+```
 
 # References
