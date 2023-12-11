@@ -212,7 +212,32 @@ summary(flights_rec)
 ```
 
 ## Fit A Model With A Recipe
+- A simple process to use a recipe class object is applying `prep()` and `bake()`. A bake function returns a tibble class object.
+- To extract the model or recipe objects from the workflow, you can use the helper functions `extract_fit_parsnip()` and `extract_recipe()`.
 ```{r}
+lr_mod <- logistic_reg() %>% set_engine("glm")
+```
+```{r}
+flights_wflow <- 
+  workflow() %>% 
+  add_model(lr_mod) %>% 
+  add_recipe(flights_rec)
 
+flights_wflow
+```
+```{r}
+flights_fit <- 
+    flights_wflow %>% 
+    fit(data = train_data)
+```
+```{r}
+flights_fit %>% 
+    extract_fit_parsnip() %>% 
+    tidy()
+```
+
+## Use A Trained Workflow To Predict
+```{r}
+predict(flights_fit, new_data = test_data)
 ```
 
