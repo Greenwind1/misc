@@ -61,6 +61,7 @@ library(mice)
 library(ggmice)  # see src/imputation/ggmice_XX.Rmd
 library(psych)
 library(gtsummary)
+library(summarytools)
 
 # ML
 library(tidymodels)
@@ -169,6 +170,10 @@ flight_data <- flights %>%
 ```{r}
 flight_data %>% skimr::skim(dest, carrier)
 ```
+```{r}
+flight_data %>% dfSummary() %>% stview(file = "output/get-started_eda-1.html")
+```
+
 
 ## Data Splitting
 ```{r}
@@ -186,8 +191,28 @@ test_data  <- testing(data_split)
 flights_rec <- recipe(arr_delay ~ ., data = train_data) %>% 
     update_role(flight, time_hour, new_role = "ID")
 class(flights_rec)
-```
-```{r}
 summary(flights_rec)
+```
+
+## Create Features
+- Unlike the standard model formula methods in R, a recipe does not automatically create these dummy variables for you. You need to tell your recipe to add this step.  
+- Nominal variables are data whose levels are labels or descriptions, and which cannot be ordered. Examples of nominal variables are gender, school, and yes/no questions.  
+- `step_zv()` will remove columns from the data when the training set data have a single value, so it is added to the recipe after `step_dummy()`.
+```{r}
+flights_rec <- 
+    recipe(arr_delay ~ ., data = train_data) %>% 
+    update_role(flight, time_hour, new_role = "ID") %>% 
+    step_date(date, features = c("dow", "month")) %>% 
+    step_holiday(date, 
+                 holidays = timeDate::listHolidays("US"), 
+                 keep_original_cols = FALSE) %>% 
+    step_dummy(all_factor_predictors()) %>% 
+    step_zv(all_predictors())  # remove zero-variance predictor (e.g. LEX in dest var)
+summary(flights_rec)
+```
+
+## Fit A Model With A Recipe
+```{r}
+
 ```
 

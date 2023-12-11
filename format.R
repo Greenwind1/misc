@@ -29,6 +29,7 @@ library(ggmice)  # see src/imputation/ggmice_XX.Rmd
 library(psych)
 library(skimr)  # skim: an alternative to glimpse
 library(gtsummary)  # tbl_summary; tbl_regression; https://cran.r-project.org/web/packages/gtsummary/vignettes/tbl_regression.html
+library(summarytools)  # dfSummary; stview
 
 # ML
 library(tidymodels)  # check src/tidymodels files
