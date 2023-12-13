@@ -237,7 +237,23 @@ flights_fit %>%
 ```
 
 ## Use A Trained Workflow To Predict
+- To get the predicted class probabilities, specify `type = "prob"` when we use predict() or use `augment()` with the model plus test data to save them together
 ```{r}
-predict(flights_fit, new_data = test_data)
+predict(flights_fit, new_data = test_data, type = "prob")
+```
+```{r}
+flights_aug <- 
+    augment(flights_fit, test_data)
+
+flights_aug %>%
+    select(arr_delay, time_hour, flight, .pred_class, .pred_on_time)
+```
+
+```{r}
+p <- flights_aug %>% 
+    roc_curve(truth = arr_delay, .pred_late) %>% 
+    autoplot() + 
+    theme(text = element_text(family = font.base))
+p
 ```
 
