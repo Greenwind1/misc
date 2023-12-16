@@ -257,3 +257,100 @@ p <- flights_aug %>%
 p
 ```
 
+
+# Evaluate your model with resamples {.tabset .tabset-fade .tabset-pills}
+## The Cell Image Data
+```{r}
+data(cells, package = "modeldata")
+glimpse(cells)
+```
+
+## Data Splitting
+```{r}
+set.seed(2023)
+cell_split <- initial_split(cells %>% select(-case), 
+                            strata = class)
+cell_split
+```
+```{r}
+cell_train <- training(cell_split)
+cell_test  <- testing(cell_split)
+
+nrow(cell_train)
+nrow(cell_train) / nrow(cells)
+
+cell_train %>% 
+    count(class) %>% 
+    mutate(prop = n / sum(n))
+
+cell_test %>% 
+    count(class) %>% 
+    mutate(prop = n / sum(n))
+```
+
+## Modeling
+- Each of the arguments in this function other than mode and engine are captured as quosures. To pass values programmatically, use the injection operator.  
+https://parsnip.tidymodels.org/reference/rand_forest.html#details
+```{r}
+n_trees <- 1000
+rf_mod <- rand_forest(trees = !!n_trees) %>% 
+    set_engine("ranger") %>% 
+    set_mode("classification")
+```
+```{r}
+set.seed(2023)
+rf_fit <- rf_mod %>% 
+    fit(class ~ ., data = cell_train)
+rf_fit
+```
+
+## Estimating Performance
+- The yardstick package has functions for computing both of these measures called `roc_auc()` and `accuracy()`.
+```{r}
+rf_testing_pred <- 
+    predict(rf_fit, cell_test) %>% 
+    bind_cols(predict(rf_fit, cell_test, type = "prob")) %>% 
+    bind_cols(cell_test %>% select(class))
+```
+
+```{r}
+rf_testing_pred %>%
+    roc_auc(truth = class, .pred_PS)
+rf_testing_pred %>%
+    accuracy(truth = class, .pred_class)
+```
+
+## Fit A Model With Resampling
+There are several resampling methods (https://rsample.tidymodels.org/reference/#section-resampling-methods) implemented in rsample; cross-validation folds can be created using `vfold_cv()`:
+```{r}
+set.seed(2023)
+folds <- vfold_cv(cell_train, v = 10)
+folds
+```
+
+- When using `workflow()`, the syntax to `fit_resamples()` is very similar to `fit()`.
+```{r}
+set.seed(2023)
+rf_wf <- 
+    workflow() %>% 
+    add_model(rf_mod) %>%
+    add_formula(class ~ .)
+
+rf_fit_rs <- 
+    rf_wf %>% 
+    fit_resamples(folds)
+```
+```{r}
+rf_fit_rs
+```
+```{r}
+collect_metrics(rf_fit_rs)
+```
+
+
+# Tune model parameters {.tabset .tabset-fade .tabset-pills}
+## 
+```{r}
+
+```
+
