@@ -1,6 +1,6 @@
 ---
-title: "GET STARTED"
-subtitle: "vignettes"
+title: "Case Study"
+subtitle: "01: insuranceData"
 author: "Maxwell"
 date: '`r Sys.Date()`'
 # bibliography: references.bib
