@@ -289,7 +289,7 @@ cell_test %>%
 ```
 
 ## Modeling
-- Each of the arguments in this function other than mode and engine are captured as quosures. To pass values programmatically, use the injection operator.  
+- Each of the arguments in this function other than mode and engine are captured as `quosures`. To pass values programmatically, use the `injection operator`.  
 https://parsnip.tidymodels.org/reference/rand_forest.html#details
 ```{r}
 n_trees <- 1000

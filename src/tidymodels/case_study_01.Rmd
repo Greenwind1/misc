@@ -16,8 +16,8 @@ output:
         toc_depth: 5
         toc_float: TRUE
         theme:
-            bootswatch: minty
-            # bootswatch: cosmo
+            # bootswatch: minty
+            bootswatch: cosmo
         highlight: espresso  # espresso, tango, zenburn
         code_folding: show
         # code_download: TRUE
@@ -34,9 +34,7 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ----
 
 # Preparations {.tabset .tabset-fade .tabset-pills}
-
 ## Packages
-
 ```{r Packages, echo=TRUE, message=FALSE}
 # Data manipulation
 library(tidyverse)
@@ -74,18 +72,19 @@ library(insuranceData)
 ```
 
 ## Environment
-
 ```{r Environment, echo=TRUE, message=FALSE}
 # source(file = "utility/environments.R")
 # source(file = "utility/helper_functions.R")
 ```
 
+
 # Dataset {.tabset .tabset-fade .tabset-pills}
 ```{r}
 data("dataCar")
 glimpse(dataCar)
-?dataCar
+# ?dataCar
 ```
+
 
 # Simple EDA {.tabset .tabset-fade .tabset-pills}
 ```{r}
@@ -93,13 +92,53 @@ dataCar %>% skimr::skim()
 dataCar %>% dfSummary() %>% stview(file = "output/case-study_01.html")
 ```
 
+
+# Preprocessing {.tabset .tabset-fade .tabset-pills}
+```{r}
+dataCar <- dataCar %>% 
+    select(-numclaims, -claimcst0, -X_OBSTAT_)
+```
+
+
 # Data splitting and resampling {.tabset .tabset-fade .tabset-pills}
 ```{r}
 set.seed(2023)
-init_splits <- initial_split(dataCar, prop = 0.8, strata = clm)
+init_splits <- initial_split(
+    data = dataCar, prop = 0.8, strata = clm
+)
 ```
 ```{r}
 car_train_val <- training(init_splits)
 car_test <- testing(init_splits)
+```
+
+
+# Create the recipe and features {.tabset .tabset-fade .tabset-pills}
+https://recipes.tidymodels.org/reference/index.html
+```{r}
+car_recipe <- recipe(clm ~ ., data = car_train_val) %>% 
+    step_log(veh_value) %>% 
+    step_mutate_at(veh_age, agecat, fn = ~ as.factor(.)) %>% 
+    step_zv(all_predictors())
+summary(car_recipe)
+```
+
+```{r}
+car_recipe %>% prep() %>% bake(new_data = NULL)
+car_recipe %>% prep() %>% bake(new_data = car_test)
+```
+
+
+# Build the model {.tabset .tabset-fade .tabset-pills}
+```{r}
+lr_mod <- 
+    logistic_reg(penalty = tune(), mixture = 1) %>% 
+    set_engine("glmnet")
+```
+
+
+# Create the workflow {.tabset .tabset-fade .tabset-pills}
+```{r}
+
 ```
 
