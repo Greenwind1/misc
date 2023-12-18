@@ -40,431 +40,66 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```{r Packages, echo=TRUE, message=FALSE}
 # Data manipulation
 library(tidyverse)
-library(data.table)
-library(janitor)  # janitor::row_to_names()
-library(DT)
-library(stringr)
-library(lubridate)
+# library(data.table)
+# library(janitor)  # janitor::row_to_names()
+# library(DT)
+# library(stringr)
+# library(lubridate)
 
 # Visualisation
-library(ggplot2)
-library(ggalt)  # geom_encircle
-library(patchwork)
-library(broman)  # plot_crayons()
-library(ggsci)  # Journal palette
-library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
-library(extrafont)  # "Candara"
-library(dotwhisker)
+# library(ggplot2)
+# library(ggalt)  # geom_encircle
+# library(patchwork)
+# library(broman)  # plot_crayons()
+# library(ggsci)  # Journal palette
+# library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+# library(extrafont)  # "Candara"
+# library(dotwhisker)
 
 # Descriptive Statistics
-library(mice)
-library(ggmice)  # see src/imputation/ggmice_XX.Rmd
-library(psych)
-library(gtsummary)
+# library(mice)
+# library(ggmice)  # see src/imputation/ggmice_XX.Rmd
+# library(psych)
+library(skimr)
+# library(gtsummary)
 library(summarytools)
 
 # ML
 library(tidymodels)
-library(broom.mixed)
+# library(broom.mixed)
 tidymodels::tidymodels_prefer()  # override conflicting methods of other pkgs
+
+# Dataset
+library(insuranceData)
 ```
 
 ## Environment
 
 ```{r Environment, echo=TRUE, message=FALSE}
-source(file = "utility/environments.R")
-source(file = "utility/helper_functions.R")
+# source(file = "utility/environments.R")
+# source(file = "utility/helper_functions.R")
 ```
 
-# Build models {.tabset .tabset-fade .tabset-pills}
-## Dataset
+# Dataset {.tabset .tabset-fade .tabset-pills}
 ```{r}
-urchins <- read_csv("https://tidymodels.org/start/models/urchins.csv") 
-urchins <- urchins %>% 
-    setNames(c("food_regime", "initial_volume", "width")) %>%
-    mutate(food_regime = factor(food_regime, levels = c("Initial", "Low", "High")))
-
-glimpse(urchins)
+data("dataCar")
+glimpse(dataCar)
+?dataCar
 ```
 
-## Simple EDA
+# Simple EDA {.tabset .tabset-fade .tabset-pills}
 ```{r}
-ggplot(urchins, aes(x = initial_volume, 
-                    y = width, 
-                    group = food_regime, 
-                    col = food_regime)) + 
-    geom_point() + 
-    geom_smooth(method = lm, se = FALSE) + 
-    scale_color_npg(alpha = 0.7)
+dataCar %>% skimr::skim()
+dataCar %>% dfSummary() %>% stview(file = "output/case-study_01.html")
 ```
 
-
-## Training
-```{r}
-lin.reg.fit <- linear_reg() %>% 
-    fit(width ~ initial_volume * food_regime, data = urchins)
-lm.tidy <- lin.reg.fit%>% tidy()
-lm.tidy
-```
-
-A dot.whisker function used for a trained model
-```{r}
-lm.tidy %>% dwplot(
-    dot_args = list(size = 2, color = "black"), 
-    whisker_args = list(color = "black"), 
-    vline = geom_vline(xintercept = 0, colour = "grey50", linetype = 2)
-)
-```
-
-## Testing
-```{r}
-new_points <- expand.grid(food_regime = c("Initial", "Low", "High"), 
-                          initial_volume = 20)
-new_points
-```
-```{r}
-mean_pred <- predict(lin.reg.fit, new_data = new_points)
-mean_pred
-
-conf_int_pred <- predict(lin.reg.fit, 
-                         new_data = new_points, 
-                         type = "conf_int")
-conf_int_pred
-plot_data <- 
-    new_points %>% 
-    bind_cols(mean_pred) %>% 
-    bind_cols(conf_int_pred)
-
-# and plot:
-ggplot(plot_data, aes(x = food_regime)) + 
-    geom_point(aes(y = .pred)) + 
-    geom_errorbar(aes(ymin = .pred_lower, 
-                      ymax = .pred_upper), 
-                  width = .2) + 
-    labs(y = "urchin size")
-```
-
-
-# Preprocess data with recipes {.tabset .tabset-fade .tabset-pills}
-Before training the model, we can use a recipe to create a few new predictors and conduct some preprocessing required by the model.
-## The NY Flight Data
-```{r}
-library(nycflights13)
-library(skimr)
-
-set.seed(2023)
-
-flight_data <- flights %>% 
-    mutate(
-        arr_delay = factor(ifelse(arr_delay >= 30, "late", "on_time")), 
-        date = lubridate::as_date(time_hour)
-    ) %>% 
-    inner_join(weather, by = c("origin", "time_hour")) %>% 
-    select(dep_time, flight, origin, dest, air_time, 
-           distance, carrier, date, arr_delay, time_hour) %>% 
-    na.omit() %>% 
-    mutate_if(is.character, as.factor)
-```
-
-## Simple EDA with skimr
-```{r}
-flight_data %>% skimr::skim(dest, carrier)
-```
-```{r}
-flight_data %>% dfSummary() %>% stview(file = "output/get-started_eda-1.html")
-```
-
-
-## Data Splitting
+# Data splitting and resampling {.tabset .tabset-fade .tabset-pills}
 ```{r}
 set.seed(2023)
-data_split <- initial_split(flight_data, prop = 3/4)
-train_data <- training(data_split)
-test_data  <- testing(data_split)
-```
-
-## Create Recipe and Roles
-- A formula: Any variable on the left-hand side of the tilde (~) is considered the model outcome (here, arr_delay). On the right-hand side of the tilde are the predictors.
-- The data: A recipe is associated with the data set used to create the model. It is only used to catalog the names of the variables and their types, like factors, integers, dates, etc.
-```{r}
-# Whereas our formula included all variables in the training set other than arr_delay as predictors, "ID" in update_role tells the recipe to keep these two variables but not use them as either outcomes or predictors.
-flights_rec <- recipe(arr_delay ~ ., data = train_data) %>% 
-    update_role(flight, time_hour, new_role = "ID")
-class(flights_rec)
-summary(flights_rec)
-```
-
-## Create Features
-- Unlike the standard model formula methods in R, a recipe does not automatically create these dummy variables for you. You need to tell your recipe to add this step.  
-- Nominal variables are data whose levels are labels or descriptions, and which cannot be ordered. Examples of nominal variables are gender, school, and yes/no questions.  
-- `step_zv()` will remove columns from the data when the training set data have a single value, so it is added to the recipe after `step_dummy()`.
-```{r}
-flights_rec <- 
-    recipe(arr_delay ~ ., data = train_data) %>% 
-    update_role(flight, time_hour, new_role = "ID") %>% 
-    step_date(date, features = c("dow", "month")) %>% 
-    step_holiday(date, 
-                 holidays = timeDate::listHolidays("US"), 
-                 keep_original_cols = FALSE) %>% 
-    step_dummy(all_factor_predictors()) %>% 
-    step_zv(all_predictors())  # remove zero-variance predictor (e.g. LEX in dest var)
-summary(flights_rec)
-```
-
-## Fit A Model With A Recipe
-- A simple process to use a recipe class object is applying `prep()` and `bake()`. A bake function returns a tibble class object.
-- To extract the model or recipe objects from the workflow, you can use the helper functions `extract_fit_parsnip()` and `extract_recipe()`.
-```{r}
-lr_mod <- logistic_reg() %>% set_engine("glm")
+init_splits <- initial_split(dataCar, prop = 0.8, strata = clm)
 ```
 ```{r}
-flights_wflow <- 
-  workflow() %>% 
-  add_model(lr_mod) %>% 
-  add_recipe(flights_rec)
-
-flights_wflow
-```
-```{r}
-flights_fit <- 
-    flights_wflow %>% 
-    fit(data = train_data)
-```
-```{r}
-flights_fit %>% 
-    extract_fit_parsnip() %>% 
-    tidy()
-```
-
-## Use A Trained Workflow To Predict
-- To get the predicted class probabilities, specify `type = "prob"` when we use predict() or use `augment()` with the model plus test data to save them together
-```{r}
-predict(flights_fit, new_data = test_data, type = "prob")
-```
-```{r}
-flights_aug <- 
-    augment(flights_fit, test_data)
-
-flights_aug %>%
-    select(arr_delay, time_hour, flight, .pred_class, .pred_on_time)
-```
-
-```{r}
-p <- flights_aug %>% 
-    roc_curve(truth = arr_delay, .pred_late) %>% 
-    autoplot() + 
-    theme(text = element_text(family = font.base))
-p
-```
-
-
-# Evaluate your model with resamples {.tabset .tabset-fade .tabset-pills}
-## The Cell Image Data
-```{r}
-data(cells, package = "modeldata")
-glimpse(cells)
-```
-
-## Data Splitting
-```{r}
-set.seed(2023)
-cell_split <- initial_split(cells %>% select(-case), 
-                            strata = class)
-cell_split
-```
-```{r}
-cell_train <- training(cell_split)
-cell_test  <- testing(cell_split)
-
-nrow(cell_train)
-nrow(cell_train) / nrow(cells)
-
-cell_train %>% 
-    count(class) %>% 
-    mutate(prop = n / sum(n))
-
-cell_test %>% 
-    count(class) %>% 
-    mutate(prop = n / sum(n))
-```
-
-## Modeling
-- Each of the arguments in this function other than mode and engine are captured as quosures. To pass values programmatically, use the injection operator.  
-https://parsnip.tidymodels.org/reference/rand_forest.html#details
-```{r}
-n_trees <- 1000
-rf_mod <- rand_forest(trees = !!n_trees) %>% 
-    set_engine("ranger") %>% 
-    set_mode("classification")
-```
-```{r}
-set.seed(2023)
-rf_fit <- rf_mod %>% 
-    fit(class ~ ., data = cell_train)
-rf_fit
-```
-
-## Estimating Performance
-- The yardstick package has functions for computing both of these measures called `roc_auc()` and `accuracy()`.
-```{r}
-rf_testing_pred <- 
-    predict(rf_fit, cell_test) %>% 
-    bind_cols(predict(rf_fit, cell_test, type = "prob")) %>% 
-    bind_cols(cell_test %>% select(class))
-```
-
-```{r}
-rf_testing_pred %>%
-    roc_auc(truth = class, .pred_PS)
-rf_testing_pred %>%
-    accuracy(truth = class, .pred_class)
-```
-
-## Fit A Model With Resampling
-There are several resampling methods (https://rsample.tidymodels.org/reference/#section-resampling-methods) implemented in rsample; cross-validation folds can be created using `vfold_cv()`:
-```{r}
-set.seed(2023)
-folds <- vfold_cv(cell_train, v = 10)
-folds
-```
-
-- When using `workflow()`, the syntax to `fit_resamples()` is very similar to `fit()`.
-```{r}
-set.seed(2023)
-rf_wf <- 
-    workflow() %>% 
-    add_model(rf_mod) %>%
-    add_formula(class ~ .)
-
-rf_fit_rs <- 
-    rf_wf %>% 
-    fit_resamples(folds)
-```
-```{r}
-rf_fit_rs
-```
-```{r}
-collect_metrics(rf_fit_rs)
-```
-
-
-# Tune model parameters {.tabset .tabset-fade .tabset-pills}
-```{r}
-library(rpart.plot)
-library(vip)
-```
-```{r}
-set.seed(2023)
-cell_split <- initial_split(cells %>% select(-case), 
-                            strata = class)
-cell_train <- training(cell_split)
-cell_test  <- testing(cell_split)
-```
-
-## Tuning Hyperparameters
-- To tune the model hyperparameters (e.g. cost_complexity and tree_depth), we create a model specification that identifies which hyperparameters we plan to tune.
-
-```{r}
-args(decision_tree)
-tune_spec <- 
-    decision_tree(cost_complexity = tune(),
-                  tree_depth = tune()) %>% 
-    set_engine("rpart") %>% 
-    set_mode("classification")
-
-tune_spec
-```
-
-```{r}
-tree_grid <- grid_regular(cost_complexity(), 
-                          tree_depth(), 
-                          levels = 5)
-tree_grid
-```
-
-```{r}
-set.seed(2023)
-cell_folds <- vfold_cv(cell_train)
-```
-
-
-## Model Tuning With A Grid
-- Use `tune_grid()` to fit models at all the different values we chose for each tuned hyperparameter.
-```{r}
-set.seed(2023)
-
-tree_wf <- workflow() %>% 
-    add_model(tune_spec) %>% 
-    add_formula(class ~ .)
-
-tree_res <- 
-    tree_wf %>% 
-    tune_grid(resamples = cell_folds,
-              grid = tree_grid)
-
-tree_res
-```
-
-```{r}
-tree_res %>% 
-    collect_metrics() %>% 
-    mutate(tree_depth = factor(tree_depth)) %>% 
-    ggplot(aes(cost_complexity, mean, color = tree_depth)) + 
-    geom_line(linewidth = 1.5, alpha = 0.6) + 
-    geom_point(size = 2) + 
-    facet_wrap( ~ .metric, scales = "free", nrow = 2) + 
-    scale_x_log10(labels = scales::label_number()) + 
-    scale_color_carto_d()
-```
-
-- The `show_best()` function shows us the top 5 candidate models by default.  
-- The `select_best()` function pull out the single set of hyperparameter values for our best decision tree model.
-```{r}
-tree_res %>% show_best()
-best_tree <- tree_res %>% select_best(metric = "roc_auc")
-best_tree
-```
-
-## Finalizing Our Model
-```{r}
-final_wf <- 
-    tree_wf %>% 
-    finalize_workflow(best_tree)
-
-final_wf
-```
-
-## The Last Fit
-- Use the function last_fit() with our finalized model; this function fits the finalized model on the full training data set and evaluates the finalized model on the testing data.
-```{r}
-final_fit <- 
-    final_wf %>% 
-    last_fit(cell_split)
-
-final_fit %>%
-    collect_metrics()
-
-final_fit %>%
-    collect_predictions() %>% 
-    roc_curve(class, .pred_PS) %>% 
-    autoplot()
-```
-
-- The `final_fit` object contains a finalized, fitted workflow that you can use for predicting on new data or further understanding the results. You may want to extract this object, using one of the extract_ helper functions.
-```{r}
-final_tree <- extract_workflow(final_fit)  # returns a workflow object
-```
-
-- We can create a visualization of the decision tree using another helper function to extract the underlying engine-specific fit.
-```{r}
-final_tree %>% 
-    extract_fit_engine() %>% 
-    rpart.plot(roundint = FALSE)
-```
-
-```{r}
-final_tree %>% 
-    extract_fit_parsnip() %>% 
-    vip()
+car_train_val <- training(init_splits)
+car_test <- testing(init_splits)
 ```
 
