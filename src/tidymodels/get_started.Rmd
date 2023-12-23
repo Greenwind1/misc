@@ -103,7 +103,7 @@ ggplot(urchins, aes(x = initial_volume,
 ```{r}
 lin.reg.fit <- linear_reg() %>% 
     fit(width ~ initial_volume * food_regime, data = urchins)
-lm.tidy <- lin.reg.fit%>% tidy()
+lm.tidy <- lin.reg.fit %>% tidy()
 lm.tidy
 ```
 
@@ -359,6 +359,7 @@ cell_split <- initial_split(cells %>% select(-case),
                             strata = class)
 cell_train <- training(cell_split)
 cell_test  <- testing(cell_split)
+cell_folds <- vfold_cv(cell_train)
 ```
 
 ## Tuning Hyperparameters
@@ -382,20 +383,15 @@ tree_grid <- grid_regular(cost_complexity(),
 tree_grid
 ```
 
-```{r}
-set.seed(2023)
-cell_folds <- vfold_cv(cell_train)
-```
-
-
 ## Model Tuning With A Grid
 - Use `tune_grid()` to fit models at all the different values we chose for each tuned hyperparameter.
 ```{r}
-set.seed(2023)
-
 tree_wf <- workflow() %>% 
     add_model(tune_spec) %>% 
-    add_formula(class ~ .)
+    add_formula(class ~ .)  # recipe object declaring no formula.
+```
+```{r}
+set.seed(2023)
 
 tree_res <- 
     tree_wf %>% 
@@ -429,7 +425,7 @@ best_tree
 ```{r}
 final_wf <- 
     tree_wf %>% 
-    finalize_workflow(best_tree)
+    finalize_workflow(best_tree)  # or `update_model`
 
 final_wf
 ```

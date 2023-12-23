@@ -1,6 +1,6 @@
 ---
 title: "Case Study using insuranceData"
-subtitle: "01: GLM Lasso"
+subtitle: "02: Random Forest"
 author: "Maxwell"
 date: '`r Sys.Date()`'
 # bibliography: references.bib
@@ -47,7 +47,7 @@ library(tidyverse)
 # Visualisation
 # library(ggplot2)
 # library(ggalt)  # geom_encircle
-# library(patchwork)
+library(patchwork)
 # library(broman)  # plot_crayons()
 # library(ggsci)  # Journal palette
 # library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
@@ -64,7 +64,10 @@ library(summarytools)
 
 # ML
 library(tidymodels)
+library(vip)
+library(ale)  # XAI
 # library(broom.mixed)
+library(tictoc)  # timer
 tidymodels::tidymodels_prefer()  # override conflicting methods of other pkgs
 
 # Dataset
@@ -75,6 +78,9 @@ library(insuranceData)
 ```{r Environment, echo=TRUE, message=FALSE}
 # source(file = "utility/environments.R")
 # source(file = "utility/helper_functions.R")
+
+cores <- parallel::detectCores()
+cores
 ```
 
 
@@ -89,14 +95,15 @@ glimpse(dataCar)
 # Simple EDA {.tabset .tabset-fade .tabset-pills}
 ```{r}
 dataCar %>% skimr::skim()
-dataCar %>% dfSummary() %>% stview(file = "output/case-study_01.html")
+# dataCar %>% dfSummary() %>% stview(file = "output/case-study_01.html")
 ```
 
 
 # Preprocessing {.tabset .tabset-fade .tabset-pills}
 ```{r}
 dataCar <- dataCar %>% 
-    select(-numclaims, -claimcst0, -X_OBSTAT_)
+    select(-numclaims, -claimcst0, -X_OBSTAT_) %>% 
+    na.omit()
 ```
 
 
@@ -110,7 +117,7 @@ init_splits <- initial_split(
 ```{r}
 car_train_val <- training(init_splits)
 car_test <- testing(init_splits)
-folds <- vfold_cv(car_train_val, v = 5)
+folds <- vfold_cv(car_train_val, v = 4, strata = clm)
 ```
 
 
@@ -118,47 +125,50 @@ folds <- vfold_cv(car_train_val, v = 5)
 https://recipes.tidymodels.org/reference/index.html  
 - all_factor() captures ordered and unordered factors, all_string() captures characters, all_unordered() captures unordered factors and characters, all_ordered() captures ordered factors, all_nominal() captures characters, unordered and ordered factors.
 ```{r}
-car_recipe <- recipe(clm ~ ., data = car_train_val) %>% 
-    step_log(veh_value) %>% 
-    step_mutate_at(veh_age, agecat, clm, fn = ~ as.factor(.)) %>% 
-    step_dummy(all_nominal_predictors()) %>% 
-    step_zv(all_predictors())
-summary(car_recipe)
+rf_recipe <- recipe(clm ~ ., data = car_train_val) %>% 
+    # step_log(veh_value) %>% 
+    step_mutate_at(clm, fn = ~ as.factor(.)) %>% 
+    step_mutate_at(veh_age, agecat, fn = ~ as.ordered(.))
+    # step_dummy(all_nominal_predictors()) %>% 
+    # step_zv(all_predictors())
+summary(rf_recipe)
 ```
 
 ```{r}
-car_recipe %>% prep() %>% bake(new_data = NULL)
-car_recipe %>% prep() %>% bake(new_data = car_test)
+car_train_prep <- rf_recipe %>% prep() %>% bake(new_data = NULL)
+car_test_prep <- rf_recipe %>% prep() %>% bake(new_data = car_test)
+glimpse(car_train_prep)
 ```
 
 
 # Build the model {.tabset .tabset-fade .tabset-pills}
-https://www.tidymodels.org/learn/models/coefficients/#more-complex-a-glmnet-model
 ```{r}
-# mixture = 1 specifies a pure lasso model
-# A logistic_reg does not need `set_mode("classification")`
-lr_mod <- 
-    logistic_reg(penalty = tune(), mixture = 1) %>% 
-    set_engine("glmnet")
+show_engines("rand_forest")
+args(rand_forest)
+rf_mod <- rand_forest(mtry = tune(), min_n = tune(), trees = 1000) %>% 
+    set_engine("ranger", num.threads = cores - 1, seed = 2023) %>% 
+    set_mode("classification")
 
-lr_mod %>% translate()
+rf_mod %>% translate()
+extract_parameter_set_dials(rf_mod) %>% 
+    finalize(car_train_val)  # check parameters for tuning
 ```
 
 
 # Create the workflow {.tabset .tabset-fade .tabset-pills}
 ```{r}
 wf <- workflow() %>% 
-    add_model(lr_mod) %>% 
-    add_recipe(car_recipe)
+    add_model(rf_mod) %>% 
+    add_recipe(rf_recipe)
 ```
 
 
 # Create the grid tibble for hyper parameter tuning {.tabset .tabset-fade .tabset-pills}
 ```{r}
-grid.tibble <- tibble(penalty = 10 ^ seq(-5, -2, length.out = 10))
-    
-grid.tibble <- grid_regular(list(penalty = penalty_L1(range = c(-5, -2))), 
-                            levels = 10)
+set.seed(2023)
+grid.tibble <- grid_random(extract_parameter_set_dials(rf_mod) %>% 
+                               finalize(car_train_val), 
+                           size = 5)
 grid.tibble
 ```
 
@@ -166,29 +176,42 @@ grid.tibble
 # Train and tune the model {.tabset .tabset-fade .tabset-pills}
 ## Find the best hyper parameters
 ```{r}
+tic()
 wf_res <- wf %>% 
     tune_grid(resamples = folds, 
               grid = grid.tibble, 
-              metrics = metric_set(accuracy, roc_auc))
+              control = control_grid(save_pred = TRUE), 
+              metrics = metric_set(roc_auc))
+toc()
 ```
 ```{r}
 p.1 <- wf_res %>% 
     collect_metrics() %>% 
     filter(.metric == "roc_auc") %>% 
-    ggplot(aes(penalty, mean)) + 
-    geom_line(linewidth = 1, color = "#CF00A3", alpha = 0.7) + 
+    ggplot(aes(mtry, mean)) + 
+    # geom_line(linewidth = 1, color = "#CF00A3", alpha = 0.7) + 
     geom_point(size = 2, color = "#CF00A3") + 
     # facet_wrap( ~ .metric, scales = "free", nrow = 2) + 
     # scale_color_carto_d() + 
     scale_x_log10(labels = scales::label_number())
-p.1
+
+p.2 <- wf_res %>% 
+    collect_metrics() %>% 
+    filter(.metric == "roc_auc") %>% 
+    ggplot(aes(min_n, mean)) + 
+    # geom_line(linewidth = 1, color = "#CF00A3", alpha = 0.7) + 
+    geom_point(size = 2, color = "#CF00A3") + 
+    # facet_wrap( ~ .metric, scales = "free", nrow = 2) + 
+    # scale_color_carto_d() + 
+    scale_x_log10(labels = scales::label_number())
+
+p.1 + p.2
 ```
 
 ## Slice a model with the best hyper parameters
 ```{r}
 top_models <- wf_res %>% 
-    show_best("roc_auc", n = 5) %>% 
-    arrange(penalty)
+    show_best("roc_auc", n = 5)
 top_models  # tbl_df
 
 # auto selection with metrics
@@ -196,26 +219,28 @@ sel_best_model <- wf_res %>% select_best(metric = "roc_auc")
 sel_best_model
 
 # manual selection
-best_model <- top_models %>% slice(5)
+best_model <- top_models %>% slice(1)
 best_model
 ```
 
 # Finalizing the model {.tabset .tabset-fade .tabset-pills}
-## 
+- When we set the engine, we add a new argument: `importance = "impurity"`. This will provide variable importance scores for this last model, which gives some insight into which predictors drive model performance.
 ```{r}
-lr_mod_best <- 
-    logistic_reg(penalty = best_model$penalty, mixture = 1) %>% 
-    set_engine("glmnet")
+rf_mod_best <- 
+    rand_forest(mtry = best_model$mtry, min_n = best_model$min_n, trees = 2000) %>% 
+    set_engine("ranger", num.threads = cores - 1, 
+               importance = "permutation", seed = 2023) %>% 
+    set_mode("classification")
 ```
 
 ```{r}
 final_wf <- wf %>% 
-    update_model(lr_mod_best)    # or `finalize_workflow`
+    update_model(rf_mod_best)    # or `finalize_workflow`
 
 final_wf
 ```
 
-- last_fit: Fit the final best model to the training set and evaluate the test set.
+- `last_fit()`: Fit the final best model to the training set and evaluate the test set.
 ```{r}
 final_fit <- 
     final_wf %>% 
@@ -237,17 +262,36 @@ final_fit %>%
 final_fit_wf <- extract_workflow(final_fit)  # returns a workflow object
 ```
 
-- We can create a visualization of the decision tree using another helper function to extract the underlying engine-specific fit.
-- https://www.tidymodels.org/learn/models/coefficients/#using-glmnet-penalty-values
+## XAI
+### Permutation Importance
+- `extract_fit_parsnip()` extract a parsnip class object.
+```{r}
+final_fit_wf %>% 
+    extract_fit_parsnip() %>% 
+    vip()
+```
+
+### Accumulated Local Effects
+- `extract_fit_engine()` extract a backend class object.  
+https://cran.r-project.org/web/packages/ale/vignettes/ale-intro.html
 ```{r}
 final_fit_model <- final_fit_wf %>% 
     extract_fit_engine()
-
-# bad
-final_fit_model %>% 
-    tidy() %>% 
-    filter(term != "(Intercept)")
-
-# good
-tidy(final_fit_wf)
 ```
+
+```{r}
+# tic()
+# custom_predict <- function(object, newdata) {
+#     predict(object, newdata, type = 'response')$predictions[, 2]
+# }
+# ale_obj <- ale(data = car_test_prep, 
+#                y_col = "clm", 
+#                model = final_fit_model, 
+#                pred_fun = custom_predict)
+# toc()
+```
+
+```{r}
+# names(ale_obj)
+```
+

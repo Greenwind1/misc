@@ -33,6 +33,10 @@ library(summarytools)  # dfSummary; stview
 
 # ML
 library(tidymodels)  # check src/tidymodels files
+library(vip)
+library(ale)  # XAI
+library(broom.mixed)
+library(tictoc)  # timer
 tidymodels::tidymodels_prefer()  # override conflicting methods of other pkgs
 
 # Time Series
