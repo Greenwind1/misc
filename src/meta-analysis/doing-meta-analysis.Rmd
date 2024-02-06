@@ -16,7 +16,7 @@ output:
         toc_depth: 5
         toc_float: TRUE
         theme:
-            bootswatch: minty
+            bootswatch: yeti  # minty, flatly, litera, lumen, sandstone, spacelab, yeti
             # bootswatch: cosmo
         highlight: espresso  # espresso, tango, zenburn
         code_folding: show
@@ -76,7 +76,7 @@ fn.prefix <- "doing-meta-analysis_"
 
 
 # Effect Sizes {.tabset .tabset-fade .tabset-pills}
-## (Standardized) Mean Difference
+## Mean Difference and Standardized Mean Difference
 ### Between-Group Mean Difference
 $$
 MD_{between} = \bar{x}_1 - \bar{x}_2 \\
@@ -84,7 +84,10 @@ SE_{MD_{between}} = s_{pooled} \; \sqrt{\frac{1}{n_1} + \frac{1}{n_2}} \\
 s_{pooled} = \sqrt{\frac{S^2_{x_1} + S^2_{x_2}}{n_1 + n_2 - 2}} \\
 $$
 
-### Between-Group Standardized Mean Difference (Cohen's d)
+### Between-Group Standardized Mean Difference (SMD; Cohen's d)
+- SMD ~ 0.2: small effect
+- SMD ~ 0.5: moderate effect
+- SMD ~ 0.8: large effect
 $$
 SMD_{between} = \frac{\bar{x}_1 - \bar{x}_2}{s_{pooled}} \\
 SE_{SMD_{between}} = \sqrt{\frac{n_1 + n_2}{n_1 \; n_2} + \frac{SMD^2_{between}}{2 \; (n_1 + n_2)}}
@@ -120,9 +123,27 @@ esc_mean_sd(
 ```
 
 
+# Effect Size Correction
+## Small Sample Bias (Hedges' g)
+- The standardized mean difference has been found to have an upward bias when the sample size of a study is small, especially when $n \le 20$.
+- So it is sensible to correct an upward bias for the standardized mean differences, using Hedges' $g$ formula: 
+$$
+g = SMD \times (1 - \frac{3}{4n-9})
+$$
+- $n$ represents the total sample size of study.
+```{r}
+# Define uncorrected SMD and sample size n
+SMD <- 0.5
+n <- 30
+g <- hedges_g(SMD, n)
+g
+```
+
+
+
 # Pooling Effect Sizes {.tabset .tabset-fade .tabset-pills}
 ## The Fixed-Effect Model
-
+- All studies are part of a homogeneous population and that the only cause for differences in observed effects is the sampling error of studies. **If we were to calculate the effect size of each study without sampling error, all true effect sizes would be absolutely the same.**
 - The only reason why a study $k$'s observed effect size $\hat{\theta}_{k}$ deviates from $\theta$ is because of its sampling error $\epsilon_k$. $\hat{\theta}_{k} = \theta + \epsilon_k$
 - All studies are estimators of the same true effect size. Yet, because every study can only draw somewhat bigger or smaller samples of the infinitely large study population, results are burdened by sampling error.
   
@@ -135,7 +156,7 @@ $$
 ```{r}
 data(SuicidePrevention)
 
-# Calculate Hedges' g and the Standard Error
+# Calculate Hedges' g effect sizes and the standard errors for pooling.
 # - We save the study names in "study".
 # - We use the pmap_dfr function to calculate the effect size for each row.
 SP_calc <- pmap_dfr(SuicidePrevention, 
@@ -150,7 +171,7 @@ SP_calc <- pmap_dfr(SuicidePrevention,
                     }) 
 
 # The data set contains Hedges' g ("es") and standard error ("se")
-glimpse(SP_calc)
+SP_calc
 ```
 ```{r}
 # Calculate the inverse variance-weights for each study
@@ -160,6 +181,67 @@ SP_calc$w <- 1 / SP_calc$se ^ 2
 pooled_effect <- sum(SP_calc$w * SP_calc$es) / sum(SP_calc$w)
 pooled_effect
 ```
+
+## The Random-Effects Model
+- The random-effects model assumes that there is not only one true effect size $\theta$ but a distribution of true effect sizes $\theta_k$. 
+- The goal of the random-effects model is therefore **not** to estimate the one true effect size $\theta$ of all studies, but the mean of the distribution of true effects $\theta_k$.
+
+$$
+\hat{\theta}_{k} = \theta_k + \epsilon_k \neq \theta + \epsilon_k \\
+\theta_{k} = \mu + \zeta_{k}
+$$
+
+## Estimators of the Betweeen-Study Heterogeneity
+
+**Inverse-variance weighting**  
+$\tau^2$: The variance of the distribution of true effect sizes
+$$
+w_k^* = \frac{1}{s_k^2 + \tau^2} \\
+\hat{\theta} = \frac{\Sigma^K_{k=1} \; \hat{\theta}_k \; w_k^*}{\Sigma^K_{k=1} \; w_k^*}
+$$
+
+For estimate $\hat{\theta}$, we also have to estimate the variance of the distribution of true effect sizes $\tau^2$ before that.
+  
+Which Estimator Should I Use?
+(https://bookdown.org/MathiasHarrer/Doing_Meta_Analysis_in_R/pooling-es.html#rem)
+- Continuous: REML
+- Binary: Paule-Mandel
+- Large heterogeneity: Sidik-Jonkman
+- Outside R: Dersimonian-Laird
+
+## Significance Tests using Knapp-Hartung Adjustments
+- Several studies showed that Knapp-Hartung adjustments can reduce the chance of false positives, especially when the number of studies is small.
+- While significance tests of the pooled effect usually assume a normal distribution (so-called Wald-type tests), the Knapp-Hartung method is based on a t distribution.
+
+
+# Effect Size Pooling in R
+```{r}
+data(ThirdWave)
+glimpse(ThirdWave)
+```
+
+
+# Power Analysis
+```{r}
+power.analysis(
+    d = 0.2,
+    k = 10,
+    n1 = 25,
+    n2 = 25,
+    p = 0.05
+)
+```
+```{r}
+power.analysis(
+    d = 0.5,
+    k = 10,
+    n1 = 25,
+    n2 = 25,
+    p = 0.05,
+    heterogeneity = "moderate"
+)
+```
+
 
 
 # References
