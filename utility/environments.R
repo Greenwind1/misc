@@ -64,7 +64,7 @@ sysfonts::font_add("fa6-brands", "fonts/Font Awesome 6 Brands-Regular-400.otf")
 sysfonts::font_add_google(name = "lusitana")
 sysfonts::font_add_google(name = "cinzel")
 sysfonts::font_add_google(name = "Tinos")  # compatible with Times New Roman
-font.base.showtext <- "Tinos"
+font.base.showtext <- "cinzel"
 
 # Twitter and GitHub fonts ----
 # 1. showtext_auto(enable = TRUE) to show awesome icons before plotting

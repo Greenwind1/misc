@@ -1,6 +1,6 @@
 ---
 title: "Doing Meta-Analysis in R"
-subtitle: "A Hands-on Guide"
+subtitle: "Section 1 - 4"
 author: ""
 date: '`r Sys.Date()`'
 # bibliography: references.bib
@@ -207,42 +207,202 @@ Which Estimator Should I Use?
 - Continuous: REML
 - Binary: Paule-Mandel
 - Large heterogeneity: Sidik-Jonkman
-- Outside R: Dersimonian-Laird
+- Outside R: Dersimonian-Laird (classical and frequently used, but biased)
 
 ## Significance Tests using Knapp-Hartung Adjustments
 - Several studies showed that Knapp-Hartung adjustments can reduce the chance of false positives, especially when the number of studies is small.
 - While significance tests of the pooled effect usually assume a normal distribution (so-called Wald-type tests), the Knapp-Hartung method is based on a t distribution.
 
 
-# Effect Size Pooling in R
+# Effect Size Pooling in R {.tabset .tabset-fade .tabset-pills}
+## Pre-Calculated Effect Size Data
+https://bookdown.org/MathiasHarrer/Doing_Meta_Analysis_in_R/pooling-es.html#pre-calculated-es  
+- Studies examining the effect of so-called "hird wave" psychotherapies on perceived stress in college students.
+- The `TE` column contains the g value of each study, and `seTE` is the standard error of g. The other columns represent variables describing the subgroup categories that each study falls into.
 ```{r}
 data(ThirdWave)
 glimpse(ThirdWave)
 ```
 
-
-# Power Analysis
 ```{r}
-power.analysis(
-    d = 0.2,
-    k = 10,
-    n1 = 25,
-    n2 = 25,
-    p = 0.05
-)
-```
-```{r}
-power.analysis(
-    d = 0.5,
-    k = 10,
-    n1 = 25,
-    n2 = 25,
-    p = 0.05,
-    heterogeneity = "moderate"
-)
+m.gen <- metagen(TE = TE,  # treatment effect
+                 seTE = seTE,  # standard error of TE
+                 studlab = Author,  # study labels
+                 data = ThirdWave, 
+                 sm = "SMD",  # underlying summary measure
+                 fixed = FALSE,  # if fixed-effect model meta-analysis should be calc.
+                 random = TRUE,  # if a random-effects model should be used.
+                 method.tau = "REML",
+                 hakn = TRUE,  # Knapp-Hartung adjustments
+                 title = "Third Wave Psychotherapies")
+summary(m.gen)
 ```
 
+
+## SMD
+```{r}
+data("SuicidePrevention")
+```
+The variance of true effect sizes is not significantly greater than zero.
+```{r}
+# ?metacont
+m.cont <- metacont(n.e = n.e, 
+                   mean.e = mean.e, 
+                   sd.e = sd.e, 
+                   n.c = n.c, 
+                   mean.c = mean.c, 
+                   sd.c = sd.c, 
+                   studlab = author, 
+                   data = SuicidePrevention, 
+                   sm = "SMD", 
+                   method.smd = "Hedges",  # only relevant when sm = "SMD"
+                   fixed = FALSE, 
+                   random = TRUE, 
+                   method.tau = "REML", 
+                   hakn = TRUE,  # Knapp-Hartung adjustments
+                   title = "Suicide Prevention")
+summary(m.cont)
+```
+
+
+## Binary Outcomes
+### Risk and Odds Ratios
+### The Mantel-Haenszel Method
+- The Mantel-Haenszel Method commonly used as an alternative to calculate the weights of studies with binary outcome data.
+- It may be advisable in most cases to follow Cochrane's general assessment (Julian Higgins et al. 2019, chap. 10.4), and use the Mantel-Haenszel method (without continuity correction: add +0.5 to a zero cell).
+
+Risk Ratio:  
+$$
+w_k = \frac{(a_k + b_k) \; c_k}{n_k}
+$$
+Odds Ratio:  
+$$
+w_k = \frac{b_k \; c_k}{n_k}
+$$
+$a_k$: the number of  events in the treatment group  
+$b_k$: the number of  non-events in the treatment group  
+$c_k$: the number of  events in the control group  
+$d_k$: the number of  non-events in the control group  
+
+### The Peto Method
+- The Peto method uses a special kind of effect size, **the Peto odds ratio**, which we will denote with $\hat{\psi_k}$.
+$$
+O_k = a_k \\
+E_k = \frac{(a_k + b_k)(a_k + c_k)}{a_k + b_k + c_k + d_k} \\
+V_k = \frac{(a_k + b_k)(c_k + d_k)(a_k + c_k)(b_k + d_k)}{(a_k + b_k + c_k + d_k)^2 \; (a_k + b_k + c_k + d_k - 1)} \\
+\log{\hat{\psi_k}} = \frac{O_k - E_k}{V_k}
+$$
+
+### The Bakbergenuly-Sample Size Method
+- The weight of effects is only determined by a study's sample size.
+- It showed that this approach may be preferable to the one by Mantel and Haenszel.
+- The weights and overall effect using the fixed- and random-effects model will be identical.
+$$
+w_k = \frac{n_{treat_k} \; n_{control_k}}{n_{treat_k} + n_{control_k}}
+$$
+
+### Pooling Binary Effect Sizes in R
+```{r}
+data(DepressionMortality)
+# View(DepressionMortality)
+```
+```{r}
+m.bin <- metabin(event.e = event.e, 
+                 n.e = n.e, 
+                 event.c = event.c, 
+                 n.c = n.c, 
+                 studlab = author, 
+                 data = DepressionMortality, 
+                 method = "MH",  # Mantel-Haenszel method; decault and recommended
+                 sm = "RR",  # RR: risk ratio; OR: odds ratio
+                 MH.exact = TRUE,  # TRUE: Do not use a continuity correction for MH
+                 fixed = TRUE,  # both fixed and random effects model can be caluculated
+                 random = TRUE, 
+                 method.tau = "PM",  # Paule-Mandel is a good choice for binary outcomes
+                 hakn = TRUE, 
+                 title = "Depression and Mortality")
+summary(m.bin)
+```
+
+Check if the method to estimate $\tau^2$ has an impact on the results.  
+Meta-analyses of binary outcomes are actually performed by using a log-transformed version of the effect size. When presenting the results, metabin just reconverts the effect size metrics to their original form through exponentitating the value.
+```{r}
+m.bin.update <- update.meta(m.bin, method.tau = "REML")
+print(exp(m.bin.update$TE.random))
+print(m.bin.update$tau2)
+```
+
+OR version  
+```{r}
+m.bin.or <- update.meta(m.bin, sm = "OR")
+summary(m.bin.or)
+```
+
+### Pooling Pre-Calculated Binary Effect Sizes
+- Confidence intervals are ok instead of seTE.
+```{r}
+DepressionMortality$TE <- m.bin$TE  # log-transformed
+DepressionMortality$seTE <- m.bin$seTE  # log-transformed
+
+# Set seTE of study 7 to NA
+DepressionMortality$seTE[7] <- NA
+
+# Create empty columns 'lower' and 'upper'
+DepressionMortality[,"lower"] <- NA
+DepressionMortality[,"upper"] <- NA
+
+# Fill in values for 'lower' and 'upper' in study 7
+# As always, binary effect sizes need to be log-transformed
+DepressionMortality$lower[7] <- log(1.26)
+DepressionMortality$upper[7] <- log(2.46)
+
+DepressionMortality[,c("author", "TE", "seTE", "lower", "upper")]
+```
+```{r}
+m.gen_bin <- metagen(TE = TE, 
+                     seTE = seTE, 
+                     lower = lower, 
+                     upper = upper, 
+                     studlab = author, 
+                     data = DepressionMortality, 
+                     sm = "RR", 
+                     method.tau = "PM", 
+                     fixed = FALSE, 
+                     random = TRUE, 
+                     title = "Depression Mortality (Pre-calculated)")
+
+summary(m.gen_bin)
+```
+
+### Incidence Rate Ratios
+- In contrast to metabin, metainc does not use a continuity correction by default. Specifying MH.exact as TRUE is therefore not required. A continuity correction is only performed when we choose the generic inverse variance pooling method (method = "Inverse").
+```{r}
+data(EatingDisorderPrevention)
+# View(EatingDisorderPrevention)
+```
+```{r}
+m.inc <- metainc(event.e = event.e, 
+                 time.e = time.e, 
+                 event.c = event.c, 
+                 time.c = time.c, 
+                 studlab = Author, 
+                 data = EatingDisorderPrevention, 
+                 sm = "IRR", 
+                 method = "MH", 
+                 fixed = TRUE, 
+                 random = TRUE, 
+                 method.tau = "PM", 
+                 method.random.ci = "HK", 
+                 title = "Eating Disorder Prevention")
+
+summary(m.inc)
+```
+
+## Correlations, Means and Proportions
+See web pages:  
+https://bookdown.org/MathiasHarrer/Doing_Meta_Analysis_in_R/pooling-es.html#pooling-cor
 
 
 # References
 - https://bookdown.org/MathiasHarrer/Doing_Meta_Analysis_in_R/
+- Bakbergenuly, Ilyas, David C. Hoaglin, and Elena Kulinskaya. 2020. “Methods for Estimating Between-Study Variance and Overall Effect in Meta-Analysis of Odds Ratios.” Research Synthesis Methods 11(3): 426–42. doi:10.1002/jrsm.1404.

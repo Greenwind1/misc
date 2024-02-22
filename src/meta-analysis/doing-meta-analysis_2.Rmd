@@ -1,0 +1,108 @@
+---
+title: "Doing Meta-Analysis in R"
+subtitle: "Section 5 - 9"
+author: ""
+date: '`r Sys.Date()`'
+# bibliography: references.bib
+# link-citations: true
+# zotero: "My Library"
+# abstract: \singlespacing Abstract which has to be long enough to 
+#   take multiple lines otherwise one does not see the effect of single-spacing.
+output: 
+    html_document:
+        number_sections: TRUE
+        fig_caption: TRUE
+        toc: TRUE
+        toc_depth: 5
+        toc_float: TRUE
+        theme:
+            bootswatch: yeti  # minty, flatly, litera, lumen, sandstone, spacelab, yeti
+            # bootswatch: cosmo
+        highlight: espresso  # espresso, tango, zenburn
+        code_folding: show
+        # code_download: TRUE
+        fig_width: 15
+editor_options: 
+    chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = ".")  # modify with the location of code
+```
+
+***
+
+# Preparations {.tabset .tabset-fade .tabset-pills}
+## Packages
+```{r Packages, echo=FALSE, message=FALSE}
+# Data manipulation
+library(tidyverse)
+library(data.table)
+library(janitor)  # janitor::row_to_names()
+library(DT)
+library(stringr)  # in tidyverse
+library(lubridate)  # in tidyverse
+
+# Visualisation
+library(ggplot2)  # RColorBrewer::display.brewer.all()
+library(ggalt)  # geom_encircle
+library(ggimage)  # geom_subview
+library(patchwork)
+library(broman)  # plot_crayons()
+library(ggsci)  # Journal palette
+library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
+library(PrettyCols)  # view_all_palettes(colourblind_friendly = TRUE)
+library(extrafont)  # fonttable(); "Candara"
+library(latex2exp)  # example: latex2exp::TeX("Equation: $\\lambda$")
+
+# Descriptive Statistics
+library(mice)
+library(ggmice)  # see src/imputation/ggmice_XX.Rmd
+library(psych)
+library(gtsummary)  # tbl_summary; tbl_regression; https://cran.r-project.org/web/packages/gtsummary/vignettes/tbl_regression.html
+
+
+pacman::p_load(meta, metafor, esc, dmetar)
+```
+
+## Environment
+```{r Environment, echo=FALSE, message=FALSE}
+source(file = "utility/environments.R")
+source(file = "utility/helper_functions.R")
+
+fn.prefix <- "doing-meta-analysis_"
+```
+
+# Between-Study Heterogeneity {.tabset .tabset-fade .tabset-pills}
+```{r}
+
+```
+
+
+# Power Analysis {.tabset .tabset-fade .tabset-pills}
+```{r}
+power.analysis(
+    d = 0.2,
+    k = 10,
+    n1 = 25,
+    n2 = 25,
+    p = 0.05
+)
+```
+```{r}
+power.analysis(
+    d = 0.5,
+    k = 10,
+    n1 = 25,
+    n2 = 25,
+    p = 0.05,
+    heterogeneity = "moderate"
+)
+```
+
+
+
+# References
+- https://bookdown.org/MathiasHarrer/Doing_Meta_Analysis_in_R/
+- Bakbergenuly, Ilyas, David C. Hoaglin, and Elena Kulinskaya. 2020. “Methods for Estimating Between-Study Variance and Overall Effect in Meta-Analysis of Odds Ratios.” Research Synthesis Methods 11(3): 426–42. doi:10.1002/jrsm.1404.
