@@ -75,9 +75,130 @@ fn.prefix <- "doing-meta-analysis_"
 ```
 
 # Between-Study Heterogeneity {.tabset .tabset-fade .tabset-pills}
-```{r}
+## Cochran's Q
+- $Q$ increases both when the number of studies $K$, and when the precision (i.e. the sample size of a study) increases. Therefore, $Q$ and whether it is significant highly depends on the size of your meta-analysis, and thus its statistical power.
+- From this follows that we should not only rely on the significance of a $Q$-test when assessing heterogeneity.
+- $\hat{\theta}$: the pooled effect according to the fixed-effect model.
 
+$$
+Q = \sum^{K}_{k=1} \; w_k \; (\hat{\theta}_k - \hat{\theta})^2 \\
+w_k = \frac{1}{s_k^2}
+$$
+$\hat{\theta}$: the pooled effect according to the `fixed-effect` model.
+
+Case 1: no-heterogeneity
+$\zeta_k = 0$ and the residuals $\hat{\theta_k} - \hat{\theta}$ are only product of the sampling error $\epsilon_k$.
+$$
+\hat{\theta}_k - \hat{\theta} \sim N(0, \; 1)
+$$
+```{r}
+set.seed(2024)
+error_fixed <- replicate(n = 10000, rnorm(40))
 ```
+
+Case 2: heterogeneity
+Reference: https://bookdown.org/MathiasHarrer/Doing_Meta_Analysis_in_R/pooling-es.html#rem
+$$
+\hat{\theta}_k - \hat{\theta} = \epsilon_k + \zeta_k
+$$
+```{r}
+set.seed(2024)
+error_random <- replicate(n = 10000, rnorm(40) + rnorm(40))
+```
+
+Simplify the formula of $Q$ a little by assuming that the variance, and thus the weight 
+$w_k$ of every study, is one, resulting in $w_k$ to drop out of the equation. 
+```{r}
+set.seed(2024)
+Q_fixed <- replicate(10000, sum(rnorm(40)^2))
+Q_random <- replicate(10000, sum((rnorm(40) + rnorm(40))^2))
+```
+```{r}
+hist(error_fixed, 
+     xlab = expression(hat(theta[k]) ~ - ~ hat(theta)), prob = TRUE, 
+     breaks = 100, ylim = c(0, .45), xlim = c(-4, 4), 
+     main = "No Heterogeneity")
+lines(seq(-4, 4, 0.01), dnorm(seq(-4, 4, 0.01)), 
+      col = "blue", lwd = 2)
+
+hist(error_random, 
+     xlab = expression(hat(theta[k]) ~ - ~ hat(theta)), prob = TRUE, 
+     breaks = 100, ylim = c(0, .45), xlim = c(-4, 4), 
+     main = "Heterogeneity")
+lines(seq(-4, 4, 0.01), dnorm(seq(-4, 4, 0.01)), 
+      col = "blue", lwd = 2)
+
+df <- 40 - 1
+hist(Q_fixed, xlab = expression(italic("Q")), prob = TRUE, 
+     breaks = 100, ylim = c(0, .06), xlim = c(0, 160), 
+     main = "No Heterogeneity")
+lines(seq(0, 100, 0.01), dchisq(seq(0, 100, 0.01), df = df), 
+      col = "blue", lwd = 2)
+
+hist(Q_random,  xlab = expression(italic("Q")), prob = TRUE, 
+     breaks = 100, ylim = c(0, .06), xlim = c(0, 160), 
+     main = "Heterogeneity")
+lines(seq(0, 150, 0.01), dchisq(seq(0, 150, 0.01), df = df * 2), 
+      col = "blue", lwd = 2)
+```
+
+## Higgins & Thompson's I^2 Statistic
+- Defined as the percentage of variability in the effect sizes that is not caused by sampling error.
+- It quantifies, in percent, how much the observed value of $Q$ exceeds the expected 
+$Q$ value when there is no heterogeneity (i.e. K - 1)
+$$
+I^2 = \frac{Max\{Q - (K - 1), \; 0\}}{Q} \ge 0
+$$
+```{r}
+hist((Q_fixed - 39) / Q_fixed, breaks = 100)
+```
+```{r}
+hist((Q_random - 39) / Q_random, breaks = 100)
+```
+
+## The H^2 Statistic
+- A little more elegant than the one of $I^2$, because we do not have to artificially correct its value when $Q$ is smaller than $K - 1$.
+- Values greater than one indicate the presence of between-study heterogeneity.
+- Compared to $I^2$, it is far less common to find this statistic reported in published meta-analyses.
+$$
+H^2 = \frac{Q}{K-1}
+$$
+
+## Q-Profile
+- The Q-Profile method is based on an altered $Q$ version, the generalized Q-statistic $Q_{gen}$.
+- While the standard version of $Q$ uses the pooled effect based on the fixed-effect model, $Q_{gen}$ is based on the random-effects model.
+- $\hat{u}$: the overall effect according to the random-effects model
+- The Q-Profile method can be specified in `meta` functions through the argument `method.tau.ci = "QP"`. This is the default setting.
+- $Q_{gen}(\tilde{\tau}^2)$ is calculated repeatedly while increasing the value of $\tau^2$, until the expected value of the lower and upper bound of the confidence interval based on the $\chi^2$ distribution ($K-1$ DoF) is reached.
+
+$$
+Q_{gen} = \sum^{K}_{k=1} \; w_k^* \; (\hat{\theta}_k - \hat{u})^2 \\
+w_k^* = \frac{1}{s_k^2 \; + \; \tau^2}
+$$
+
+## Prediction Intervals (PIs)
+- A good way to overcome limitation of other measures (become significant when studies have a greater sample size).
+- Give us a range into which we can expect the effects of future studies to fall based on present evidence.
+- To calculate prediction intervals around the overall effect $\hat{u}$, we use both the estimated between-study heterogeneity variance $\hat{\tau}^2$, as well as the standard error of the pooled effect, $SE_{\hat{u}}$.
+- When running a meta-analysis, we have to add the argument `prediction = TRUE` so that prediction intervals appear in the output.
+$$
+\hat{u} \; \pm \; t_{K-1, 0.975} \; \sqrt{SE^2_{\hat{u}} \; + \; \hat{\tau}^2} \\
+\hat{u} \; \pm \; t_{K-1, 0.975} \; SD_{PI}
+$$
+
+## Assesing Heterogeneity in R
+```{r}
+m.gen <- update(m.gen, prediction = TRUE)
+summary(m.gen)
+```
+
+
+## Outliers and Influential Cases
+- Assessing the robustness of our pooled results: outlier and influence analyses.
+
+### Basic Outlier Removal
+- View a study as an outlier if its confidence interval does not overlap with the confidence interval of the pooled effect.
+
 
 
 # Power Analysis {.tabset .tabset-fade .tabset-pills}
@@ -100,7 +221,6 @@ power.analysis(
     heterogeneity = "moderate"
 )
 ```
-
 
 
 # References

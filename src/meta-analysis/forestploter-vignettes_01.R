@@ -45,7 +45,7 @@ dt$`HR (95% CI)` <- ifelse(is.na(dt$se),
                            "",
                            sprintf("%.2f (%.2f to %.2f)",
                                    dt$est, dt$low, dt$hi))
-View(dt)
+# View(dt)
 
 
 # Visualization ----
@@ -71,7 +71,7 @@ plot(p)
 # Change Theme ----
 dt_tmp <- rbind(dt[-1, ], dt[1, ])  # reorder the first row from head to tail
 dt_tmp[nrow(dt_tmp), 1] <- "Overall"
-View(dt_tmp)
+# View(dt_tmp)
 
 tm <- forest_theme(base_size = 10, 
                    base_family = font.base, 
@@ -102,7 +102,8 @@ tm <- forest_theme(base_size = 10,
                    # Footnote font size/face/color
                    footnote_cex = 1.0,
                    footnote_fontface = "bold",
-                   footnote_col = col.c.b)
+                   footnote_col = col.c.b, 
+                   title_fontfamily = font.base)
 
 
 pt <- forest(dt_tmp[, c(1:3, 8:9)], 
@@ -146,14 +147,14 @@ g <- edit_plot(g, row = c(3, 15, 17, 20),
 
 # Insert text at top
 g <- insert_text(g,
-                 text = "Treatment group",
+                 text = "forestploter vignettes",
                  col = 2:3,
                  part = "header",
                  gp = gpar(fontface = "bold"))
 
 # Add underline at the bottom of the header
-g <- add_underline(g, part = "header")
-g <- add_underline(g, row = 21, part = "body", 
+g <- forestploter::add_border(g, part = "header")
+g <- add_border(g, row = 21, part = "body", 
                    gp = gpar(lwd = 1, col = col.os))
 
 plot(g)
@@ -227,3 +228,6 @@ p <- forest(dt.all[,c(1, 19, 21, 20, 22)],
             theme = tm)
 
 plot(p)
+ggsave(filename = "fig/forestploter-vignettes_01-2.jpg", 
+       plot = plot(p), 
+       dpi = 200, width = 4 * 1.75, height = 4 * 1.5)
