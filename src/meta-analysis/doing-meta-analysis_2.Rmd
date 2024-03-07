@@ -55,6 +55,7 @@ library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(PrettyCols)  # view_all_palettes(colourblind_friendly = TRUE)
 library(extrafont)  # fonttable(); "Candara"
 library(latex2exp)  # example: latex2exp::TeX("Equation: $\\lambda$")
+library(GGally)  # https://ggobi.github.io/ggally/reference/index.html
 
 # Descriptive Statistics
 library(mice)
@@ -297,7 +298,7 @@ Let us assume we determined influential studies in our meta-analysis. In this ca
 # Forest Plots
 - A diamond shape represents the average effect. The length of the diamond symbolizes the confidence interval of the pooled result on the x-axis. 
 - When the summary measure is a ratio (such as odds ratios or risk ratios), it is common to use a logarithmic scale on the x-axis. 
-- 
+- "RevMan5" is a software name develped by Cochrane
 ```{r}
 png(file = "fig/doing-meta-analysis_2-1.png", 
     width = 3600, height = 2400, res = 300)
@@ -339,6 +340,117 @@ drapery(m.gen,
         legend = FALSE)
 ```
 
+
+# Subgroup Analyses
+## The Fixed-Effects Plural Model (Mixed-Effects Model)
+- `A meta-ragression (mixed-effects model) with a categorical predictor`. 
+$$
+D_g = 0 \; (\mathrm{Subgroup \; A}) \\
+D_g = 1 \; (\mathrm{Subgroup \; B}) \\
+\hat{\theta_k} = \theta + \beta \; D_g + \epsilon_k + \zeta_k
+$$
+$\theta$: the intercept in our regression model. the true overall effect size of subgroup A  
+$\beta$: the effect size difference between subgroup A and subgroup B.  
+
+- An objective is to reject the null hypothesis that there is no difference in effect sizes between subgroups (e.g. $Q$ test), `regarding the pooled effect of a subgroup as the observed effect size of one large study`.
+- The difference to a normal meta-analysis is that we conduct several separate random-effects meta-analyses, one for each subgroup. Studies within a subgroup are drawn from a universe of populations, the mean of which we want to estimate. 
+- Since each subgroup gets its own separate meta-analysis, estimated heterogeneity $\hat{\tau_g}^2$ will also differ from subgroup to subgroup.
+- When the number of studies in a subgroup is small (< 5), it is better to calculate a pooled version of $\tau^2$ that is used across all subgroups, than to rely on a very imprecise estimate of the between-study heterogeneity in one subgroup $\hat{\tau_g}^2$.
+- At least K=10 studies are required to do subgroup analyses in each group.
+  
+![The Fixed-Effects Plural Model](https://bookdown.org/MathiasHarrer/Doing_Meta_Analysis_in_R/images/subgroups_sep.png)
+```{r}
+update(m.gen, 
+       subgroup = RiskOfBias, 
+       tau.common = FALSE)
+```
+
+
+# Meta-Regression (Mixed-Effects Model)
+$$
+\hat{\theta}_k = \theta + \beta \; x_k + \epsilon_k + \zeta_k
+$$
+
+- Perform a regression with predictors on a study level.
+- Subgroup analysis is a meta-regression with a categorical predictor. 
+- The random-effects model to pool effect sizes is nothing but a meta-regression model without a slope term, $\beta$.
+- In meta-regression, a modified method called weighted least squares (WLS) is used, which makes sure that studies with a smaller standard error are given a higher weight.
+- $R^2$ in meta-regression is slightly different to the one used in conventional regressions. $R^2_*$ uses the amount of residual heterogeneity variance that even the meta-regression slope cannot explain, and puts it in relation to the total heterogeneity that we initially found in our meta-analysis.
+
+$$
+R^2_* = 1 - \frac{\hat{\tau}^2_{unexplained}}{\hat{\tau}^2_{(total)}}
+$$
+
+![Meta-regression with a continuous predictor and four studies](https://bookdown.org/MathiasHarrer/Doing_Meta_Analysis_in_R/images/subgroups3_sep.png)
+
+```{r}
+# Add the publication years to ThirdWave dataset.
+year <- c(2014, 1998, 2010, 1999, 2005, 2014, 
+          2019, 2010, 1982, 2020, 1978, 2001, 
+          2018, 2002, 2009, 2011, 2011, 2013)
+m.gen.reg <- metareg(m.gen, ~ year)
+```
+
+We are also presented with the corresponding t-statistic for each regression coefficient (tval). This tells us that the Knapp-Hartung method was used to calculate the confidence interval and p-value. Since we also used this adjustment in our initial meta-analysis model, metareg automatically used it again here. Otherwise, z values and Wald-type confidence intervals would have been provided.
+```{r}
+m.gen.reg
+```
+
+## A Bubble Plot
+- Shows the estimated regression slope, as well as the effect size of each study. 
+```{r}
+bubble(m.gen.reg, studlab = TRUE)
+```
+
+## Subgroup Analysis within a Meta-regression Framework
+- The results are identical to the ones of a subgroup analysis which assumes a common estimate of $\tau^2$.
+```{r}
+metareg(m.gen, RiskOfBias)
+```
+
+## Multiple Meta-Regression in R
+- The function `rma` runs a random-effects meta-analysis, which is extended to mixed-effects meta-regression models when moderators are added.
+- We can use the `anova` function, providing it with the two models we want to compare. Note that this is only feasible because we fitted both mixed-effects models using maximum likelihood ("ML") instead of restricted maximum likelihood ("REML").
+```{r}
+data(MVRegressionData)
+glimpse(MVRegressionData)
+
+ggpairs(
+    data = MVRegressionData[, c("reputation", "quality", "pubyear")]
+) + theme_gray()
+```
+```{r}
+m.qual <- rma(yi = yi, 
+              sei = sei, 
+              data = MVRegressionData, 
+              method = "ML", 
+              mods = ~ quality, 
+              test = "knha")
+
+m.qual
+```
+```{r}
+m.qual.rep <- rma(yi = yi, 
+                  sei = sei, 
+                  data = MVRegressionData, 
+                  method = "ML", 
+                  mods = ~ quality + reputation, 
+                  test = "knha")
+
+m.qual.rep
+```
+
+### Model Selection
+```{r}
+# The anova function performs a likelihood ratio test, the results of which we can see in the `LRT` column. log-likelihood ratio ~ chisq(df1 - df2)
+# log-likelihood ratio = 2 * (LL_1 - LL_0) = 2 * log(L_1 / L_0)
+anova(m.qual, m.qual.rep)
+```
+
+### Permutation Test
+```{r}
+
+```
 
 
 # Power Analysis {.tabset .tabset-fade .tabset-pills}

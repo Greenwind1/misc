@@ -18,6 +18,7 @@ library(rcartocolor)  # display_carto_all(); https://bit.ly/3Itq5kB
 library(PrettyCols)  # view_all_palettes(colourblind_friendly = TRUE)
 library(extrafont)  # fonttable(); "Candara"
 library(latex2exp)  # example: latex2exp::TeX("Equation: $\\lambda$")
+library(GGally)  # https://ggobi.github.io/ggally/reference/index.html
 
 # Interactivity
 library(plotly)
