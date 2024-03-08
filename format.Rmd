@@ -24,6 +24,8 @@ output:
         fig_width: 15
 editor_options: 
     chunk_output_type: console
+# Shiny in RMarkdown
+# runtime: shiny
 ---
 
 ```{r setup, include=FALSE}

@@ -417,7 +417,9 @@ glimpse(MVRegressionData)
 
 ggpairs(
     data = MVRegressionData[, c("reputation", "quality", "pubyear")]
-) + theme_gray()
+) + theme_gray() + theme(
+    text = element_text(family = font.base)
+)
 ```
 ```{r}
 m.qual <- rma(yi = yi, 
