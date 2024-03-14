@@ -450,9 +450,116 @@ anova(m.qual, m.qual.rep)
 ```
 
 ### Permutation Test
+- Assessing if the coefficients in our model indeed capture a true pattern underlying our data through rearranging, or shuffling, the order of our data.
 ```{r}
-
+permutest(m.qual.rep)
 ```
+
+### Multi-Model Inference
+- Examining which possible predictor combination provides the best fit, and which predictors are the most important ones overall.
+```{r}
+multimodel.inference(TE = "yi", 
+                     seTE = "sei", 
+                     data = MVRegressionData, 
+                     predictors = c("pubyear", "quality", 
+                                    "reputation", "continent"), 
+                     interaction = FALSE)
+```
+
+
+# Publication Bias
+
+## Small-Study Effect Methods
+- Studies with a high standard error are more likely to fall prey to publication bias. Small studies with a higher standard error (and thus a lower precision) have higher average effect sizes than large studies.
+- Small studies are at the greatest risk of generating non-significant findings, and thus of remaining in the file drawer. In small studies, only very large effects become significant. This means that `only small studies with very high effect sizes will be published`.
+- Essentially, it says that publication bias exists because only significant effects are published. 
+
+### Funnel Plot
+- The y-axis in funnel plots is inverted.
+- Studies in the top part of the plot (those with low standard errors), should lie closely together, and not far away from the pooled effect size. In the lower part of the plot, with increasing standard errors, the funnel opens up, and effect sizes are expected to scatter more heavily to the left and right of the pooled effect.
+- In the below example, there are no small studies with very low or negative effect sizes to “balance out” the ones with very high effects.
+```{r}
+meta::funnel(m.gen, 
+             xlim = c(-0.5, 2), 
+             studlab = TRUE)
+
+# Add title
+title("Funnel Plot (Third Wave Psychotherapies)")
+```
+
+### Contour-Enhanced Funnel Plot
+```{r}
+col.contour = c("gray75", "gray85", "gray95")
+
+meta::funnel(m.gen, xlim = c(-0.5, 2), 
+             contour = c(0.9, 0.95, 0.99), 
+             col.contour = col.contour)
+
+legend(x = 1.6, y = 0.01, 
+       legend = c("p < 0.1", "p < 0.05", "p < 0.01"), 
+       fill = col.contour)
+title("Contour-Enhanced Funnel Plot (Third Wave Psychotherapies)")
+```
+
+### Egger's Regression Test
+![Egger's Regression Test](fig/eggers-regression-test.PNG)
+- The test is based on a simple linear regression model.
+$$
+\frac{\hat{\theta}_k}{SE_{\hat{\theta}_k}} = \beta_{0} \; + \; \beta_1 \; \frac{1}{SE_{\hat{\theta}_k}} \\
+\Leftrightarrow \; \hat{\theta}_k = \beta_1 \; + \; \beta_{0} \; SE_{\hat{\theta}_k}
+$$
+- The responses are equicalent to z-scores.
+- To evaluate the funnel asymmetry, we inspect the size of $\hat{\beta}_0$, and if it differs significantly from `zero`. 
+```{r}
+m.gen$data %>% 
+    mutate(y = TE / seTE, x = 1 / seTE) %>% 
+    lm(y ~ x, data = .) %>% 
+    summary()
+```
+
+```{r}
+metabias(m.gen, method.bias = "linreg")
+```
+
+- A study's SMD and standard error are not independent; there is an artifactual correlation between the SMD and its standard error ($SE^2 \propto SMD^2$) as the below equation.
+
+$$
+SMD_{between} = \frac{\bar{x}_1 - \bar{x}_2}{s_{pooled}} \\
+s_{pooled} = \sqrt{\frac{S^2_{x_1} + S^2_{x_2}}{n_1 + n_2 - 2}} \\
+SE_{SMD_{between}} = \sqrt{\frac{n_1 + n_2}{n_1 \; n_2} + \frac{SMD^2_{between}}{2 \; (n_1 + n_2)}}
+$$
+- Pustejovsky and Rodgers (2019) propose to use a modified version of the standard error removing $SMD$-related term from $SE_{SMD_{between}}$.
+$$
+SE^{*}_{SMD_{between}} = \sqrt{\frac{n_1 + n_2}{n_1 \; n_2}}
+$$
+```{r}
+# Add experimental (n1) and control group (n2) sample size
+n1 <- c(62, 72, 44, 135, 103, 71, 69, 68, 95, 
+        43, 79, 61, 62, 60, 43, 42, 64, 63)
+
+n2 <- c(51, 78, 41, 115, 100, 79, 62, 72, 80, 
+        44, 72, 67, 59, 54, 41, 51, 66, 55)
+
+# Calculate modified SE
+ThirdWave$seTE_c <- sqrt((n1 + n2) / (n1 * n2))
+
+# Re-run 'metagen' with modified SE to get meta-analysis object
+m.gen.c <- metagen(TE = TE, seTE = seTE_c, 
+                   studlab = Author, data = ThirdWave, sm = "SMD", 
+                   fixed = FALSE, random = TRUE, 
+                   method.tau = "REML", hakn = TRUE, 
+                   title = "Third Wave Psychotherapies")
+
+metabias(m.gen.c, method = "linreg")
+```
+
+## P-Curve
+- A New method
+- Focuses on p-values as the main driver of publication bias
+- In practice, research findings are only considered worth publishing when the results are p < 0.05.
+- For small-study effect methods, there is hardly a difference between a study in which p = 0.049, and a study with a p-value of 0.051.
+- Restricted to significant effect sizes, and how their p-values are distributed.
+
 
 
 # Power Analysis {.tabset .tabset-fade .tabset-pills}
