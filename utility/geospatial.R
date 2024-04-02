@@ -53,3 +53,49 @@ get.country.sf <- function(year = "2016",
     
     return(country_transformed)
 }
+
+
+shift_okinawa <- 
+    function(data, 
+             col_pref = "name", 
+             pref_value = "Okinawa", 
+             geometry = "geometry", 
+             zoom_rate = 1.2, 
+             pos = c(15, 3)) {
+        row_okinawa <- data[[col_pref]] == pref_value
+        geo <- data[[geometry]][row_okinawa]
+        cent <- sf::st_centroid(geo)  # compute centroid
+        geo2 <- (geo - cent) * zoom_rate + cent + pos
+        data[[geometry]][row_okinawa] <- geo2
+        return(sf::st_as_sf(data))
+    }
+
+layer_autoline_okinawa <- function(
+        x = c(136.5, 136.5, 141),
+        xend = c(136.5, 141, 145.5),
+        y = c(25.5, 29.5, 33),
+        yend = c(29.5, 33, 33),
+        size = ggplot2::.pt / 15, 
+        color = "gray50"
+){
+    ggplot2::annotate(
+        geom = "segment", 
+        x = x, 
+        xend = xend, 
+        y = y, 
+        yend = yend, 
+        size = .pt / 15, 
+        color = color
+    )
+}
+
+
+# ne.jpn.sf <- ne_states(country = "Japan", returnclass = "sf") %>%
+#     rmapshaper::ms_filter_islands(min_area = 1e8) %>%
+#     select(iso_3166_2, name, region, latitude, longitude)
+# 
+# ne.jpn.sf.shift <- shift_okinawa(ne.jpn.sf)
+# ggplot(data = ne.jpn.sf.shift) + 
+#     geom_sf() + 
+#     layer_autoline_okinawa()
+# ggsave(str_glue("tmp.jpg"), dpi = 300, width = 7, height = 7)
