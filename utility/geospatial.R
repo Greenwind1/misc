@@ -55,6 +55,8 @@ get.country.sf <- function(year = "2016",
 }
 
 
+# Plot Okinawa to another area
+# https://rstudio-pubs-static.s3.amazonaws.com/775867_4cfbe983012a46cab16e53205452d3c8.html
 shift_okinawa <- 
     function(data, 
              col_pref = "name", 
