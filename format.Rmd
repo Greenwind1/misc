@@ -127,6 +127,11 @@ fn.prefix <- "_"
 # Dataset {.tabset .tabset-fade .tabset-pills}
 ```{r Dataset}
 data("penguins", package = "modeldata")  # modeldata from tidymodels
+glimpse(penguins)
+```
+```{r}
+summarytools::view(summarytools::dfSummary(penguins),
+                   file = "output/dfsummary_penguins.html")
 ```
 ```{r}
 p <- ggmice::plot_pattern(data = penguins, 

@@ -89,6 +89,8 @@ options(dplyr.summarise.inform = TRUE)
 # DataSet ----
 data("penguins")  # modeldata from tidymodels
 glimpse(penguins)
+summarytools::view(summarytools::dfSummary(penguins), 
+                   file = "output/dfsummary_penguins.html")
 p <- ggmice::plot_pattern(data = penguins, 
                           vrb = "all", square = TRUE, 
                           rotate = FALSE, cluster = NULL)
