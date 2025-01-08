@@ -115,7 +115,7 @@ library(doParallel)
 # pacman::p_load()
 ```
 
-## Environment
+## Source
 ```{r Environment, echo=TRUE, message=FALSE}
 source(file = "utility/environments.R")
 source(file = "utility/helper_functions.R")
@@ -124,7 +124,7 @@ fn.prefix <- "_"
 ```
 
 
-# Dataset {.tabset .tabset-fade .tabset-pills}
+# Datasets {.tabset .tabset-fade .tabset-pills}
 ```{r Dataset}
 data("penguins", package = "modeldata")  # modeldata from tidymodels
 glimpse(penguins)

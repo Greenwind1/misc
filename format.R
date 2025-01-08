@@ -75,7 +75,7 @@ library(doParallel)
 
 # pacman::p_load()
 
-# Environment ----
+# Source ----
 source(file = "utility/environments.R")
 source(file = "utility/helper_functions.R")
 # icon.grob <- png_to_grob()
@@ -86,7 +86,7 @@ theme_set(theme_minimal(base_family = font.base))
 options(dplyr.summarise.inform = TRUE)
 
 
-# DataSet ----
+# DataSets ----
 data("penguins")  # modeldata from tidymodels
 glimpse(penguins)
 summarytools::view(summarytools::dfSummary(penguins), 
