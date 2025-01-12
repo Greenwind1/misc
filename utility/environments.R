@@ -11,7 +11,7 @@ colnames(crgb) <- cc
 # head(t(crgb))
 # display_carto_all()
 # RColorBrewer::display.brewer.all()
-# ggsci::scale_color_npg()
+# scales::show_col(ggsci::pal_npg("nrc")(10))
 
 col.tw <- "#DBD7D2"     # TimberWolf
 col.c.b <- "#B0B7C6"    # Cadet Blue
