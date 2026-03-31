@@ -1,7 +1,7 @@
 # =============================================================================
 # ALD (Accelerated Longitudinal Design) Simulation
 # Hurdle (2-part) model using mgcv package
-# version 01: proto type, data generation based on Hurdle model
+# Version 01: proto type, data generation based on Hurdle model
 # 
 # Reference:
 # Galbraith, Sally, Jack Bowden, and Adrian Mander. 2017. 
