@@ -66,7 +66,7 @@ true_age_log_amount <- function(age) {
     0.05  * pmax(age - 70, 0)
 }
  
-# True cohort effect: younger cohorts are slightly healthier
+# True cohort effect: younger cohorts are slightly healthier (Linear-effect)
 true_cohort_effect <- function(birth_year) {
   -0.06 * (birth_year - 1950)
 }
