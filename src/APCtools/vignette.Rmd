@@ -65,6 +65,8 @@ library(psych)
 library(gtsummary)
 
 library(APCtools)
+library(cowplot)
+options(ggpubr.null_device = cowplot::agg_null_device)
 library(mgcv)
 ```
 
@@ -221,8 +223,7 @@ p2 <- APCtools::plot_linearEffects(model_cov) +
 p1 + plot_spacer()  + p2 + plot_layout(ncol = 1, heights = c(7, 1, 7)) + 
     plot_annotation(title = "Results of APC Modeling")
 
-ggsave(paste0("fig/", fn.prefix, "-2.jpg"), 
-       width = 7.5, height = 10, dpi = 300)
+ggsave(paste0("fig/", fn.prefix, "-2.jpg"), width = 7.5, height = 10, dpi = 300)
 ```
 
 
