@@ -1,41 +1,49 @@
 # =============================================================================
-# ALD Simulation - Method B: Carstensen-style APC Hurdle Model
+# ALD Simulation: Carstensen-style APC Hurdle Model
 #
-# Carstensen (2007) parametrization applied to individual-level data:
-#   - Age:    cubic regression spline (full: linear + nonlinear)
-#   - Period: cubic regression spline (full: linear + nonlinear)
-#   - Cohort: nonlinear part ONLY  (linear slope constrained to zero)
-#   - Period jumps: post-revision step dummies (Part 2 only)
+# Identification constraint (Carstensen 2007, Section 6.2, Principle 3):
+#   Period linear slope (drift) = 0  -->  drift attributed to Cohort
 #
-# Key references:
+# Period effect representation:
+#   A. Default Method: jump dummies only (discrete, no continuous smooth)
+#   B. Carstensen-style Method: period_nl_* only (continuous nonlinear smooth, no jumps)
+#
+# The two methods differ in HOW they represent period effects:
+#   Method A assumes period acts only at discrete revision boundaries.
+#   Method B assumes period acts as a smooth nonlinear curve.
+#
+# Model structure:
+#   Part 1 and Part 2:
+#     Age:    s(age, bs='cr', k=10) full (linear + nonlinear)
+#     Cohort: s(birth_year, bs='cr', k=5) full (linear + nonlinear)
+#     Period: period_nl_* nonlinear only (linear drift = 0)
+#
+# References:
 #   Carstensen, B. (2007). Age-period-cohort models for the Lexis diagram.
-#     Statistics in Medicine, 26(15), 3018-3045. doi:10.1002/sim.2764
-#   Carstensen, B., Plummer, M., Laara, E., & Hills, M. (2021).
-#     Epi: A package for statistical analysis in epidemiology.
-#     https://CRAN.R-project.org/package=Epi
-#
-# Design note:
-#   Epi::apc.fit() targets tabulated rate data (cases + person-years).
-#   For individual-level Hurdle data we replicate the same identification
-#   constraint manually inside gam(): include s(obs_year) as the period
-#   smooth and restrict cohort (birth_year) to its nonlinear component only,
-#   removing the identifiable linear drift.
+#   Statistics in Medicine, 26(15), 3018-3045. doi:10.1002/sim.2764
 # =============================================================================
 
 library(mgcv)
-library(splines)   # ns(), poly()
+library(splines)
 library(tidyverse)
+library(extrafont)  # fonttable(); "Candara"
 library(patchwork)
+source("utility/environments.R")
 set.seed(2026)
 
 NAME <- "ald_simulation_04"
 
 # =============================================================================
-# 0. Study design parameters & true DGP functions
+# 1. Load data
 # =============================================================================
-REVISION_YEARS     <- c(2012, 2014, 2016, 2018)
+dat <- read_csv(paste0("input/", NAME, "-data.csv"))
+
+
+# =============================================================================
+# 2. Study design parameters & true DGP functions
+# =============================================================================
+REVISION_YEARS <- c(2012, 2014, 2016, 2018)
 COHORT_BIRTH_YEARS <- c(1940, 1945, 1950, 1955, 1960)
-jump_vars          <- paste0("post_", REVISION_YEARS)
 
 true_age_logit <- function(age) {
   -2.5 + 0.04 * pmax(age - 50, 0) + 0.06 * pmax(age - 70, 0)
@@ -51,260 +59,175 @@ true_theta <- c(`2012` = -0.08, `2014` = 0.05, `2016` = -0.06, `2018` = 0.04)
 
 
 # =============================================================================
-# 1. Load data and construct Carstensen cohort variable
+# 3. Construct period nonlinear basis
+# Period nonlinear basis:
+#   Build ns(obs_year, df=3), then project out the linear component.
+#   The residual basis captures only nonlinear curvature in obs_year.
+#   The linear drift is constrained to zero (Carstensen default).
 # =============================================================================
-dat <- read_csv(paste0("input/", NAME, "-data.csv"))
+mean_year <- mean(dat$obs_year)
+x_c_ref <- dat$obs_year - mean_year
+ns_period <- ns(dat$obs_year, df = 3)
+coef_period <- lm.fit(cbind(1, x_c_ref), ns_period)$coef
 
-# ---------------------------------------------------------------------------
-# Carstensen identification constraint:
-#   The linear (drift) component of cohort is unidentifiable from A + P and
-#   is set to zero.  Only the nonlinear curvature of birth_year is retained.
-#
-# Implementation A [used here – 5 discrete cohort levels]:
-#   poly(birth_year, degree=2, raw=FALSE) produces two orthogonal components:
-#     [,1]  linear      → EXCLUDED  (Carstensen constraint)
-#     [,2]  quadratic   → INCLUDED  (captures U-shaped cohort effect)
-#   The poly() object is saved so that predict() on new data uses the same
-#   centering and scaling as the training data.
-#
-# Implementation B [for continuous cohort, e.g., production NDB data]:
-#   make_cohort_nl_basis() builds a natural spline basis for birth_year
-#   and projects out the linear component by regression, returning the
-#   orthogonalized residual basis.  See helper function below.
-# ---------------------------------------------------------------------------
-
-poly_cohort <- poly(dat$birth_year, 2)   # store poly object for later prediction
-dat <- dat %>%
-  mutate(cohort_nl = poly_cohort[, 2])   # quadratic component only
-
-cat("=== Cohort variable summary ===\n")
-cat("birth_year distribution:\n"); print(table(dat$birth_year))
-cat(sprintf("cohort_nl range: [%.4f, %.4f]\n\n", min(dat$cohort_nl), max(dat$cohort_nl)))
-
-
-# ---------------------------------------------------------------------------
-# Helper: general-purpose Carstensen cohort basis (continuous cohort)
-# ---------------------------------------------------------------------------
-# Usage (example):
-#   B_nl <- make_cohort_nl_basis(dat$birth_year, df = 4)
-#   dat  <- cbind(dat, setNames(as.data.frame(B_nl),
-#                               paste0("cnl", seq_len(ncol(B_nl)))))
-#   # Then add cnl1 + cnl2 + ... to the formula instead of cohort_nl
-# ---------------------------------------------------------------------------
-make_cohort_nl_basis <- function(x, df = 3) {
-  B     <- ns(x, df = df)                      # natural spline basis (full)
-  x_c   <- x - mean(x)                         # center cohort
-  coef  <- lm.fit(cbind(1, x_c), B)$coef       # fit linear part per basis col
-  B_nl  <- B - cbind(1, x_c) %*% coef          # residualize → remove linear
-  keep  <- apply(B_nl, 2, var) > 1e-12         # drop zero-variance columns
+make_period_nl <- function(x, ns_obj = ns_period) {
+  B <- predict(ns_obj, newx = x)
+  x_c <- x - mean_year
+  B_nl <- B - cbind(1, x_c) %*% coef_period
+  keep <- apply(predict(ns_period, newx = dat$obs_year), 2, var) > 1e-12
   B_nl[, keep, drop = FALSE]
 }
 
+B_period_nl_full <- make_period_nl(dat$obs_year)
+n_pnl     <- ncol(B_period_nl_full)
+pnl_names <- paste0("period_nl_", seq_len(n_pnl))
 
-# =============================================================================
-# 2. Method B – Part 1: Visit probability  (binomial / logit)
-# =============================================================================
-# Model:
-#   logit P(visit_it = 1) = f_A(age_it) + f_P(obs_year_it) + γ · cohort_nl_i
-#
-# Differences vs Method A:
-#   Method A  visited ~ s(age) + s(birth_year)
-#   Method B  visited ~ s(age) + s(obs_year) + cohort_nl  (parametric term)
-#
-# s(obs_year) captures the smooth secular trend in visit probability.
-# cohort_nl (quadratic, no linear) captures the U-shaped cohort effect.
-# No fee-revision jump terms: revisions affect reimbursed COST, not visit prob.
+dat <- dat %>%
+  bind_cols(setNames(as.data.frame(B_period_nl_full), pnl_names))
 
-formula_b1 <- visited ~ s(age, bs = "cr", k = 10) +
-                         s(obs_year, bs = "cr", k = 6) +
-                         cohort_nl
+cat("=== Period nonlinear basis ===\n")
+cat(sprintf("Retained columns: %d (%s)\n\n",
+            n_pnl, paste(pnl_names, collapse = ", ")))
 
-cat("=== Method B | Part 1 formula ===\n")
-print(formula_b1)
-
-m1_b <- gam(
-  formula_b1,
-  data   = dat,
-  family = binomial(link = "logit"),
-  method = "REML"
-)
-cat("\n=== Method B | Part 1 summary ===\n")
-print(summary(m1_b))
+period_nl_formula_str <- paste(pnl_names, collapse = " + ")
 
 
 # =============================================================================
-# 3. Method B – Part 2: Conditional expenditure  (Gamma / log)
+# 2. Part 1: Visit probability  (binomial / logit)
 # =============================================================================
-# Model (visitors only):
-#   log E[cost_it | visit=1] = f_A(age_it) + f_P(obs_year_it)
-#                             + γ · cohort_nl_i
-#                             + Σ_r θ_r · D_{r,it}
-#
-# D_{r,it} = 1(obs_year_it >= r): cumulative post-revision step dummy.
-# f_P(obs_year) captures smooth secular cost trends between revisions.
-# The two period components are separable: f_P absorbs gradual drift,
-# θ_r captures the discrete jump at each fee revision boundary.
-
-formula_b2 <- as.formula(paste0(
-  "medical_cost ~ s(age, bs='cr', k=10) + ",
-  "s(obs_year, bs='cr', k=6) + ",
-  "cohort_nl + ",
-  paste(jump_vars, collapse = " + ")
+formula_b1 <- as.formula(paste0(
+  "visited ~ s(age, bs='cr', k=10) + ",
+  "s(birth_year, bs='cr', k=5)"
 ))
 
-cat("\n=== Method B | Part 2 formula ===\n")
-print(formula_b2)
+cat("=== Method B | Part 1 formula ===\n"); print(formula_b1)
 
-m2_b <- gam(
-  formula_b2,
-  data   = filter(dat, visited == 1),
-  family = Gamma(link = "log"),
-  method = "REML"
-)
-cat("\n=== Method B | Part 2 summary ===\n")
-print(summary(m2_b))
+m1_b <- gam(formula_b1, data = dat,
+            family = binomial(link = "logit"), method = "REML")
+cat("\n=== Method B | Part 1 summary ===\n"); print(summary(m1_b))
+saveRDS(m1_b, file = paste0("output/", NAME, "-fitting_m1_b.rda"))
+
+
+# =============================================================================
+# 3. Part 2: Conditional expenditure  (Gamma / log)
+# No jump dummies -- period smooth (period_nl_*) absorbs all period variation,
+# including the step-like behavior near revision years.
+# The smooth will approximate the cumulative jumps as a piecewise curve.
+# =============================================================================
+formula_b2 <- as.formula(paste0(
+  "medical_cost ~ s(age, bs='cr', k=10) + ",
+  "s(birth_year, bs='cr', k=5) + ",
+  period_nl_formula_str
+))
+
+cat("\n=== Method B | Part 2 formula ===\n"); print(formula_b2)
+
+m2_b <- gam(formula_b2, data = filter(dat, visited == 1),
+            family = Gamma(link = "log"), method = "REML")
+cat("\n=== Method B | Part 2 summary ===\n"); print(summary(m2_b))
+saveRDS(m2_b, file = paste0("output/", NAME, "-fitting_m2_b.rda"))
 
 cat(sprintf("\nMethod B | Part 1 AIC: %.1f\n", AIC(m1_b)))
 cat(sprintf("Method B | Part 2 AIC: %.1f\n",  AIC(m2_b)))
 
 
 # =============================================================================
-# 4. Validation plots (Method B only; comparison vs A requires m1, m2 loaded)
+# 4. Validation plots
 # =============================================================================
 font.base <- "Times New Roman"
 theme_ald <- theme_minimal(base_family = font.base, base_size = 13) +
-  theme(
-    legend.position  = "bottom",
-    strip.background = element_rect(fill = "gray95"),
-    panel.grid.minor = element_blank()
-  )
+  theme(legend.position = "bottom",
+        strip.background = element_rect(fill = "gray95"),
+        panel.grid.minor = element_blank())
 pal <- c("True" = "tomato", "Method B (Carstensen)" = "darkorange")
 
-# ---------------------------------------------------------------------------
-# Helper: predict cohort_nl for new birth_year value(s)
-# ---------------------------------------------------------------------------
-# Must use the stored poly_cohort object so that centering/scaling matches
-# the training data.  predict.poly() handles this correctly.
-pred_cohort_nl <- function(new_by) {
-  predict(poly_cohort, newdata = new_by)[, 2]
+# Period reference point for prediction grids: window midpoint 2014 or window mean
+period_nl_2014 <- make_period_nl(2014)
+period_nl_mean <- colMeans(B_period_nl_full)
+
+# Helper to attach period_nl at a fixed obs_year to a grid tibble
+attach_period_nl <- function(grid_tbl, period_nl_vec, col_names) {
+  grid_tbl %>%
+    bind_cols(setNames(
+      as.data.frame(matrix(
+        rep(as.numeric(period_nl_vec), nrow(grid_tbl)),
+        nrow = nrow(grid_tbl), ncol = length(col_names), byrow = TRUE
+      )),
+      col_names
+    ))
 }
 
 
 # ---------------------------------------------------------------------------
 # 4-1. Age effect
 # ---------------------------------------------------------------------------
-# Prediction grid: reference cohort birth_year=1950, period mid-window 2014,
-# all revision dummies = 0  (isolates pure age trajectory).
-#
-# NOTE on obs_year choice:
-#   Method A does not include obs_year, so "age effect" is independent of
-#   calendar time.  Method B has s(obs_year), so we must fix obs_year.
-#   We use 2014 (window midpoint) as the period reference.
-#   Setting jump dummies to 0 removes the fee-revision component.
+age_grid <- tibble(age = 50:79, birth_year = 1950) %>%
+  attach_period_nl(period_nl_mean, pnl_names)
+  # attach_period_nl(period_nl_2014, pnl_names)
 
-age_grid <- tibble(
-  age        = 50:79,
-  birth_year = 1950,
-  obs_year   = 2014,                          # period reference
-  cohort_nl  = pred_cohort_nl(1950),          # reference cohort
-  post_2012  = 0L, post_2014 = 0L, post_2016 = 0L, post_2018 = 0L
-)
-
-# --- Part 1: visit probability ---
 pred1_b <- predict(m1_b, newdata = age_grid, type = "link", se.fit = TRUE)
+pred2_b <- predict(m2_b, newdata = age_grid, type = "link", se.fit = TRUE)
+
 age_grid <- age_grid %>%
   mutate(
-    fit_logit = pred1_b$fit,
-    se_logit  = pred1_b$se.fit,
+    # Part 1
+    fit_logit = pred1_b$fit, se_logit = pred1_b$se.fit,
     fit_prob  = plogis(fit_logit),
     lo_prob   = plogis(fit_logit - 1.96 * se_logit),
     hi_prob   = plogis(fit_logit + 1.96 * se_logit),
-    true_prob = plogis(true_age_logit(age) + true_cohort_effect(1950))
+    true_prob = plogis(true_age_logit(age) + true_cohort_effect(1950)),
+    # Part 2
+    fit_log   = pred2_b$fit, se_log = pred2_b$se.fit,
+    fit_amt   = exp(fit_log),
+    lo_amt    = exp(fit_log - 1.96 * se_log),
+    hi_amt    = exp(fit_log + 1.96 * se_log),
+    true_amt  = exp(true_age_log_amount(age) + true_cohort_effect(1950) * 0.5),
+    # E[Y]
+    fit_ey    = fit_prob * fit_amt,
+    true_ey   = true_prob * true_amt
   )
 
 p_age_prob_b <- ggplot(age_grid, aes(x = age)) +
-  geom_ribbon(aes(ymin = lo_prob, ymax = hi_prob),
-              fill = "darkorange", alpha = 0.2) +
+  geom_ribbon(aes(ymin = lo_prob, ymax = hi_prob), fill = "darkorange", alpha = 0.2) +
   geom_line(aes(y = fit_prob,  color = "Method B (Carstensen)"), linewidth = 1.2) +
-  geom_line(aes(y = true_prob, color = "True"),
-            linewidth = 1.2, linetype = "dashed") +
+  geom_line(aes(y = true_prob, color = "True"), linewidth = 1.2, linetype = "dashed") +
   scale_color_manual(values = pal) +
   scale_y_continuous(labels = scales::percent) +
-  labs(
-    title    = "Part 1: Visit Probability",
-    subtitle = "Reference: birth_year=1950, obs_year=2014, jump dummies=0 | 95% CI",
-    x = "Age", y = "Visit probability", color = NULL
-  ) +
-  theme_ald
-
-# --- Part 2: conditional expenditure ---
-pred2_b <- predict(m2_b, newdata = age_grid, type = "link", se.fit = TRUE)
-age_grid <- age_grid %>%
-  mutate(
-    fit_log = pred2_b$fit,
-    se_log  = pred2_b$se.fit,
-    fit_amt = exp(fit_log),
-    lo_amt  = exp(fit_log - 1.96 * se_log),
-    hi_amt  = exp(fit_log + 1.96 * se_log),
-    true_amt = exp(true_age_log_amount(age) + true_cohort_effect(1950) * 0.5)
-  )
+  labs(title = "Part 1: Frequency",
+       subtitle = "Ref: birth_year=1950, obs_year=mean over years, no jump dummies | 95% CI",
+       x = "Age", y = "Visit probability", color = NULL) + theme_ald
 
 p_age_amt_b <- ggplot(age_grid, aes(x = age)) +
-  geom_ribbon(aes(ymin = lo_amt, ymax = hi_amt),
-              fill = "darkorange", alpha = 0.2) +
+  geom_ribbon(aes(ymin = lo_amt, ymax = hi_amt), fill = "darkorange", alpha = 0.2) +
   geom_line(aes(y = fit_amt,  color = "Method B (Carstensen)"), linewidth = 1.2) +
-  geom_line(aes(y = true_amt, color = "True"),
-            linewidth = 1.2, linetype = "dashed") +
+  geom_line(aes(y = true_amt, color = "True"), linewidth = 1.2, linetype = "dashed") +
   scale_color_manual(values = pal) +
   scale_y_continuous(labels = scales::comma) +
-  labs(
-    title    = "Part 2: Conditional Expenditure",
-    subtitle = "Reference: birth_year=1950, obs_year=2014, jump dummies=0 | 95% CI",
-    x = "Age", y = "Mean incurred expenditure", color = NULL
-  ) +
-  theme_ald
-
-# --- Combined E[Y] = pi * mu ---
-age_grid <- age_grid %>%
-  mutate(
-    fit_ey  = fit_prob * fit_amt,
-    true_ey = true_prob * true_amt
-  )
+  labs(title = "Part 2: Incurred medical expenditure",
+       subtitle = "Ref cohort: birth_year=1950, obs_year=mean over year, no jump dummies | 95% CI",
+       x = "Age", y = "Mean incurred expenditure", color = NULL) + theme_ald
 
 p_age_ey_b <- ggplot(age_grid, aes(x = age)) +
   geom_line(aes(y = fit_ey,  color = "Method B (Carstensen)"), linewidth = 1.2) +
-  geom_line(aes(y = true_ey, color = "True"),
-            linewidth = 1.2, linetype = "dashed") +
+  geom_line(aes(y = true_ey, color = "True"), linewidth = 1.2, linetype = "dashed") +
   scale_color_manual(values = pal) +
   scale_y_continuous(labels = scales::comma) +
-  labs(
-    title    = "E[Y] = P(visit) × E[cost | visit]",
-    subtitle = "Reference: birth_year=1950, obs_year=2014",
-    x = "Age", y = "Expected expenditure", color = NULL
-  ) +
-  theme_ald
+  labs(title = "Frequency * Incurred medical expenditure",
+       subtitle = "Ref: birth_year=1950, obs_year=2014",
+       x = "Age", y = "Expected expenditure", color = NULL) + theme_ald
 
 
 # ---------------------------------------------------------------------------
 # 4-2. Cohort effect
 # ---------------------------------------------------------------------------
-# Compare fitted cohort_nl coefficient vs true cohort shape.
-# We extract the marginal cohort effect by predicting at fixed age=65, obs_year=2014
-# across all 5 cohort levels, then centering both fitted and true values.
-
-cohort_grid <- tibble(
-  birth_year = COHORT_BIRTH_YEARS,
-  age        = 65,
-  obs_year   = 2014,
-  cohort_nl  = pred_cohort_nl(COHORT_BIRTH_YEARS),
-  post_2012  = 0L, post_2014 = 0L, post_2016 = 0L, post_2018 = 0L
-)
+cohort_grid <- tibble(birth_year = COHORT_BIRTH_YEARS, age = 65) %>%
+  attach_period_nl(period_nl_mean, pnl_names)
+  # attach_period_nl(period_nl_2014, pnl_names)
 
 pred_coh_b <- predict(m1_b, newdata = cohort_grid, type = "link", se.fit = TRUE)
 cohort_grid <- cohort_grid %>%
   mutate(
-    fit_logit = pred_coh_b$fit,
-    se_logit  = pred_coh_b$se.fit,
+    fit_logit = pred_coh_b$fit, se_logit = pred_coh_b$se.fit,
     fit_cen   = fit_logit - mean(fit_logit),
     true_cen  = (true_age_logit(65) + true_cohort_effect(birth_year)) -
                 mean(true_age_logit(65) + true_cohort_effect(COHORT_BIRTH_YEARS)),
@@ -314,65 +237,64 @@ cohort_grid <- cohort_grid %>%
 
 p_cohort_b <- ggplot(cohort_grid, aes(x = birth_year)) +
   geom_hline(yintercept = 0, linetype = "dotted", color = "gray60") +
-  geom_ribbon(aes(ymin = lo_cen, ymax = hi_cen),
-              fill = "darkorange", alpha = 0.2) +
+  geom_ribbon(aes(ymin = lo_cen, ymax = hi_cen), fill = "darkorange", alpha = 0.2) +
   geom_line(aes(y = fit_cen,  color = "Method B (Carstensen)"), linewidth = 1.2) +
   geom_point(aes(y = fit_cen, color = "Method B (Carstensen)"), size = 3) +
-  geom_line(aes(y = true_cen, color = "True"),
-            linewidth = 1.2, linetype = "dashed") +
+  geom_line(aes(y = true_cen, color = "True"), linewidth = 1.2, linetype = "dashed") +
   geom_point(aes(y = true_cen, color = "True"), size = 3, shape = 17) +
   scale_color_manual(values = pal) +
   scale_x_continuous(breaks = COHORT_BIRTH_YEARS) +
-  labs(
-    title    = "Cohort Effect (centered, logit scale)",
-    subtitle = "Fixed age=65, obs_year=2014 | Ribbon: 95% CI",
-    x = "Birth year", y = "Cohort effect (logit, centered)", color = NULL
-  ) +
-  theme_ald
+  labs(title = "Cohort Effect (centered, logit scale)",
+       subtitle = "Fixed age=65, obs_year=2014 | Cohort fully free | 95% CI",
+       x = "Birth year", y = "Cohort effect (logit, centered)", color = NULL) + theme_ald
 
 
 # ---------------------------------------------------------------------------
-# 4-3. Period effect: revision jump coefficients (Part 2)
+# 4-3. Period smooth: fitted vs true cumulative jump pattern (Part 2)
 # ---------------------------------------------------------------------------
-coef_m2b <- coef(m2_b)
-vcov_m2b <- vcov(m2_b)
-se_m2b   <- sqrt(diag(vcov_m2b))
+# Method B has no discrete jump coefficients to compare directly.
+# Instead, we visualize the period smooth over the observation window
+# alongside the true cumulative period effect (sum of jumps up to each year).
 
-jump_df_b <- tibble(
-  revision_year = REVISION_YEARS,
-  true_val      = as.numeric(true_theta),
-  estimate      = coef_m2b[jump_vars],
-  se            = se_m2b[jump_vars]
+period_grid <- tibble(
+  obs_year   = 2010:2019,
+  birth_year = 1950,
+  age        = 65
 ) %>%
+  bind_cols(setNames(
+    as.data.frame(make_period_nl(2010:2019)),
+    pnl_names
+  ))
+
+pred_period_b2 <- predict(m2_b, newdata = period_grid, type = "link", se.fit = TRUE)
+
+# True cumulative period effect at each year
+true_period_cumul <- sapply(2010:2019, function(yr) {
+  revs <- REVISION_YEARS[REVISION_YEARS <= yr]
+  sum(true_theta[as.character(revs)])
+})
+
+period_grid <- period_grid %>%
   mutate(
-    lo      = estimate - 1.96 * se,
-    hi      = estimate + 1.96 * se,
-    covered = true_val >= lo & true_val <= hi,
-    bias    = estimate - true_val
+    fit_log       = pred_period_b2$fit,
+    se_log        = pred_period_b2$se.fit,
+    fit_log_cen   = fit_log - mean(fit_log),
+    lo_cen        = fit_log_cen - 1.96 * se_log,
+    hi_cen        = fit_log_cen + 1.96 * se_log,
+    true_cen      = true_period_cumul - mean(true_period_cumul)
   )
 
-cat("\n=== Method B | Period jump coefficients (Part 2) ===\n")
-print(jump_df_b %>% select(revision_year, true_val, estimate, se, bias, covered))
-
-p_jump_b <- ggplot(jump_df_b, aes(x = factor(revision_year))) +
-  geom_hline(yintercept = 0, linetype = "dotted", color = "gray60") +
-  geom_pointrange(
-    aes(y = estimate, ymin = lo, ymax = hi, color = "Method B (Carstensen)"),
-    size = 0.9, linewidth = 1.0
-  ) +
-  geom_point(aes(y = true_val, color = "True"), size = 4, shape = 17) +
-  geom_text(
-    aes(y = hi + 0.01,
-        label = ifelse(covered, "covered", "NOT covered")),
-    size = 3.5, color = "gray40", vjust = 0
-  ) +
+p_period_b <- ggplot(period_grid, aes(x = obs_year)) +
+  geom_ribbon(aes(ymin = lo_cen, ymax = hi_cen), fill = "darkorange", alpha = 0.2) +
+  geom_line(aes(y = fit_log_cen, color = "Method B (Carstensen)"), linewidth = 1.2) +
+  geom_step(aes(y = true_cen,    color = "True"),
+            linewidth = 1.2, linetype = "dashed") +
+  geom_vline(xintercept = REVISION_YEARS, linetype = "dotted", color = "gray60") +
   scale_color_manual(values = pal) +
-  labs(
-    title    = "Period Effect: Revision Jump Coefficients (Part 2, log scale)",
-    subtitle = "Triangle: true value | Point + range: estimate ± 1.96 SE",
-    x = "Revision year", y = "Jump coefficient (log)", color = NULL
-  ) +
-  theme_ald
+  scale_x_continuous(breaks = 2010:2019) +
+  labs(title = "Period Effect: Smooth vs True Cumulative Jumps (Part 2, log scale)",
+       subtitle = "Both centered | Vertical dotted: revision years | 95% CI",
+       x = "Obs year", y = "Period effect (log, centered)", color = NULL) + theme_ald
 
 
 # ---------------------------------------------------------------------------
@@ -381,30 +303,22 @@ p_jump_b <- ggplot(jump_df_b, aes(x = factor(revision_year))) +
 dat_visited_b <- dat %>%
   filter(visited == 1) %>%
   mutate(
-    cohort_nl  = pred_cohort_nl(birth_year),   # ensure column present
     fitted_log = predict(m2_b, type = "link"),
-    resid_dev  = residuals(m2_b, type = "deviance"),
-    resid_pear = residuals(m2_b, type = "pearson")
+    resid_dev  = residuals(m2_b, type = "deviance")
   )
 
 p_resid1_b <- ggplot(dat_visited_b, aes(x = fitted_log, y = resid_dev)) +
   geom_point(alpha = 0.15, size = 0.8, color = "darkorange") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "tomato") +
   geom_smooth(method = "loess", se = FALSE, color = "tomato", linewidth = 0.8) +
-  labs(
-    title = "Part 2: Deviance Residuals vs Fitted (log scale)",
-    x = "Fitted (log)", y = "Deviance residual"
-  ) +
-  theme_ald
+  labs(title = "Part 2: Deviance Residuals vs Fitted",
+       x = "Fitted (log)", y = "Deviance residual") + theme_ald
 
 p_resid2_b <- ggplot(dat_visited_b, aes(sample = resid_dev)) +
   stat_qq(alpha = 0.2, size = 0.8, color = "darkorange") +
   stat_qq_line(color = "tomato", linewidth = 0.9) +
-  labs(
-    title = "Part 2: QQ Plot of Deviance Residuals",
-    x = "Theoretical quantiles", y = "Sample quantiles"
-  ) +
-  theme_ald
+  labs(title = "Part 2: QQ Plot of Deviance Residuals",
+       x = "Theoretical quantiles", y = "Sample quantiles") + theme_ald
 
 
 # ---------------------------------------------------------------------------
@@ -412,143 +326,96 @@ p_resid2_b <- ggplot(dat_visited_b, aes(sample = resid_dev)) +
 # ---------------------------------------------------------------------------
 fig_b <- (p_age_prob_b | p_age_amt_b) /
           (p_age_ey_b  | p_cohort_b)  /
-          (p_jump_b    | (p_resid1_b | p_resid2_b))
+          (p_period_b  | (p_resid1_b | p_resid2_b))
 
 ggsave(paste0("fig/", NAME, "-fitting_Carstensen.jpg"),
        fig_b, width = 16, height = 18, dpi = 300)
-
-cat("\nFigure saved: fig/", NAME, "-fitting_Carstensen.jpg\n")
+cat("\nFigure saved.\n")
 
 
 # =============================================================================
-# 5. (Optional) Side-by-side comparison with Method A
+# 5. (Optional) Comparison with Method A
+# Run AFTER sourcing ald_simulation_04-fitting.R (loads m1, m2).
 # =============================================================================
-# Run this block AFTER sourcing ald_simulation_04-fitting.R (which loads m1, m2).
-# It superimposes Method A and Method B curves on the same axes.
 
 compare_methods <- function(m1_a, m2_a, m1_b, m2_b) {
+  pal3 <- c("True" = "tomato",
+            "Method A (mgcv GAM)"   = "steelblue",
+            "Method B (Carstensen)" = "darkorange")
 
-  pal3 <- c(
-    "True"                  = "tomato",
-    "Method A (mgcv GAM)"   = "steelblue",
-    "Method B (Carstensen)" = "darkorange"
-  )
-
-  # ---- Shared prediction grid ----
-  # For Method A: no obs_year in model, birth_year=1950 is sufficient.
-  # For Method B: obs_year=2014 is fixed as period reference.
-  age_range  <- 50:79
   ref_grid_a <- tibble(
-    age       = age_range,
-    birth_year = 1950,
+    age = 50:79, birth_year = 1950,
     post_2012 = 0L, post_2014 = 0L, post_2016 = 0L, post_2018 = 0L
   )
-  ref_grid_b <- tibble(
-    age        = age_range,
-    birth_year = 1950,
-    obs_year   = 2014,
-    cohort_nl  = pred_cohort_nl(1950),
-    post_2012  = 0L, post_2014 = 0L, post_2016 = 0L, post_2018 = 0L
-  )
+  ref_grid_b <- age_grid   # built above
 
-  # ---- Age effect: Part 1 ----
   p1_a <- predict(m1_a, newdata = ref_grid_a, type = "link", se.fit = TRUE)
   p1_b <- predict(m1_b, newdata = ref_grid_b, type = "link", se.fit = TRUE)
-
-  cmp_age <- tibble(
-    age      = age_range,
-    true_p   = plogis(true_age_logit(age_range) + true_cohort_effect(1950)),
-    fit_a    = plogis(p1_a$fit),
-    fit_b    = plogis(p1_b$fit)
-  ) %>%
-    pivot_longer(c(true_p, fit_a, fit_b),
-                 names_to = "source", values_to = "prob") %>%
-    mutate(source = recode(source,
-      true_p = "True",
-      fit_a  = "Method A (mgcv GAM)",
-      fit_b  = "Method B (Carstensen)"
-    ))
-
-  p_cmp_prob <- ggplot(cmp_age, aes(x = age, y = prob, color = source,
-                                     linetype = source)) +
-    geom_line(linewidth = 1.2) +
-    scale_color_manual(values = pal3) +
-    scale_linetype_manual(values = c("True" = "dashed",
-                                      "Method A (mgcv GAM)"   = "solid",
-                                      "Method B (Carstensen)" = "solid")) +
-    scale_y_continuous(labels = scales::percent) +
-    labs(title = "Part 1: Visit Probability — Method A vs B",
-         subtitle = "Ref: birth_year=1950, dummies=0 (B: obs_year=2014)",
-         x = "Age", y = "Visit probability", color = NULL, linetype = NULL) +
-    theme_ald
-
-  # ---- Age effect: Part 2 ----
   p2_a <- predict(m2_a, newdata = ref_grid_a, type = "link", se.fit = TRUE)
   p2_b <- predict(m2_b, newdata = ref_grid_b, type = "link", se.fit = TRUE)
 
-  cmp_amt <- tibble(
-    age      = age_range,
-    true_a   = exp(true_age_log_amount(age_range) + true_cohort_effect(1950) * 0.5),
-    fit_a    = exp(p2_a$fit),
-    fit_b    = exp(p2_b$fit)
-  ) %>%
-    pivot_longer(c(true_a, fit_a, fit_b),
-                 names_to = "source", values_to = "amt") %>%
-    mutate(source = recode(source,
-      true_a = "True",
-      fit_a  = "Method A (mgcv GAM)",
-      fit_b  = "Method B (Carstensen)"
-    ))
+  cmp <- tibble(
+    age       = 50:79,
+    true_prob = plogis(true_age_logit(50:79) + true_cohort_effect(1950)),
+    A_prob    = plogis(p1_a$fit),
+    B_prob    = plogis(p1_b$fit),
+    true_amt  = exp(true_age_log_amount(50:79) + true_cohort_effect(1950) * 0.5),
+    A_amt     = exp(p2_a$fit),
+    B_amt     = exp(p2_b$fit)
+  )
 
-  p_cmp_amt <- ggplot(cmp_amt, aes(x = age, y = amt, color = source,
-                                    linetype = source)) +
+  p_cmp_prob <- cmp %>%
+    pivot_longer(c(true_prob, A_prob, B_prob),
+                 names_to = "src", values_to = "prob") %>%
+    mutate(src = recode(src,
+      true_prob = "True",
+      A_prob    = "Method A (mgcv GAM)",
+      B_prob    = "Method B (Carstensen)"
+    )) %>%
+    ggplot(aes(x = age, y = prob, color = src, linetype = src)) +
     geom_line(linewidth = 1.2) +
     scale_color_manual(values = pal3) +
-    scale_linetype_manual(values = c("True" = "dashed",
-                                      "Method A (mgcv GAM)"   = "solid",
-                                      "Method B (Carstensen)" = "solid")) +
+    scale_linetype_manual(values = c(
+      "True" = "dashed",
+      "Method A (mgcv GAM)"   = "solid",
+      "Method B (Carstensen)" = "solid")) +
+    scale_y_continuous(labels = scales::percent) +
+    labs(title = "Part 1: Visit Probability — Method A vs B",
+         subtitle = "Ref: birth_year=1950",
+         x = "Age", y = "Visit probability", color = NULL, linetype = NULL) +
+    theme_ald
+
+  p_cmp_amt <- cmp %>%
+    pivot_longer(c(true_amt, A_amt, B_amt),
+                 names_to = "src", values_to = "amt") %>%
+    mutate(src = recode(src,
+      true_amt = "True",
+      A_amt    = "Method A (mgcv GAM)",
+      B_amt    = "Method B (Carstensen)"
+    )) %>%
+    ggplot(aes(x = age, y = amt, color = src, linetype = src)) +
+    geom_line(linewidth = 1.2) +
+    scale_color_manual(values = pal3) +
+    scale_linetype_manual(values = c(
+      "True" = "dashed",
+      "Method A (mgcv GAM)"   = "solid",
+      "Method B (Carstensen)" = "solid")) +
     scale_y_continuous(labels = scales::comma) +
     labs(title = "Part 2: Conditional Expenditure — Method A vs B",
-         subtitle = "Ref: birth_year=1950, dummies=0 (B: obs_year=2014)",
+         subtitle = "Ref: birth_year=1950",
          x = "Age", y = "Mean incurred expenditure", color = NULL, linetype = NULL) +
     theme_ald
 
-  # ---- Period jump coefficients ----
-  jump_cmp <- bind_rows(
-    jump_df %>% mutate(method = "Method A (mgcv GAM)"),
-    jump_df_b %>% mutate(method = "Method B (Carstensen)")
-  )
-  pal_method <- c("Method A (mgcv GAM)" = "steelblue",
-                   "Method B (Carstensen)" = "darkorange")
-
-  p_cmp_jump <- ggplot(jump_cmp,
-                        aes(x = factor(revision_year), color = method,
-                            group = method)) +
-    geom_hline(yintercept = 0, linetype = "dotted", color = "gray60") +
-    geom_pointrange(
-      aes(y = estimate, ymin = lo, ymax = hi),
-      position = position_dodge(width = 0.4),
-      size = 0.8, linewidth = 0.9
-    ) +
-    geom_point(aes(y = true_val), color = "tomato", shape = 17,
-               size = 4, inherit.aes = FALSE,
-               data = jump_cmp %>% distinct(revision_year, true_val),
-               mapping = aes(x = factor(revision_year), y = true_val)) +
-    scale_color_manual(values = pal_method) +
-    labs(
-      title    = "Period Jumps: Method A vs B (Part 2, log scale)",
-      subtitle = "Triangle: true value | Point + range: estimate ± 1.96 SE",
-      x = "Revision year", y = "Jump coefficient (log)", color = NULL
-    ) +
-    theme_ald
-
-  fig_cmp <- (p_cmp_prob | p_cmp_amt) / p_cmp_jump
+  fig_cmp <- p_cmp_prob | p_cmp_amt
   ggsave(paste0("fig/", NAME, "-fitting_compare_AB.jpg"),
-         fig_cmp, width = 16, height = 12, dpi = 300)
-  cat("Comparison figure saved: fig/", NAME, "-fitting_compare_AB.jpg\n")
+         fig_cmp, width = 16, height = 7, dpi = 300)
+  cat("Comparison figure saved.\n")
   invisible(fig_cmp)
 }
 
-# Uncomment after loading m1, m2 from Method A script:
-# source("ald_simulation_04-fitting.R")
-# compare_methods(m1, m2, m1_b, m2_b)
+# compare_methods(
+#   m1_a = readRDS(paste0("output/", NAME, "-fitting_m1_a.rda")), 
+#   m2_a = readRDS(paste0("output/", NAME, "-fitting_m2_a.rda")), 
+#   m1_b = readRDS(paste0("output/", NAME, "-fitting_m1_b.rda")), 
+#   m2_b = readRDS(paste0("output/", NAME, "-fitting_m2_b.rda"))
+# )

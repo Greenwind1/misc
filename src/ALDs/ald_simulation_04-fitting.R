@@ -1,6 +1,5 @@
 # =============================================================================
-# ALD (Accelerated Longitudinal Design) Simulation
-# Hurdle (2-part) model using mgcv package
+# ALD Simulation: Hurdle (2-part) model using mgcv package
 # 
 # Reference:
 # Galbraith, Sally, Jack Bowden, and Adrian Mander. 2017. 
@@ -13,21 +12,21 @@
 # 02: Shared observation window across all cohorts;
 #     cohorts differ in birth year, producing staggered age bands.
 # 03: Change the simple cohort effect to the bathtub-shaped cohort effect.
+# 04: Increase Noises
 # =============================================================================
 
 library(mgcv)
 library(tidyverse)
 library(patchwork)
 library(extrafont)  # fonttable(); "Candara"
-library(patchwork)
 source("utility/environments.R") 
 set.seed(2026)
 
+NAME <- "ald_simulation_04"
 
 # =============================================================================
 # 1. Load data
 # =============================================================================
-NAME <- "ald_simulation_04"
 dat <- read_csv(paste0("input/", NAME, "-data.csv"))
 
 
@@ -79,6 +78,7 @@ print(formula_part1)
 cat("\nFitting Part 1 (visit probability)...\n")
 m1 <- gam(formula_part1, data = dat,
   family = binomial(link = "logit"), method = "REML")
+saveRDS(m1, file = paste0("output/", NAME, "-fitting_m1_a.rda"))
 
 # Part 2: expenditure amount among visitors (Gamma)
 formula_part2 <- as.formula(paste0(
@@ -89,6 +89,7 @@ print(formula_part2)
 cat("Fitting Part 2 (expenditure amount)...\n")
 m2 <- gam(formula_part2, data = filter(dat, visited == 1),
           family = Gamma(link = "log"), method = "REML")
+saveRDS(m1, file = paste0("output/", NAME, "-fitting_m2_a.rda"))
  
 # Summary
 cat(sprintf("\nPart 1 AIC: %.1f\n", AIC(m1)))
