@@ -14,6 +14,8 @@
 #      cohorts differ in birth year, producing staggered age bands.
 #  03: Change the simple cohort effect to the bathtub-shaped cohort effect.
 #  04: Increase noises.
+#  05: COVID-19 shock that effects on frequency only.
+#  06: More realistic COVID-19 shock and cohort effect.
 # =============================================================================
 
 library(mgcv)
@@ -21,13 +23,13 @@ library(tidyverse)
 library(patchwork)
  
 set.seed(2026)
-NAME <- "ald_simulation_04"
+NAME <- "ald_simulation_06"
 
 # 1. Study design parameters ----
 OBS_START <- 2010        # Start of shared observation window
 OBS_END <- 2019        # End of shared observation window
 OBS_YEARS <- OBS_START:OBS_END
-NOISE_RATIO <- 2
+NOISE_RATIO <- 1
  
 # Cohorts defined by birth year.
 # The same observation window covers different age bands per cohort:
@@ -40,7 +42,7 @@ COHORT_BIRTH_YEARS   <- c(1940, 1945, 1950, 1955, 1960)
 N_PERSONS_PER_COHORT <- 600
  
 # Fee revision years falling within the observation window
-REVISION_YEARS <- c(2012, 2014, 2016, 2018)
+REVISION_YEARS <- c(2012, 2013, 2014, 2015, 2016, 2017, 2018)
  
 cat("=== ALD Study Design ===\n")
 cat(sprintf("Observation window: %d - %d (%d years)\n",
@@ -55,31 +57,31 @@ for (by in COHORT_BIRTH_YEARS) {
 # True age effect on visit probability (logit scale)
 # Gradual increase from age 50, steeper increase from age 70
 true_age_logit <- function(age) {
-  -2.5 +
-    0.04 * pmax(age - 50, 0) +
-    0.06 * pmax(age - 70, 0)
+  -2.5 + 0.04 * pmax(age - 50, 0) + 0.06 * pmax(age - 70, 0)
 }
  
 # True age effect on expenditure amount (log scale)
 true_age_log_amount <- function(age) {
-  8.5 +
-    0.025 * pmax(age - 50, 0) +
-    0.05  * pmax(age - 70, 0)
+  8.5 + 0.025 * pmax(age - 50, 0) + 0.05  * pmax(age - 70, 0)
 }
  
 # Bathtub-shaped cohort effect (function of birth_year, not age)
 # High risk for oldest cohorts, low for middle, very high for youngest
 true_cohort_effect <- function(birth_year) {
-  x <- birth_year - 1950    # center at 1950
-  0.3 * (x / 10)^2 - 0.2   # U-shaped: 1940=->, 1950=min, 1960=->
+  x <- birth_year - 1940  # center at 1950 => 1940
+  - 0.075 * (x / 10)^2 + 0.2
 }
- 
+# true_cohort_effect(1940:1960)
+
 # True period effect: step jumps at each fee revision year
 true_theta <- c(
-  `2012` = -0.08,
-  `2014` =  0.05,
-  `2016` = -0.06,
-  `2018` =  0.04
+  `2012` = 0, 
+  `2013` = 0, 
+  `2014` = 0, 
+  `2015` = -0.3, 
+  `2016` = +0.1, 
+  `2017` = +0.1, 
+  `2018` = +0.1
 )
 
 
@@ -103,15 +105,15 @@ generate_ald_data <- function() {
  
         # Cumulative period jump up to observation year yr
         revisions_so_far   <- REVISION_YEARS[REVISION_YEARS <= yr]
-        # period_jump_prob   <- sum(true_theta[as.character(revisions_so_far)] * 0.5)
-        period_jump_amount <- sum(true_theta[as.character(revisions_so_far)])
+        period_jump_prob   <- sum(true_theta[as.character(revisions_so_far)])
+        # period_jump_amount <- sum(true_theta[as.character(revisions_so_far)])
  
         # --- Hurdle Part 1: visit probability ---
         logit_pi <- true_age_logit(age) +
                     true_cohort_effect(birth_year) +
-                    # period_jump_prob +
+                    period_jump_prob +
                     re[p_idx] * 0.4 +
-                    rnorm(1, 0, 0.15) * NOISE_RATIO
+                    rnorm(1, 0, 0.15) * NOISE_RATIO 
         pi      <- plogis(logit_pi)
         visited <- rbinom(1, 1, pi)
  
@@ -120,10 +122,10 @@ generate_ald_data <- function() {
         if (visited == 1L) {
           log_mu <- true_age_log_amount(age) +
                     true_cohort_effect(birth_year) * 0.5 +
-                    period_jump_amount +
+                    # period_jump_amount +
                     re[p_idx] +
                     rnorm(1, 0, 0.25) * NOISE_RATIO
-          mu           <- exp(log_mu)
+          mu <- exp(log_mu)
           medical_cost <- rgamma(1, shape = 2, rate = 2 / mu)
         }
  

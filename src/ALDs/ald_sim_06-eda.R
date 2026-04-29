@@ -6,7 +6,7 @@ library(extrafont)  # fonttable(); "Candara"
 library(patchwork)
 
 # 1. Load data ----
-NAME <- "ald_simulation_05"
+NAME <- "ald_simulation_06"
 dat <- read_csv(paste0("input/", NAME, "-data.csv"))
 
 
@@ -15,8 +15,7 @@ source("utility/environments.R")
 
 
 # REVISION_YEARS
-# REVISION_YEARS <- c(2012, 2014, 2016, 2018, 2020)
-REVISION_YEARS <- c(2016)
+REVISION_YEARS <- c(2012, 2013, 2014, 2015, 2016, 2017, 2018)
 revision_df <- data.frame(obs_year = REVISION_YEARS)
 
 # common theme for ggplot
@@ -131,33 +130,36 @@ p5
 
 
 # 3-6. Heatmap of average medical expenditure by obs year and age ----
-p6 <- dat %>%
-  group_by(obs_year, age) %>%
+p6 <- dat %>% 
+  group_by(obs_year, age) %>% 
   summarise(mean_cost = mean(medical_cost), .groups = "drop") %>%
   ggplot(aes(x = obs_year, y = age, fill = mean_cost)) +
   geom_tile() +
   geom_vline(data = revision_df, aes(xintercept = obs_year), 
-             color = col.os, linewidth = 0.6, alpha = 0.9) + 
-  scale_fill_viridis_c(option = "plasma", labels = scales::comma,
-                       name = "Average medical expenditure") +
-  scale_x_continuous(breaks = seq(2010, 2035, by = 2)) +
+             color = col.os, linewidth = 0.4, alpha = 0.5) + 
+  scale_fill_gradient(low = col.p.b, high = col.rm, 
+                      labels = scales::comma, name = "Average medical expenditure", 
+                      guide = guide_colorbar(barwidth = 10, barheight = 0.5)) + 
+  scale_x_continuous(breaks = seq(2010, 2020, by = 2)) +
   labs(
-    title    = "Heatmap of average medical expenditure by obs year and age",
+    title = "Heatmap of average medical expenditure by obs year and age",
     x = "Observation year", y = "Age"
   ) + 
   theme_ald +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 p6
+ggsave(filename = paste0("fig/", NAME, "-eda_p6.jpg"), 
+  plot = p6, width = 7.5, height = 7.5, dpi = 300)
 
 
 # 3-7. Average medical expenditure for all cohorts in the same age ----
 overlap_summary <- dat %>%
   group_by(age) %>%
   summarise(
-    n_cohorts     = n_distinct(birth_year),
-    mean_cost     = mean(medical_cost),
-    sd_cost       = sd(medical_cost),
-    .groups       = "drop"
+    n_cohorts = n_distinct(birth_year),
+    mean_cost = mean(medical_cost),
+    sd_cost = sd(medical_cost),
+    .groups = "drop"
   )
 
 p7 <- ggplot(overlap_summary, aes(x = age)) +

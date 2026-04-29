@@ -9,9 +9,10 @@ invisible(pacman::p_load(ggplot2, extrafont, ggtext, showtext, stringr))
 crgb <- col2rgb(cc <- colors())
 colnames(crgb) <- cc
 # head(t(crgb))
-# display_carto_all()
+# rcartocolor::display_carto_all()
 # RColorBrewer::display.brewer.all()
 # scales::show_col(ggsci::pal_npg("nrc")(10))
+# scico::scico_palette_show()
 
 col.tw <- "#DBD7D2"     # TimberWolf
 col.c.b <- "#B0B7C6"    # Cadet Blue
