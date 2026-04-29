@@ -1,20 +1,16 @@
 # =============================================================================
-# EDA: ALD simulation data
+#  EDA: ALD simulation data
 # =============================================================================
 library(tidyverse)
 library(extrafont)  # fonttable(); "Candara"
 library(patchwork)
 
-# -----------------------------------------------------------------------------
-# 1. Load data
-# -----------------------------------------------------------------------------
+# 1. Load data ----
 NAME <- "ald_simulation_04"
 dat <- read_csv(paste0("input/", NAME, "-data.csv"))
 
 
-# -----------------------------------------------------------------------------
-# 2. Env setting
-# -----------------------------------------------------------------------------
+# 2. Env setting ----
 source("utility/environments.R")
 
 
@@ -40,9 +36,7 @@ cohort_colors <- setNames(
 )
 
 
-# =============================================================================
-# P1. Age profile for each cohort
-# =============================================================================
+# 3-1. Age profile for each cohort ----
 p1 <- dat %>%
   group_by(birth_year, age) %>%
   summarise(mean_cost = mean(medical_cost), .groups = "drop") %>%
@@ -59,11 +53,9 @@ p1 <- dat %>%
 p1
 
 
-# =============================================================================
-# P2. Trend for average medical expenditure
+# 3-2. Trend for average medical expenditure ----
 # - X: observation year, Y: Average medical expenditure
 # - Vertical broken lines show revision year for 
-# =============================================================================
 p2 <- dat %>%
   group_by(obs_year, birth_year) %>%
   summarise(mean_cost = mean(medical_cost), .groups = "drop") %>%
@@ -86,9 +78,7 @@ p2 <- dat %>%
 p2
 
 
-# =============================================================================
-# P3. Frequency by Age for each cohort
-# =============================================================================
+# 3-3. Frequency by Age for each cohort ----
 p3 <- dat %>% 
   group_by(birth_year, age) %>%
   summarise(visit_rate = mean(visited), .groups = "drop") %>%
@@ -105,9 +95,7 @@ p3 <- dat %>%
 p3
 
 
-# =============================================================================
-# P4. Average incurred medical expenditure by age for each cohort
-# =============================================================================
+# 3-4. Average incurred medical expenditure by age for each cohort ----
 p4 <- dat %>%
   filter(visited == 1) %>%
   group_by(birth_year, age) %>%
@@ -125,9 +113,7 @@ p4 <- dat %>%
 p4
 
 
-# =============================================================================
-# P5. Histogram for medical expenditure by each cohort
-# =============================================================================
+# 3-5. Histogram for medical expenditure by each cohort ----
 p5 <- dat %>%
   filter(visited == 1) %>%
   ggplot(aes(x = medical_cost, fill = factor(birth_year))) +
@@ -145,9 +131,7 @@ p5 <- dat %>%
 p5
 
 
-# =============================================================================
-# P6. Heatmap of average medical expenditure by obs year and age
-# =============================================================================
+# 3-6. Heatmap of average medical expenditure by obs year and age ----
 p6 <- dat %>%
   group_by(obs_year, age) %>%
   summarise(mean_cost = mean(medical_cost), .groups = "drop") %>%
@@ -167,9 +151,7 @@ p6 <- dat %>%
 p6
 
 
-# =============================================================================
-# P7. Average medical expenditure for all cohorts in the same age
-# =============================================================================
+# 3-7. Average medical expenditure for all cohorts in the same age ----
 overlap_summary <- dat %>%
   group_by(age) %>%
   summarise(
@@ -202,9 +184,7 @@ p7 <- ggplot(overlap_summary, aes(x = age)) +
 p7
 
 
-# =============================================================================
-# Save figures
-# =============================================================================
+# 4. Save figures ----
 fig_top <- (p1 | p2)
 fig_bot <- (p3 | p4)
 fig_all <- fig_top / fig_bot

@@ -33,15 +33,11 @@ set.seed(2026)
 
 NAME <- "ald_simulation_04"
 
-# =============================================================================
-# 1. Load data
-# =============================================================================
+# 1. Load data ----
 dat <- read_csv(paste0("input/", NAME, "-data.csv"))
 
 
-# =============================================================================
-# 2. Study design parameters & true DGP functions
-# =============================================================================
+# 2. Study design parameters & true DGP functions ----
 REVISION_YEARS <- c(2012, 2014, 2016, 2018)
 COHORT_BIRTH_YEARS <- c(1940, 1945, 1950, 1955, 1960)
 
@@ -58,13 +54,11 @@ true_cohort_effect <- function(birth_year) {
 true_theta <- c(`2012` = -0.08, `2014` = 0.05, `2016` = -0.06, `2018` = 0.04)
 
 
-# =============================================================================
-# 3. Construct period nonlinear basis
+# 3. Construct period nonlinear basis ----
 # Period nonlinear basis:
 #   Build ns(obs_year, df=3), then project out the linear component.
 #   The residual basis captures only nonlinear curvature in obs_year.
 #   The linear drift is constrained to zero (Carstensen default).
-# =============================================================================
 mean_year <- mean(dat$obs_year)
 x_c_ref <- dat$obs_year - mean_year
 ns_period <- ns(dat$obs_year, df = 3)
@@ -92,9 +86,7 @@ cat(sprintf("Retained columns: %d (%s)\n\n",
 period_nl_formula_str <- paste(pnl_names, collapse = " + ")
 
 
-# =============================================================================
-# 2. Part 1: Visit probability  (binomial / logit)
-# =============================================================================
+# 4-1. Part 1: Visit probability  (binomial / logit) ----
 formula_b1 <- as.formula(paste0(
   "visited ~ s(age, bs='cr', k=10) + ",
   "s(birth_year, bs='cr', k=5)"
@@ -107,13 +99,10 @@ m1_b <- gam(formula_b1, data = dat,
 cat("\n=== Method B | Part 1 summary ===\n"); print(summary(m1_b))
 saveRDS(m1_b, file = paste0("output/", NAME, "-fitting_m1_b.rda"))
 
-
-# =============================================================================
-# 3. Part 2: Conditional expenditure  (Gamma / log)
+# 4-2. Part 2: Conditional expenditure  (Gamma / log) ----
 # No jump dummies -- period smooth (period_nl_*) absorbs all period variation,
 # including the step-like behavior near revision years.
 # The smooth will approximate the cumulative jumps as a piecewise curve.
-# =============================================================================
 formula_b2 <- as.formula(paste0(
   "medical_cost ~ s(age, bs='cr', k=10) + ",
   "s(birth_year, bs='cr', k=5) + ",
@@ -131,9 +120,7 @@ cat(sprintf("\nMethod B | Part 1 AIC: %.1f\n", AIC(m1_b)))
 cat(sprintf("Method B | Part 2 AIC: %.1f\n",  AIC(m2_b)))
 
 
-# =============================================================================
-# 4. Validation plots
-# =============================================================================
+# 5. Validation plots ----
 font.base <- "Times New Roman"
 theme_ald <- theme_minimal(base_family = font.base, base_size = 13) +
   theme(legend.position = "bottom",
@@ -158,9 +145,7 @@ attach_period_nl <- function(grid_tbl, period_nl_vec, col_names) {
 }
 
 
-# ---------------------------------------------------------------------------
-# 4-1. Age effect
-# ---------------------------------------------------------------------------
+# 5-1. Age effect ----
 age_grid <- tibble(age = 50:79, birth_year = 1950) %>%
   attach_period_nl(period_nl_mean, pnl_names)
   # attach_period_nl(period_nl_2014, pnl_names)
@@ -217,9 +202,7 @@ p_age_ey_b <- ggplot(age_grid, aes(x = age)) +
        x = "Age", y = "Expected expenditure", color = NULL) + theme_ald
 
 
-# ---------------------------------------------------------------------------
-# 4-2. Cohort effect
-# ---------------------------------------------------------------------------
+# 5-2. Cohort effect ----
 cohort_grid <- tibble(birth_year = COHORT_BIRTH_YEARS, age = 65) %>%
   attach_period_nl(period_nl_mean, pnl_names)
   # attach_period_nl(period_nl_2014, pnl_names)
@@ -249,9 +232,7 @@ p_cohort_b <- ggplot(cohort_grid, aes(x = birth_year)) +
        x = "Birth year", y = "Cohort effect (logit, centered)", color = NULL) + theme_ald
 
 
-# ---------------------------------------------------------------------------
-# 4-3. Period smooth: fitted vs true cumulative jump pattern (Part 2)
-# ---------------------------------------------------------------------------
+# 5-3. Period smooth: fitted vs true cumulative jump pattern (Part 2) ----
 # Method B has no discrete jump coefficients to compare directly.
 # Instead, we visualize the period smooth over the observation window
 # alongside the true cumulative period effect (sum of jumps up to each year).
@@ -297,9 +278,7 @@ p_period_b <- ggplot(period_grid, aes(x = obs_year)) +
        x = "Obs year", y = "Period effect (log, centered)", color = NULL) + theme_ald
 
 
-# ---------------------------------------------------------------------------
-# 4-4. Residual diagnostics – Part 2
-# ---------------------------------------------------------------------------
+# 5-4. Residual diagnostics – Part 2 ----
 dat_visited_b <- dat %>%
   filter(visited == 1) %>%
   mutate(
@@ -321,9 +300,7 @@ p_resid2_b <- ggplot(dat_visited_b, aes(sample = resid_dev)) +
        x = "Theoretical quantiles", y = "Sample quantiles") + theme_ald
 
 
-# ---------------------------------------------------------------------------
-# 4-5. Save figure
-# ---------------------------------------------------------------------------
+# 5-5. Save figure ----
 fig_b <- (p_age_prob_b | p_age_amt_b) /
           (p_age_ey_b  | p_cohort_b)  /
           (p_period_b  | (p_resid1_b | p_resid2_b))
@@ -333,10 +310,8 @@ ggsave(paste0("fig/", NAME, "-fitting_Carstensen.jpg"),
 cat("\nFigure saved.\n")
 
 
-# =============================================================================
-# 5. (Optional) Comparison with Method A
+# 6. (Optional) Comparison with Method A ----
 # Run AFTER sourcing ald_simulation_04-fitting.R (loads m1, m2).
-# =============================================================================
 
 compare_methods <- function(m1_a, m2_a, m1_b, m2_b) {
   pal3 <- c("True" = "tomato",

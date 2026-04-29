@@ -1,18 +1,18 @@
 # =============================================================================
-# ALD Simulation: Hurdle (2-part) model using mgcv package
+#  ALD Simulation: Hurdle (2-part) model using mgcv package
 # 
-# Reference:
-# Galbraith, Sally, Jack Bowden, and Adrian Mander. 2017. 
-# “Accelerated Longitudinal Designs: 
-# An Overview of Modelling, Power, Costs and Handling Missing Data.” 
-# Statistical Methods in Medical Research 26(1): 374–98. 
-# doi:10.1177/0962280214547150.
-# =============================================================================
-# Change logs:
-# 02: Shared observation window across all cohorts;
-#     cohorts differ in birth year, producing staggered age bands.
-# 03: Change the simple cohort effect to the bathtub-shaped cohort effect.
-# 04: Increase Noises
+#  Reference:
+#  Galbraith, Sally, Jack Bowden, and Adrian Mander. 2017. 
+#  “Accelerated Longitudinal Designs: 
+#  An Overview of Modelling, Power, Costs and Handling Missing Data.” 
+#  Statistical Methods in Medical Research 26(1): 374–98. 
+#  doi:10.1177/0962280214547150.
+# 
+#  Change logs:
+#  02: Shared observation window across all cohorts;
+#      cohorts differ in birth year, producing staggered age bands.
+#  03: Change the simple cohort effect to the bathtub-shaped cohort effect.
+#  04: Increase Noises
 # =============================================================================
 
 library(mgcv)
@@ -24,15 +24,12 @@ set.seed(2026)
 
 NAME <- "ald_simulation_04"
 
-# =============================================================================
-# 1. Load data
-# =============================================================================
+
+# 1. Load data ----
 dat <- read_csv(paste0("input/", NAME, "-data.csv"))
 
 
-# =============================================================================
-# 2. Study design parameters
-# =============================================================================
+# 2. Study design parameters ----
 # Fee revision years falling within the observation window
 REVISION_YEARS <- c(2012, 2014, 2016, 2018)
 COHORT_BIRTH_YEARS <- c(1940, 1945, 1950, 1955, 1960)
@@ -66,10 +63,8 @@ true_theta <- c(
 )
 
 
-# =============================================================================
-# 3. Fitting
-# =============================================================================
-# Part 1: Frequency (logistic)
+# 3. Fitting ----
+## Part 1: Frequency (logistic) ----
 formula_part1 <- as.formula(
   "visited ~ s(age, bs='cr', k=10) + s(birth_year, bs='cr', k=5)"
   # "visited ~ s(age, bs='cr', k=10) + s(birth_year, bs='cr', k=10)"  # k knots <= 5
@@ -80,7 +75,7 @@ m1 <- gam(formula_part1, data = dat,
   family = binomial(link = "logit"), method = "REML")
 saveRDS(m1, file = paste0("output/", NAME, "-fitting_m1_a.rda"))
 
-# Part 2: expenditure amount among visitors (Gamma)
+## Part 2: expenditure amount among visitors (Gamma) ----
 formula_part2 <- as.formula(paste0(
   "medical_cost ~ s(age, bs='cr', k=10) + s(birth_year, bs='cr', k=5) + ",
   jump_formula_str
@@ -91,16 +86,14 @@ m2 <- gam(formula_part2, data = filter(dat, visited == 1),
           family = Gamma(link = "log"), method = "REML")
 saveRDS(m1, file = paste0("output/", NAME, "-fitting_m2_a.rda"))
  
-# Summary
+## Summary ----
 cat(sprintf("\nPart 1 AIC: %.1f\n", AIC(m1)))
 cat(sprintf("Part 2 AIC: %.1f\n",  AIC(m2)))
 print(summary(m1))
 print(summary(m2))
 
 
-# =============================================================================
-# 4. Check result
-# =============================================================================
+# 4. Check result ----
 font.base <- "Times New Roman"
 theme_ald <- theme_minimal(base_family = font.base, base_size = 13) + 
   theme(
@@ -118,9 +111,8 @@ cohort_colors <- setNames(
 # Color palette: true vs fitted
 pal <- c("True" = "tomato", "Fitted" = "steelblue")
 
-# -----------------------------------------------------------------------------
-# 4-1. Age Effect
-# -----------------------------------------------------------------------------
+
+# 4-1. Age Effect ----
 # Prediction grid: fix birth_year at reference cohort (1950), post-all revisions
 age_grid <- tibble(
   age        = 50:79,
@@ -131,7 +123,7 @@ age_grid <- tibble(
   post_2018  = 0L
 )
 
-# --- Part 1: Frequency ---
+## 4-1-1: Frequency ----
 pred1 <- predict(m1, newdata = age_grid, type = "link", se.fit = TRUE)
 age_grid <- age_grid %>% 
   mutate(
@@ -159,7 +151,7 @@ p_age_prob <- ggplot(age_grid, aes(x = age)) +
   theme_ald
 p_age_prob
 
-# --- Part 2: conditional expenditure ---
+## 4-1-2: conditional expenditure ----
 pred2    <- predict(m2, newdata = age_grid, type = "link", se.fit = TRUE)
 age_grid <- age_grid %>%
   mutate(
@@ -186,7 +178,7 @@ p_age_amt <- ggplot(age_grid, aes(x = age)) +
   theme_ald
 p_age_amt
 
-# --- Combined: E[Y] = pi * mu ---
+## 4-1-3. Combined: E[Y] = pi * mu ----
 age_grid <- age_grid %>%
   mutate(
     fit_ey  = fit_prob * fit_amt,
@@ -207,9 +199,7 @@ p_age_ey <- ggplot(age_grid, aes(x = age)) +
 p_age_ey
 
 
-# -----------------------------------------------------------------------------
-# 4-2. Cohort Effect
-# -----------------------------------------------------------------------------
+# 4-2. Cohort Effect ----
 # Prediction grid: fix age at 65 (mid-range), post-all revisions
 cohort_grid <- tibble(
   birth_year = COHORT_BIRTH_YEARS,
@@ -247,9 +237,8 @@ p_cohort <- ggplot(cohort_grid, aes(x = birth_year)) +
   theme_ald
 p_cohort
 
-# -----------------------------------------------------------------------------
-# 4-3. Period Effect (Revision Jump Coefficients)
-# -----------------------------------------------------------------------------
+
+# 4-3. Period Effect (Revision Jump Coefficients) ----
 # Compare estimated theta_r vs true_theta for Part 2 only
 coef_m2 <- coef(m2)
 vcov_m2 <- vcov(m2)
@@ -291,9 +280,8 @@ p_jump <- ggplot(jump_df, aes(x = factor(revision_year))) +
   theme_ald
 p_jump
 
-# -----------------------------------------------------------------------------
-# 4-4. Residual Check for Part 2
-# -----------------------------------------------------------------------------
+
+# 4-4. Residual Check for Part 2 ----
 dat_visited <- dat %>% filter(visited == 1) %>%
   mutate(
     fitted_log = predict(m2, type = "link"),
@@ -324,9 +312,7 @@ p_resid2 <- ggplot(dat_visited, aes(sample = resid_dev)) +
 p_resid2
 
 
-# -----------------------------------------------------------------------------
-# 4-5. Save
-# -----------------------------------------------------------------------------
+# 4-5. Save ----
 fig_main <- (p_age_prob | p_age_amt) /
             (p_age_ey  | p_cohort)  /
             (p_jump    | (p_resid1 | p_resid2))

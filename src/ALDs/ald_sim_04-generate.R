@@ -1,19 +1,19 @@
 # =============================================================================
-# ALD (Accelerated Longitudinal Design) Simulation
-# Hurdle (2-part) model using mgcv package
+#  ALD (Accelerated Longitudinal Design) Simulation
+#  Hurdle (2-part) model using mgcv package
 # 
-# Reference:
-# Galbraith, Sally, Jack Bowden, and Adrian Mander. 2017. 
-# “Accelerated Longitudinal Designs: 
-# An Overview of Modelling, Power, Costs and Handling Missing Data.” 
-# Statistical Methods in Medical Research 26(1): 374–98. 
-# doi:10.1177/0962280214547150.
-# =============================================================================
-# Change logs:
-# 02: Shared observation window across all cohorts;
-#     cohorts differ in birth year, producing staggered age bands.
-# 03: Change the simple cohort effect to the bathtub-shaped cohort effect.
-# 04: Increase noises.
+#  Reference:
+#  Galbraith, Sally, Jack Bowden, and Adrian Mander. 2017. 
+#  “Accelerated Longitudinal Designs: 
+#  An Overview of Modelling, Power, Costs and Handling Missing Data.” 
+#  Statistical Methods in Medical Research 26(1): 374–98. 
+#  doi:10.1177/0962280214547150.
+# 
+#  Change logs:
+#  02: Shared observation window across all cohorts;
+#      cohorts differ in birth year, producing staggered age bands.
+#  03: Change the simple cohort effect to the bathtub-shaped cohort effect.
+#  04: Increase noises.
 # =============================================================================
 
 library(mgcv)
@@ -23,10 +23,7 @@ library(patchwork)
 set.seed(2026)
 NAME <- "ald_simulation_04"
 
-# -----------------------------------------------------------------------------
-# 1. Study design parameters
-# -----------------------------------------------------------------------------
- 
+# 1. Study design parameters ----
 OBS_START <- 2010        # Start of shared observation window
 OBS_END <- 2019        # End of shared observation window
 OBS_YEARS <- OBS_START:OBS_END
@@ -54,9 +51,7 @@ for (by in COHORT_BIRTH_YEARS) {
 }
 
 
-# -----------------------------------------------------------------------------
-# 2. True parameters
-# -----------------------------------------------------------------------------
+# 2. True parameters ----
 # True age effect on visit probability (logit scale)
 # Gradual increase from age 50, steeper increase from age 70
 true_age_logit <- function(age) {
@@ -88,9 +83,7 @@ true_theta <- c(
 )
 
 
-# -----------------------------------------------------------------------------
-# 3. Data generation
-# -----------------------------------------------------------------------------
+# 3. Data generation ----
 generate_ald_data <- function() {
  
   df_list <- list()
