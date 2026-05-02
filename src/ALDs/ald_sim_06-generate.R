@@ -29,7 +29,7 @@ NAME <- "ald_simulation_06"
 OBS_START <- 2010        # Start of shared observation window
 OBS_END <- 2019        # End of shared observation window
 OBS_YEARS <- OBS_START:OBS_END
-NOISE_RATIO <- 1
+NOISE_RATIO <- .5
  
 # Cohorts defined by birth year.
 # The same observation window covers different age bands per cohort:
@@ -78,8 +78,8 @@ true_theta <- c(
   `2012` = 0, 
   `2013` = 0, 
   `2014` = 0, 
-  `2015` = -0.3, 
-  `2016` = +0.1, 
+  `2015` = -0.4, 
+  `2016` = +0.2, 
   `2017` = +0.1, 
   `2018` = +0.1
 )
