@@ -16,6 +16,7 @@
 #  04: Increase noises.
 #  05: COVID-19 shock that effects on frequency only.
 #  06: More realistic COVID-19 shock and cohort effect. less noises.
+#  07: Simple settings: no period effect.
 # =============================================================================
 
 library(mgcv)
@@ -23,13 +24,13 @@ library(tidyverse)
 library(patchwork)
  
 set.seed(2026)
-NAME <- "ald_simulation_06"
+NAME <- "ald_simulation_07"
 
 # 1. Study design parameters ----
 OBS_START <- 2010        # Start of shared observation window
 OBS_END <- 2019        # End of shared observation window
 OBS_YEARS <- OBS_START:OBS_END
-NOISE_RATIO <- .5
+NOISE_RATIO <- .0
  
 # Cohorts defined by birth year.
 # The same observation window covers different age bands per cohort:
@@ -78,10 +79,10 @@ true_theta <- c(
   `2012` = 0, 
   `2013` = 0, 
   `2014` = 0, 
-  `2015` = -0.4, 
-  `2016` = +0.2, 
-  `2017` = +0.1, 
-  `2018` = +0.1
+  `2015` = 0, 
+  `2016` = 0, 
+  `2017` = 0, 
+  `2018` = 0
 )
 
 

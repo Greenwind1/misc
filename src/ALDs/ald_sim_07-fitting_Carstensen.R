@@ -31,27 +31,48 @@ library(patchwork)
 source("utility/environments.R")
 set.seed(2026)
 
-NAME <- "ald_simulation_04"
 
-# 1. Load data ----
-dat <- read_csv(paste0("input/", NAME, "-data.csv"))
+NAME <- "ald_simulation_07"
 
 
-# 2. Study design parameters & true DGP functions ----
-REVISION_YEARS <- c(2012, 2014, 2016, 2018)
+# 1. Study design parameters & true DGP functions ----
+# REVISION_YEARS <- c(2012, 2014, 2016, 2018)
+REVISION_YEARS <- c(2012, 2013, 2014, 2015, 2016, 2017, 2018)
+# DOF_PERIOD <- 6  # AIC: 25039.6
+# DOF_PERIOD <- 5  # AIC: X
+# DOF_PERIOD <- 4  # AIC: 25035.0
+# DOF_PERIOD <- 3  # AIC: 25033.2
+DOF_PERIOD <- 2  # AIC: 25032.3
+# DOF_PERIOD <- 1  # AIC: 25033.0
+# knots = c(2015), Boundary.knots = c(2010, 2019)  # AIC: 25033.0
 COHORT_BIRTH_YEARS <- c(1940, 1945, 1950, 1955, 1960)
 
 true_age_logit <- function(age) {
   -2.5 + 0.04 * pmax(age - 50, 0) + 0.06 * pmax(age - 70, 0)
 }
+
 true_age_log_amount <- function(age) {
   8.5 + 0.025 * pmax(age - 50, 0) + 0.05 * pmax(age - 70, 0)
 }
+
 true_cohort_effect <- function(birth_year) {
-  x <- birth_year - 1950
-  0.3 * (x / 10)^2 - 0.2
+  x <- birth_year - 1940  # center at 1950 => 1940
+  - 0.075 * (x / 10)^2 + 0.2
 }
-true_theta <- c(`2012` = -0.08, `2014` = 0.05, `2016` = -0.06, `2018` = 0.04)
+
+true_theta <- c(
+  `2012` = 0, 
+  `2013` = 0, 
+  `2014` = 0, 
+  `2015` = 0, 
+  `2016` = 0, 
+  `2017` = 0, 
+  `2018` = 0
+)
+
+
+# 2. Load data ----
+dat <- read_csv(paste0("input/", NAME, "-data.csv"))
 
 
 # 3. Construct period nonlinear basis ----
@@ -61,7 +82,12 @@ true_theta <- c(`2012` = -0.08, `2014` = 0.05, `2016` = -0.06, `2018` = 0.04)
 #   The linear drift is constrained to zero (Carstensen default).
 mean_year <- mean(dat$obs_year)
 x_c_ref <- dat$obs_year - mean_year
-ns_period <- ns(dat$obs_year, df = 3)
+ns_period <- ns(dat$obs_year, df = DOF_PERIOD)
+# ns_period <- ns(dat$obs_year, knots = c(2015), Boundary.knots = c(2010, 2019))
+# ns_period <- ns(dat$obs_year, knots = c(2014, 2016), Boundary.knots = c(2010, 2019))
+# ns_period <- ns(dat$obs_year, knots = c(2011, 2013, 2015, 2017), 
+#                 Boundary.knots = c(2010, 2019))  # abnormal
+print(attr(ns_period, "knots"))
 coef_period <- lm.fit(cbind(1, x_c_ref), ns_period)$coef
 
 make_period_nl <- function(x, ns_obj = ns_period) {
@@ -89,16 +115,19 @@ period_nl_formula_str <- paste(pnl_names, collapse = " + ")
 # 4-1. Part 1: Visit probability  (binomial / logit) ----
 formula_b1 <- as.formula(paste0(
   "visited ~ s(age, bs='cr', k=10) + ",
-  "s(birth_year, bs='cr', k=5)"
+  "s(birth_year, bs='cr', k=5) + ",
+  period_nl_formula_str
 ))
 
 cat("=== Method B | Part 1 formula ===\n"); print(formula_b1)
 
 m1_b <- gam(formula_b1, data = dat,
-            family = binomial(link = "logit"), method = "REML")
+            family = binomial(link = "logit"), 
+            method = "REML", optimizer = c("outer",  "bfgs"))
 cat("\n=== Method B | Part 1 summary ===\n"); print(summary(m1_b))
 saveRDS(m1_b, file = paste0("output/", NAME, "-fitting_m1_b.rda"))
 cat(sprintf("\nMethod B | Part 1 AIC: %.1f\n", AIC(m1_b)))
+
 
 # 4-2. Part 2: Conditional expenditure  (Gamma / log) ----
 # No jump dummies -- period smooth (period_nl_*) absorbs all period variation,
@@ -106,8 +135,8 @@ cat(sprintf("\nMethod B | Part 1 AIC: %.1f\n", AIC(m1_b)))
 # The smooth will approximate the cumulative jumps as a piecewise curve.
 formula_b2 <- as.formula(paste0(
   "medical_cost ~ s(age, bs='cr', k=10) + ",
-  "s(birth_year, bs='cr', k=5) + ",
-  period_nl_formula_str
+  "s(birth_year, bs='cr', k=5)"
+  # period_nl_formula_str
 ))
 
 cat("\n=== Method B | Part 2 formula ===\n"); print(formula_b2)
@@ -246,7 +275,7 @@ period_grid <- tibble(
     pnl_names
   ))
 
-pred_period_b2 <- predict(m2_b, newdata = period_grid, type = "link", se.fit = TRUE)
+pred_period_b2 <- predict(m1_b, newdata = period_grid, type = "link", se.fit = TRUE)
 
 # True cumulative period effect at each year
 true_period_cumul <- sapply(2010:2019, function(yr) {
@@ -271,8 +300,9 @@ p_period_b <- ggplot(period_grid, aes(x = obs_year)) +
             linewidth = 1.2, linetype = "dashed") +
   geom_vline(xintercept = REVISION_YEARS, linetype = "dotted", color = "gray60") +
   scale_color_manual(values = pal) +
-  scale_x_continuous(breaks = 2010:2019) +
-  labs(title = "Period Effect: Smooth vs True Cumulative Jumps (Part 2, log scale)",
+  scale_x_continuous(breaks = 2010:2019) + 
+  ylim(min(period_grid$true_cen) - 0.2, max(period_grid$true_cen) + 0.2) + 
+  labs(title = "Period Effect: Smooth vs True Cumulative Jumps (Part 1, log scale)",
        subtitle = "Both centered | Vertical dotted: revision years | 95% CI",
        x = "Obs year", y = "Period effect (log, centered)", color = NULL) + theme_ald
 

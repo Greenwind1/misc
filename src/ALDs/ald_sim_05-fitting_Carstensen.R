@@ -99,6 +99,7 @@ m1_b <- gam(formula_b1, data = dat,
             family = binomial(link = "logit"), method = "REML")
 cat("\n=== Method B | Part 1 summary ===\n"); print(summary(m1_b))
 saveRDS(m1_b, file = paste0("output/", NAME, "-fitting_m1_b.rda"))
+cat(sprintf("\nMethod B | Part 1 AIC: %.1f\n", AIC(m1_b)))
 
 # 4-2. Part 2: Conditional expenditure  (Gamma / log) ----
 # No jump dummies -- period smooth (period_nl_*) absorbs all period variation,
@@ -116,8 +117,6 @@ m2_b <- gam(formula_b2, data = filter(dat, visited == 1),
             family = Gamma(link = "log"), method = "REML")
 cat("\n=== Method B | Part 2 summary ===\n"); print(summary(m2_b))
 saveRDS(m2_b, file = paste0("output/", NAME, "-fitting_m2_b.rda"))
-
-cat(sprintf("\nMethod B | Part 1 AIC: %.1f\n", AIC(m1_b)))
 cat(sprintf("Method B | Part 2 AIC: %.1f\n",  AIC(m2_b)))
 
 
