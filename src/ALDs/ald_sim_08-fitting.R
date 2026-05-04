@@ -1,29 +1,28 @@
 # =============================================================================
-# ALD (Accelerated Longitudinal Design) Simulation
-# Hurdle (2-part) model using mgcv package
+#  ALD Simulation: Hurdle (2-part) model using mgcv package
 # 
-# Reference:
-# Galbraith, Sally, Jack Bowden, and Adrian Mander. 2017. 
-# “Accelerated Longitudinal Designs: 
-# An Overview of Modelling, Power, Costs and Handling Missing Data.” 
-# Statistical Methods in Medical Research 26(1): 374–98. 
-# doi:10.1177/0962280214547150.
-# =============================================================================
-# Change logs:
-# 02: Shared observation window across all cohorts;
-#     cohorts differ in birth year, producing staggered age bands.
-# 03: Change the simple cohort effect to the bathtub-shaped cohort effect.
+#  Reference:
+#  Galbraith, Sally, Jack Bowden, and Adrian Mander. 2017. 
+#  “Accelerated Longitudinal Designs: 
+#  An Overview of Modelling, Power, Costs and Handling Missing Data.” 
+#  Statistical Methods in Medical Research 26(1): 374–98. 
+#  doi:10.1177/0962280214547150.
+# 
+#  Change logs:
+#  02: Shared observation window across all cohorts;
+#      cohorts differ in birth year, producing staggered age bands.
+#  03: Change the simple cohort effect to the bathtub-shaped cohort effect.
+#  04: Increase Noises
 # =============================================================================
 
 library(mgcv)
 library(tidyverse)
 library(patchwork)
 library(extrafont)  # fonttable(); "Candara"
-library(patchwork)
 source("utility/environments.R") 
 set.seed(2026)
 
-NAME <- "ald_simulation_03"
+NAME <- "ald_simulation_08"
 
 
 # 1. Load data ----
@@ -32,7 +31,8 @@ dat <- read_csv(paste0("input/", NAME, "-data.csv"))
 
 # 2. Study design parameters ----
 # Fee revision years falling within the observation window
-REVISION_YEARS <- c(2012, 2014, 2016, 2018)
+# REVISION_YEARS <- c(2012, 2014, 2016, 2018)
+REVISION_YEARS <- c(2012, 2013, 2014, 2015, 2016, 2017, 2018)
 COHORT_BIRTH_YEARS <- c(1940, 1945, 1950, 1955, 1960)
 jump_vars <- paste0("post_", REVISION_YEARS)
 jump_formula_str <- paste(jump_vars, collapse = " + ")
@@ -40,58 +40,58 @@ jump_formula_str <- paste(jump_vars, collapse = " + ")
 # True age effect on visit probability (logit scale)
 # Gradual increase from age 50, steeper increase from age 70
 true_age_logit <- function(age) {
-  -2.5 +
-    0.04 * pmax(age - 50, 0) +
-    0.06 * pmax(age - 70, 0)
+  -2.5 + 0.04 * pmax(age - 50, 0) + 0.06 * pmax(age - 70, 0)
 }
  
 # True age effect on expenditure amount (log scale)
 true_age_log_amount <- function(age) {
-  8.5 +
-    0.025 * pmax(age - 50, 0) +
-    0.05  * pmax(age - 70, 0)
+  8.5 + 0.025 * pmax(age - 50, 0) + 0.05  * pmax(age - 70, 0)
 }
  
 # Bathtub-shaped cohort effect (function of birth_year, not age)
 # High risk for oldest cohorts, low for middle, very high for youngest
 true_cohort_effect <- function(birth_year) {
-  x <- birth_year - 1950  # center at 1950
-  0.3 * (x / 10)^2 - 0.2  # U-shaped: 1940=->, 1950=min, 1960=->
+  x <- birth_year - 1940  # center at 1950 => 1940
+  - 0.075 * (x / 10)^2 + 0.2
 }
 
 # True period effect: step jumps at each fee revision year
 true_theta <- c(
-  `2012` = -0.08,
-  `2014` =  0.05,
-  `2016` = -0.06,
-  `2018` =  0.04
+  `2012` = 0, 
+  `2013` = 0, 
+  `2014` = 0, 
+  `2015` = 0, 
+  `2016` = 0, 
+  `2017` = 0, 
+  `2018` = 0
 )
 
 
-# =============================================================================
-# 3. Fitting
-# =============================================================================
-# Part 1: Frequency (logistic)
-formula_part1 <- as.formula(
-  "visited ~ s(age, bs='cr', k=10) + s(birth_year, bs='cr', k=5)"
+# 3. Fitting ----
+## Part 1: Frequency (logistic) ----
+formula_part1 <- as.formula(paste0(
+  "visited ~ s(age, bs='cr', k=10) + s(birth_year, bs='cr', k=5)", 
+  " + ", jump_formula_str
   # "visited ~ s(age, bs='cr', k=10) + s(birth_year, bs='cr', k=10)"  # k knots <= 5
-)
+))
 print(formula_part1)
 cat("\nFitting Part 1 (visit probability)...\n")
 m1 <- gam(formula_part1, data = dat,
   family = binomial(link = "logit"), method = "REML")
+saveRDS(m1, file = paste0("output/", NAME, "-fitting_m1_a.rda"))
 
-# Part 2: expenditure amount among visitors (Gamma)
+## Part 2: expenditure amount among visitors (Gamma) ----
 formula_part2 <- as.formula(paste0(
-  "medical_cost ~ s(age, bs='cr', k=10) + s(birth_year, bs='cr', k=5) + ",
-  jump_formula_str
+  "medical_cost ~ s(age, bs='cr', k=10) + s(birth_year, bs='cr', k=5)"
+  # " + ", jump_formula_str
 ))
 print(formula_part2)
 cat("Fitting Part 2 (expenditure amount)...\n")
 m2 <- gam(formula_part2, data = filter(dat, visited == 1),
           family = Gamma(link = "log"), method = "REML")
+saveRDS(m1, file = paste0("output/", NAME, "-fitting_m2_a.rda"))
  
-# Summary
+## Summary ----
 cat(sprintf("\nPart 1 AIC: %.1f\n", AIC(m1)))
 cat(sprintf("Part 2 AIC: %.1f\n",  AIC(m2)))
 print(summary(m1))
@@ -123,11 +123,11 @@ age_grid <- tibble(
   age        = 50:79,
   birth_year = 1950,
   post_2012  = 0L, 
-  # post_2013  = 0L, 
+  post_2013  = 0L, 
   post_2014  = 0L,
-  # post_2015  = 0L, 
+  post_2015  = 0L, 
   post_2016  = 0L,
-  # post_2017  = 0L, 
+  post_2017  = 0L, 
   post_2018  = 0L
 )
 
@@ -213,11 +213,11 @@ cohort_grid <- tibble(
   birth_year = COHORT_BIRTH_YEARS,
   age = 65,  # fixed age for cohort comparison
   post_2012  = 0L, 
-  # post_2013  = 0L, 
+  post_2013  = 0L, 
   post_2014  = 0L,
-  # post_2015  = 0L, 
+  post_2015  = 0L, 
   post_2016  = 0L,
-  # post_2017  = 0L, 
+  post_2017  = 0L, 
   post_2018  = 0L
 )
 
@@ -258,8 +258,8 @@ p_cohort
 jump_names <- paste0("post_", REVISION_YEARS)
 
 # Extract coefficients and covariance matrix for jump terms only
-coef_jump <- coef(m2)[jump_names]
-vcov_jump <- vcov(m2)[jump_names, jump_names]
+coef_jump <- coef(m1)[jump_names]
+vcov_jump <- vcov(m1)[jump_names, jump_names]
 
 # Compute cumulative sum and its SE via delta method
 # Var(beta_1 + ... + beta_k) = sum of all elements in vcov submatrix

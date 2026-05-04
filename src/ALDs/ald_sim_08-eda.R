@@ -6,7 +6,7 @@ library(extrafont)  # fonttable(); "Candara"
 library(patchwork)
 
 # 1. Load data ----
-NAME <- "ald_simulation_07"
+NAME <- "ald_simulation_08"
 dat <- read_csv(paste0("input/", NAME, "-data.csv"))
 
 

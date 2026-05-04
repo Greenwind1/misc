@@ -202,7 +202,7 @@ p_age_prob_b <- ggplot(age_grid, aes(x = age)) +
   geom_line(aes(y = true_prob, color = "True"), linewidth = 1.2, linetype = "dashed") +
   scale_color_manual(values = pal) +
   scale_y_continuous(labels = scales::percent) +
-  labs(title = "Part 1: Frequency",
+  labs(title = "Frequency",
        subtitle = "Ref: birth_year=1950, obs_year=mean over years, no jump dummies | 95% CI",
        x = "Age", y = "Visit probability", color = NULL) + theme_ald
 
@@ -212,7 +212,7 @@ p_age_amt_b <- ggplot(age_grid, aes(x = age)) +
   geom_line(aes(y = true_amt, color = "True"), linewidth = 1.2, linetype = "dashed") +
   scale_color_manual(values = pal) +
   scale_y_continuous(labels = scales::comma) +
-  labs(title = "Part 2: Incurred medical expenditure",
+  labs(title = "Incurred medical expenditure",
        subtitle = "Ref cohort: birth_year=1950, obs_year=mean over year, no jump dummies | 95% CI",
        x = "Age", y = "Mean incurred expenditure", color = NULL) + theme_ald
 
@@ -251,7 +251,7 @@ p_cohort_b <- ggplot(cohort_grid, aes(x = birth_year)) +
   geom_point(aes(y = true_cen, color = "True"), size = 3, shape = 17) +
   scale_color_manual(values = pal) +
   scale_x_continuous(breaks = COHORT_BIRTH_YEARS) +
-  labs(title = "Cohort Effect (centered, logit scale)",
+  labs(title = "Frequency Cohort Effect (centered, logit scale)",
        subtitle = "Fixed age=65, obs_year=2014 | Cohort fully free | 95% CI",
        x = "Birth year", y = "Cohort effect (logit, centered)", color = NULL) + theme_ald
 
@@ -297,8 +297,8 @@ p_period_b <- ggplot(period_grid, aes(x = obs_year)) +
   geom_vline(xintercept = REVISION_YEARS, linetype = "dotted", color = "gray60") +
   scale_color_manual(values = pal) +
   scale_x_continuous(breaks = 2010:2019) + 
-  ylim(min(period_grid$true_cen) - 0.2, max(period_grid$true_cen) + 0.2) + 
-  labs(title = "Period Effect: Smooth vs True Cumulative Jumps (Part 1, log scale)",
+  ylim(-0.5, 0.5) + 
+  labs(title = "Frequency Period Effect: Cumulative Revision Jump (logit scale)", 
        subtitle = "Both centered | Vertical dotted: revision years | 95% CI",
        x = "Obs year", y = "Period effect (log, centered)", color = NULL) + theme_ald
 
@@ -315,13 +315,15 @@ p_resid1_b <- ggplot(dat_visited_b, aes(x = fitted_log, y = resid_dev)) +
   geom_point(alpha = 0.15, size = 0.8, color = "darkorange") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "tomato") +
   geom_smooth(method = "loess", se = FALSE, color = "tomato", linewidth = 0.8) +
-  labs(title = "Part 2: Deviance Residuals vs Fitted",
+  labs(title = "Deviance Residuals vs Fitted (log scale)", 
+       subtitle = "For incurred medical expenditure", 
        x = "Fitted (log)", y = "Deviance residual") + theme_ald
 
 p_resid2_b <- ggplot(dat_visited_b, aes(sample = resid_dev)) +
   stat_qq(alpha = 0.2, size = 0.8, color = "darkorange") +
   stat_qq_line(color = "tomato", linewidth = 0.9) +
-  labs(title = "Part 2: QQ Plot of Deviance Residuals",
+  labs(title = "QQ Plot of Deviance Residuals", 
+       subtitle = "For incurred medical expenditure", 
        x = "Theoretical quantiles", y = "Sample quantiles") + theme_ald
 
 

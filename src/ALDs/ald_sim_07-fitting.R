@@ -98,7 +98,7 @@ print(summary(m1))
 print(summary(m2))
 
 
-# 4. Check result ----
+# 4. Validation plots ----
 font.base <- "Times New Roman"
 theme_ald <- theme_minimal(base_family = font.base, base_size = 13) + 
   theme(
@@ -152,7 +152,7 @@ p_age_prob <- ggplot(age_grid, aes(x = age)) +
   scale_color_manual(values = pal) +
   scale_y_continuous(labels = scales::percent) +
   labs(
-    title    = "Part 1: Frequency",
+    title = "Frequency",
     subtitle = "Reference cohort: birth year 1950 | Ribbon: 95% CI",
     x = "Age", y = "Visit probability", color = NULL
   ) +
@@ -179,7 +179,7 @@ p_age_amt <- ggplot(age_grid, aes(x = age)) +
   scale_color_manual(values = pal) + 
   scale_y_continuous(labels = scales::comma) + 
   labs(
-    title    = "Part 2: Incurred medical expenditure",
+    title    = "Incurred medical expenditure",
     subtitle = "Reference cohort: birth year 1950 | Ribbon: 95% CI",
     x = "Age", y = "Mean inccured medical expenditure", color = NULL
   ) + 
@@ -245,7 +245,7 @@ p_cohort <- ggplot(cohort_grid, aes(x = birth_year)) +
   scale_color_manual(values = pal) +
   scale_x_continuous(breaks = COHORT_BIRTH_YEARS) +
   labs(
-    title    = "Cohort Effect (centered, logit scale)",
+    title    = "Frequency Cohort Effect (centered, logit scale)",
     subtitle = "Fixed age = 65 | Ribbon: 95% CI",
     x = "Birth year", y = "Cohort effect (logit, centered)", color = NULL
   ) +
@@ -253,45 +253,53 @@ p_cohort <- ggplot(cohort_grid, aes(x = birth_year)) +
 p_cohort
 
 
-# 4-3. Period Effect (Revision Jump Coefficients) ----
-# Compare estimated theta_r vs true_theta for Part 2 only
-coef_m1 <- coef(m1)
-vcov_m1 <- vcov(m1)
-se_m1 <- sqrt(diag(vcov_m1))
- 
+# 4-3. Period Effect: Cumulative Jump (Carstensen-style) ----
+
 jump_names <- paste0("post_", REVISION_YEARS)
- 
-jump_df <- tibble(
+
+# Extract coefficients and covariance matrix for jump terms only
+coef_jump <- coef(m1)[jump_names]
+vcov_jump <- vcov(m1)[jump_names, jump_names]
+
+# Compute cumulative sum and its SE via delta method
+# Var(beta_1 + ... + beta_k) = sum of all elements in vcov submatrix
+n_jump    <- length(REVISION_YEARS)
+cum_est   <- cumsum(coef_jump)
+cum_se    <- sapply(seq_len(n_jump), function(k) {
+  idx <- seq_len(k)
+  sqrt(sum(vcov_jump[idx, idx]))   # sum of all variances and covariances
+})
+
+# True cumulative values
+cum_true <- cumsum(as.numeric(true_theta))
+
+jump_cum_df <- tibble(
   revision_year = REVISION_YEARS,
-  true_val      = as.numeric(true_theta),
-  estimate      = coef_m1[jump_names],
-  se            = se_m1[jump_names]
+  estimate      = cum_est,
+  se            = cum_se,
+  true_val      = cum_true
 ) %>%
   mutate(
-    lo       = estimate - 1.96 * se,
-    hi       = estimate + 1.96 * se,
-    covered  = true_val >= lo & true_val <= hi,   # 95% CI covers true value?
-    bias     = estimate - true_val
+    lo      = estimate - 1.96 * se,
+    hi      = estimate + 1.96 * se,
+    covered = true_val >= lo & true_val <= hi
   )
- 
-p_jump <- ggplot(jump_df, aes(x = factor(revision_year))) +
+
+p_jump <- ggplot(jump_cum_df, aes(x = revision_year)) +
   geom_hline(yintercept = 0, linetype = "dotted", color = "gray60") +
-  geom_pointrange(
-    aes(y = estimate, ymin = lo, ymax = hi, color = "Fitted"),
-    size = 0.9, linewidth = 1.0
-  ) +
+  geom_ribbon(aes(ymin = lo, ymax = hi), fill = pal["Fitted"], alpha = 0.2) +
+  geom_line(aes(y = estimate, color = "Fitted"), linewidth = 1.1) +
+  geom_point(aes(y = estimate, color = "Fitted"), size = 3) +
+  geom_line(aes(y = true_val, color = "True"),
+            linewidth = 1.1, linetype = "dashed") +
   geom_point(aes(y = true_val, color = "True"), size = 4, shape = 17) +
-  geom_text(
-    aes(y = hi + 0.01,
-        label = ifelse(covered, "covered", "NOT covered")),
-    size = 3.5, color = "gray40", vjust = 0
-  ) +
   scale_color_manual(values = pal) +
+  scale_x_continuous(breaks = REVISION_YEARS) +
   labs(
-    title    = "Period Effect: Revision Jump Coefficients (Part 1, log scale)",
-    subtitle = "Triangle: true value | Point + range: estimate +/- 1.96 SE",
-    x = "Revision year", y = "Jump coefficient (log)", color = NULL
-  ) + 
+    title    = "Frequency Period Effect: Cumulative Revision Jump (logit scale)",
+    subtitle = "Ribbon: 95% CI (delta method) | Dashed triangle: true cumulative value",
+    x = "Revision year", y = "Cumulative jump coefficient", color = NULL
+  ) +
   theme_ald
 p_jump
 
@@ -310,7 +318,8 @@ p_resid1 <- ggplot(dat_visited, aes(x = fitted_log, y = resid_dev)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "tomato") +
   geom_smooth(method = "loess", se = FALSE, color = "tomato", linewidth = 0.8) +
   labs(
-    title = "Part 2: Deviance Residuals vs Fitted (log scale)",
+    title = "Deviance Residuals vs Fitted (log scale)", 
+    subtitle = "For incurred medical expenditure", 
     x = "Fitted (log)", y = "Deviance residual"
   ) +
   theme_ald
@@ -320,7 +329,8 @@ p_resid2 <- ggplot(dat_visited, aes(sample = resid_dev)) +
   stat_qq(alpha = 0.2, size = 0.8, color = "steelblue") +
   stat_qq_line(color = "tomato", linewidth = 0.9) +
   labs(
-    title = "Part 2: QQ Plot of Deviance Residuals",
+    title = "QQ Plot of Deviance Residuals", 
+    subtitle = "For incurred medical expenditure", 
     x = "Theoretical quantiles", y = "Sample quantiles"
   ) +
   theme_ald

@@ -5,6 +5,8 @@ library(tidyverse)
 library(extrafont)  # fonttable(); "Candara"
 library(patchwork)
 
+NAME <- "ald_simulation_03"
+
 # -----------------------------------------------------------------------------
 # 1. Load data
 # -----------------------------------------------------------------------------
@@ -200,12 +202,53 @@ p7 <- ggplot(overlap_summary, aes(x = age)) +
 p7
 
 
-# =============================================================================
-# Save figures
-# =============================================================================
-fig_top <- (p1 | p2)
-fig_bot <- (p3 | p4)
-fig_all <- fig_top / fig_bot
+# 3-8. Frequency by observation year for each cohort ----
+p8 <- dat %>%
+  group_by(obs_year, birth_year) %>%
+  summarise(visit_rate = mean(visited), .groups = "drop") %>%
+  ggplot(aes(x = obs_year, y = visit_rate,
+             color = factor(birth_year), group = factor(birth_year))) +
+  geom_vline(data = revision_df, aes(xintercept = obs_year),
+             linetype = "dashed", color = "gray50", alpha = 0.8) +
+  geom_line(linewidth = 1.1) +
+  geom_point(size = 2) +
+  scale_color_manual(values = cohort_colors, name = "Cohort (birth year)") +
+  scale_y_continuous(labels = scales::percent, limits = c(0, .5)) +
+  scale_x_continuous(breaks = seq(2010, 2035, by = 2)) +
+  labs(
+    title    = "Frequency by observation year for each cohort",
+    subtitle = "Vertical broken lines: revision year for medical expenditure",
+    x = "Observation year", y = "Frequency"
+  ) +
+  theme_ald +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p8
 
-ggsave("fig/ald_simulation_03-eda.jpg", 
-  fig_all, width = 16, height = 10, dpi = 300)
+
+# 3-9. Box plot of incurred medical expenditure by observation year for each cohort ----
+p9 <- dat %>%
+  filter(visited == 1) %>%
+  ggplot(aes(x = factor(obs_year), y = medical_cost,
+             fill = factor(birth_year))) +
+  geom_boxplot(outlier.size = 0.5, outlier.alpha = 0.3, linewidth = 0.4) +
+  facet_wrap(~ factor(birth_year), nrow = 1) +
+  scale_fill_manual(values = cohort_colors, guide = "none") + 
+  scale_y_continuous(labels = scales::comma, 
+                     limits = c(0, quantile(dat$medical_cost[dat$visited == 1], 0.99))) +
+  labs(
+    title    = "Incurred medical expenditure by observation year for each cohort",
+    subtitle = "Vertical broken lines: revision year | Upper 1% excluded",
+    x = "Observation year", y = "Incurred medical expenditure"
+  ) +
+  theme_ald + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+p9
+
+
+# 4. Save figures ----
+fig_top <- (p1 | p2)
+fig_mid <- (p3 | p8)
+fig_bot <- (p4 | p9)
+fig_all <- fig_top / fig_mid / fig_bot
+
+ggsave(paste0("fig/", NAME, "-eda.jpg"), fig_all, width = 16, height = 10, dpi = 300)

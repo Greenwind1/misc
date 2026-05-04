@@ -24,7 +24,7 @@ library(tidyverse)
 library(patchwork)
  
 set.seed(2026)
-NAME <- "ald_simulation_07"
+NAME <- "ald_simulation_08"
 
 # 1. Study design parameters ----
 OBS_START <- 2010        # Start of shared observation window
@@ -40,7 +40,7 @@ NOISE_RATIO <- .0
 #   born 1955 -> age 55-64 during 2010-2019
 #   born 1960 -> age 50-59 during 2010-2019
 COHORT_BIRTH_YEARS   <- c(1940, 1945, 1950, 1955, 1960)
-N_PERSONS_PER_COHORT <- 10000
+N_PERSONS_PER_COHORT <- 600
  
 # Fee revision years falling within the observation window
 REVISION_YEARS <- c(2012, 2013, 2014, 2015, 2016, 2017, 2018)

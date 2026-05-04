@@ -32,19 +32,19 @@ source("utility/environments.R")
 set.seed(2026)
 
 
-NAME <- "ald_simulation_07"
-
+NAME <- "ald_simulation_06"
+N_THREADS <- 3
 
 # 1. Study design parameters & true DGP functions ----
 # REVISION_YEARS <- c(2012, 2014, 2016, 2018)
 REVISION_YEARS <- c(2012, 2013, 2014, 2015, 2016, 2017, 2018)
-# DOF_PERIOD <- 6  # AIC: 25039.6
-# DOF_PERIOD <- 5  # AIC: X
-# DOF_PERIOD <- 4  # AIC: 25035.0
-# DOF_PERIOD <- 3  # AIC: 25033.2
-DOF_PERIOD <- 2  # AIC: 25032.3
-# DOF_PERIOD <- 1  # AIC: 25033.0
-# knots = c(2015), Boundary.knots = c(2010, 2019)  # AIC: 25033.0
+# DOF_PERIOD <- 6  # AIC: 420680
+# DOF_PERIOD <- 5  # AIC: 420679
+# DOF_PERIOD <- 4  # AIC: 420679
+DOF_PERIOD <- 3  # AIC: 420674
+# DOF_PERIOD <- 2  # AIC: -1073321180 X
+# DOF_PERIOD <- 1  # AIC: 
+# knots = c(2015), Boundary.knots = c(2010, 2019)  # AIC: 
 COHORT_BIRTH_YEARS <- c(1940, 1945, 1950, 1955, 1960)
 
 true_age_logit <- function(age) {
@@ -64,10 +64,10 @@ true_theta <- c(
   `2012` = 0, 
   `2013` = 0, 
   `2014` = 0, 
-  `2015` = 0, 
-  `2016` = 0, 
-  `2017` = 0, 
-  `2018` = 0
+  `2015` = -0.4, 
+  `2016` = +0.2, 
+  `2017` = +0.1, 
+  `2018` = +0.1
 )
 
 
@@ -121,11 +121,15 @@ formula_b1 <- as.formula(paste0(
 
 cat("=== Method B | Part 1 formula ===\n"); print(formula_b1)
 
-m1_b <- gam(formula_b1, data = dat,
+m1_b <- bam(formula_b1, data = dat,
             family = binomial(link = "logit"), 
-            method = "REML", optimizer = c("outer",  "bfgs"))
+            # method = "REML", 
+            nthreads = N_THREADS)
+# m1_b <- gam(formula_b1, data = dat,
+#             family = binomial(link = "logit"), 
+#             method = "REML", optimizer = c("outer",  "bfgs"))
 cat("\n=== Method B | Part 1 summary ===\n"); print(summary(m1_b))
-saveRDS(m1_b, file = paste0("output/", NAME, "-fitting_m1_b.rda"))
+saveRDS(m1_b, file = paste0("output/", NAME, "-fitting_bam_m1_b.rda"))
 cat(sprintf("\nMethod B | Part 1 AIC: %.1f\n", AIC(m1_b)))
 
 
@@ -144,7 +148,7 @@ cat("\n=== Method B | Part 2 formula ===\n"); print(formula_b2)
 m2_b <- gam(formula_b2, data = filter(dat, visited == 1),
             family = Gamma(link = "log"), method = "REML")
 cat("\n=== Method B | Part 2 summary ===\n"); print(summary(m2_b))
-saveRDS(m2_b, file = paste0("output/", NAME, "-fitting_m2_b.rda"))
+saveRDS(m2_b, file = paste0("output/", NAME, "-fitting_bam_m2_b.rda"))
 cat(sprintf("Method B | Part 2 AIC: %.1f\n",  AIC(m2_b)))
 
 
@@ -206,7 +210,7 @@ p_age_prob_b <- ggplot(age_grid, aes(x = age)) +
   geom_line(aes(y = true_prob, color = "True"), linewidth = 1.2, linetype = "dashed") +
   scale_color_manual(values = pal) +
   scale_y_continuous(labels = scales::percent) +
-  labs(title = "Part 1: Frequency",
+  labs(title = "Frequency",
        subtitle = "Ref: birth_year=1950, obs_year=mean over years, no jump dummies | 95% CI",
        x = "Age", y = "Visit probability", color = NULL) + theme_ald
 
@@ -216,7 +220,7 @@ p_age_amt_b <- ggplot(age_grid, aes(x = age)) +
   geom_line(aes(y = true_amt, color = "True"), linewidth = 1.2, linetype = "dashed") +
   scale_color_manual(values = pal) +
   scale_y_continuous(labels = scales::comma) +
-  labs(title = "Part 2: Incurred medical expenditure",
+  labs(title = "Incurred medical expenditure",
        subtitle = "Ref cohort: birth_year=1950, obs_year=mean over year, no jump dummies | 95% CI",
        x = "Age", y = "Mean incurred expenditure", color = NULL) + theme_ald
 
@@ -255,7 +259,7 @@ p_cohort_b <- ggplot(cohort_grid, aes(x = birth_year)) +
   geom_point(aes(y = true_cen, color = "True"), size = 3, shape = 17) +
   scale_color_manual(values = pal) +
   scale_x_continuous(breaks = COHORT_BIRTH_YEARS) +
-  labs(title = "Cohort Effect (centered, logit scale)",
+  labs(title = "Frequency Cohort Effect (centered, logit scale)",
        subtitle = "Fixed age=65, obs_year=2014 | Cohort fully free | 95% CI",
        x = "Birth year", y = "Cohort effect (logit, centered)", color = NULL) + theme_ald
 
@@ -301,8 +305,8 @@ p_period_b <- ggplot(period_grid, aes(x = obs_year)) +
   geom_vline(xintercept = REVISION_YEARS, linetype = "dotted", color = "gray60") +
   scale_color_manual(values = pal) +
   scale_x_continuous(breaks = 2010:2019) + 
-  ylim(-0.2, 0.2) + 
-  labs(title = "Period Effect: Smooth vs True Cumulative Jumps (Part 1, log scale)",
+  ylim(-0.5, 0.5) + 
+  labs(title = "Frequency Period Effect: Cumulative Revision Jump (logit scale)", 
        subtitle = "Both centered | Vertical dotted: revision years | 95% CI",
        x = "Obs year", y = "Period effect (log, centered)", color = NULL) + theme_ald
 
@@ -319,13 +323,15 @@ p_resid1_b <- ggplot(dat_visited_b, aes(x = fitted_log, y = resid_dev)) +
   geom_point(alpha = 0.15, size = 0.8, color = "darkorange") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "tomato") +
   geom_smooth(method = "loess", se = FALSE, color = "tomato", linewidth = 0.8) +
-  labs(title = "Part 2: Deviance Residuals vs Fitted",
+  labs(title = "Deviance Residuals vs Fitted (log scale)", 
+       subtitle = "For incurred medical expenditure", 
        x = "Fitted (log)", y = "Deviance residual") + theme_ald
 
 p_resid2_b <- ggplot(dat_visited_b, aes(sample = resid_dev)) +
   stat_qq(alpha = 0.2, size = 0.8, color = "darkorange") +
   stat_qq_line(color = "tomato", linewidth = 0.9) +
-  labs(title = "Part 2: QQ Plot of Deviance Residuals",
+  labs(title = "QQ Plot of Deviance Residuals", 
+       subtitle = "For incurred medical expenditure", 
        x = "Theoretical quantiles", y = "Sample quantiles") + theme_ald
 
 
@@ -334,7 +340,7 @@ fig_b <- (p_age_prob_b | p_age_amt_b) /
           (p_age_ey_b  | p_cohort_b)  /
           (p_period_b  | (p_resid1_b | p_resid2_b))
 
-ggsave(paste0("fig/", NAME, "-fitting_Carstensen.jpg"),
+ggsave(paste0("fig/", NAME, "-fitting_Carstensen_bam.jpg"),
        fig_b, width = 16, height = 18, dpi = 300)
 cat("\nFigure saved.\n")
 

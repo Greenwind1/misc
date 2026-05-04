@@ -7,3 +7,4 @@ api
 input
 fonts/*
 !fonts/Osaka*
+*.rda
